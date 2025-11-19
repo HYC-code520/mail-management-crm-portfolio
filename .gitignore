@@ -37,7 +37,20 @@ yarn-error.log*
 
 # editors
 .vscode
+.idea
+*.swp
+*.swo
+*~
 
 # certificates
 certificates
 .env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# backend specific
+backend/.env
+backend/dist
+backend/build
