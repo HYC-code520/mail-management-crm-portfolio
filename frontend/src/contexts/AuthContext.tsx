@@ -38,6 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Clear any old errors when session changes
+      if (_event === 'TOKEN_REFRESHED') {
+        console.log('✅ Token refreshed successfully');
+      }
+      if (_event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
+      }
     });
 
     return () => subscription.unsubscribe();

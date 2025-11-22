@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase.ts';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext.tsx';
@@ -51,24 +52,24 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-6">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-4xl font-bold text-white">
-            <span>📬</span>
+          <div className="inline-flex items-center gap-2 text-4xl font-bold text-brand">
+            <Mail className="w-10 h-10" />
             <span>Mei Way</span>
-          </Link>
-          <p className="text-zinc-400 mt-2">
+          </div>
+          <p className="text-gray-600 mt-2">
             {isSignUp ? 'Create your account' : 'Sign in to your account'}
           </p>
         </div>
 
         {/* Sign In/Up Form */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8">
+        <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email
               </label>
               <input
@@ -77,13 +78,13 @@ export default function SignInPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand"
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <input
@@ -92,15 +93,16 @@ export default function SignInPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand"
                 placeholder="••••••••"
+                minLength={6}
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black py-3 rounded-lg font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </button>
@@ -109,7 +111,7 @@ export default function SignInPage() {
           <div className="mt-6 text-center">
             <button
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-sm text-brand hover:text-brand-hover transition-colors"
             >
               {isSignUp
                 ? 'Already have an account? Sign in'
@@ -117,14 +119,7 @@ export default function SignInPage() {
             </button>
           </div>
         </div>
-
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-sm text-zinc-500 hover:text-zinc-400 transition-colors">
-            ← Back to home
-          </Link>
-        </div>
       </div>
     </div>
   );
 }
-

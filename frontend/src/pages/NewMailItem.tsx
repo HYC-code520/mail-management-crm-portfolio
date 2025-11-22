@@ -134,26 +134,22 @@ export default function NewMailItemPage() {
             )}
           </div>
 
-          {/* Item Type */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-2">
-              Item Type <span className="text-red-400">*</span>
-            </label>
-            <select
-              name="item_type"
-              value={formData.item_type}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-zinc-500"
-            >
-              <option value="Package">📦 Package</option>
-              <option value="Letter">✉️ Letter</option>
-              <option value="Certified Mail">📧 Certified Mail</option>
-              <option value="Large Package">📦 Large Package</option>
-              <option value="Express Mail">⚡ Express Mail</option>
-              <option value="International">🌍 International</option>
-            </select>
-          </div>
+                 {/* Item Type */}
+                 <div>
+                   <label className="block text-sm font-medium text-zinc-300 mb-2">
+                     Item Type <span className="text-red-400">*</span>
+                   </label>
+                   <select
+                     name="item_type"
+                     value={formData.item_type}
+                     onChange={handleChange}
+                     required
+                     className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-zinc-500"
+                   >
+                     <option value="Package">📦 Package</option>
+                     <option value="Letter">✉️ Letter</option>
+                   </select>
+                 </div>
 
           {/* Description */}
           <div>
