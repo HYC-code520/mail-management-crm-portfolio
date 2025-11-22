@@ -9,7 +9,7 @@ export const mockUser = {
 export const mockContacts = [
   {
     contact_id: 'contact-1',
-    company_name: 'Test Company 1',
+    company_name: 'Acme Corporation',
     unit_number: '101',
     contact_person: 'John Doe',
     email: 'john@test.com',
@@ -24,7 +24,7 @@ export const mockContacts = [
     contact_id: 'contact-2',
     company_name: 'Test Company 2',
     unit_number: '102',
-    contact_person: 'Jane Smith',
+    contact_person: '', // No person name - will display company name
     email: 'jane@test.com',
     phone_number: '987-654-3210',
     language_preference: 'Chinese',
@@ -98,4 +98,6 @@ export const mockOutreachMessages = [
     created_at: '2024-01-15T10:30:00Z',
   },
 ];
+
+
 

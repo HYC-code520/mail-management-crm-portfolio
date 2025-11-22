@@ -296,9 +296,9 @@ describe('Contacts API', () => {
 
       const response = await request(app)
         .delete('/api/contacts/123')
-        .expect(200);
+        .expect(204); // Changed from 200 to 204 (No Content)
 
-      expect(response.body).toHaveProperty('message');
+      // No body expected for 204 responses
       expect(mockSupabaseClient.update).toHaveBeenCalledWith({ status: 'No' });
     });
 

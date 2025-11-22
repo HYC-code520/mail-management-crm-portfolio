@@ -1,43 +1,34 @@
 -- ##############################################################
--- ##     MAIL MANAGEMENT SYSTEM - DATABASE RESET & REBUILD  ##
+-- ##  MIGRATION: Stripe to Mail Management System          ##
 -- ##############################################################
--- Clean, focused schema for mail management (no Stripe bloat)
-
--- ##############################################################
--- ##                    STEP 1: CLEAN RESET                 ##
--- ##############################################################
-
--- Drop tables in reverse dependency order
-DROP TABLE IF EXISTS outreach_messages CASCADE;
-DROP TABLE IF EXISTS mail_items CASCADE;
-DROP TABLE IF EXISTS message_templates CASCADE;
-DROP TABLE IF EXISTS contacts CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-
--- Drop functions
-DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
-
--- Drop publication
-DROP PUBLICATION IF EXISTS supabase_realtime;
+-- This migration cleans up the unused Stripe tables and adds
+-- the mail management system tables that are actually used by the app.
 
 -- ##############################################################
--- ##                 STEP 2: CREATE USER TABLE              ##
+-- ##           STEP 1: DROP UNUSED STRIPE TABLES            ##
 -- ##############################################################
 
--- Users table (core user profiles)
-CREATE TABLE users (
-  id uuid references auth.users not null primary key,
-  full_name text,
-  avatar_url text,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Drop Stripe-related tables (safe - checks IF EXISTS)
+DROP TABLE IF EXISTS subscriptions CASCADE;
+DROP TABLE IF EXISTS prices CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+
+-- Drop Stripe-related types
+DROP TYPE IF EXISTS subscription_status CASCADE;
+DROP TYPE IF EXISTS pricing_plan_interval CASCADE;
+DROP TYPE IF EXISTS pricing_type CASCADE;
+
+-- Clean up users table (remove Stripe billing fields)
+ALTER TABLE users DROP COLUMN IF EXISTS billing_address;
+ALTER TABLE users DROP COLUMN IF EXISTS payment_method;
 
 -- ##############################################################
--- ##                   STEP 3: CREATE CRM TABLES            ##
+-- ##        STEP 2: CREATE MAIL MANAGEMENT TABLES           ##
 -- ##############################################################
 
 -- Contacts table (customer/client information)
-CREATE TABLE contacts (
+CREATE TABLE IF NOT EXISTS contacts (
     contact_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             UUID REFERENCES users(id) ON DELETE CASCADE,
     company_name        TEXT,
@@ -54,7 +45,7 @@ CREATE TABLE contacts (
 );
 
 -- Mail items table (individual mail/package tracking)
-CREATE TABLE mail_items (
+CREATE TABLE IF NOT EXISTS mail_items (
     mail_item_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contact_id          UUID REFERENCES contacts(contact_id) ON DELETE CASCADE,
     item_type           TEXT DEFAULT 'Package', -- Package, Letter, Certified Mail, etc.
@@ -66,7 +57,7 @@ CREATE TABLE mail_items (
 );
 
 -- Outreach messages table (communication tracking)
-CREATE TABLE outreach_messages (
+CREATE TABLE IF NOT EXISTS outreach_messages (
     message_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mail_item_id        UUID REFERENCES mail_items(mail_item_id) ON DELETE CASCADE,
     contact_id          UUID REFERENCES contacts(contact_id) ON DELETE CASCADE,
@@ -82,7 +73,7 @@ CREATE TABLE outreach_messages (
 );
 
 -- Message templates table (reusable message templates)
-CREATE TABLE message_templates (
+CREATE TABLE IF NOT EXISTS message_templates (
     template_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             UUID REFERENCES users(id) ON DELETE CASCADE,
     template_name       TEXT NOT NULL, -- e.g., "Mail Received", "Pickup Reminder", "Pickup Confirmed"
@@ -95,76 +86,58 @@ CREATE TABLE message_templates (
 );
 
 -- ##############################################################
--- ##                  STEP 4: ENABLE ROW LEVEL SECURITY     ##
+-- ##          STEP 3: ENABLE ROW LEVEL SECURITY             ##
 -- ##############################################################
 
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mail_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE outreach_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE message_templates ENABLE ROW LEVEL SECURITY;
 
 -- ##############################################################
--- ##                    STEP 5: CREATE POLICIES             ##
+-- ##              STEP 4: CREATE POLICIES                   ##
 -- ##############################################################
 
--- Users policies
-CREATE POLICY "Can view own user data." ON users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Can update own user data." ON users FOR UPDATE USING (auth.uid() = id);
-
 -- Contacts policies (users can only manage their own contacts)
+DROP POLICY IF EXISTS "Users can manage their own contacts." ON contacts;
 CREATE POLICY "Users can manage their own contacts." ON contacts
     FOR ALL USING (auth.uid() = user_id);
 
 -- Mail items policies (users can only manage mail for their contacts)
+DROP POLICY IF EXISTS "Users can manage mail items for their contacts." ON mail_items;
 CREATE POLICY "Users can manage mail items for their contacts." ON mail_items
     FOR ALL USING (auth.uid() = (SELECT user_id FROM contacts WHERE contacts.contact_id = mail_items.contact_id));
 
 -- Outreach messages policies (users can only manage outreach for their contacts)
+DROP POLICY IF EXISTS "Users can manage outreach for their contacts." ON outreach_messages;
 CREATE POLICY "Users can manage outreach for their contacts." ON outreach_messages
     FOR ALL USING (auth.uid() = (SELECT contacts.user_id FROM contacts WHERE contacts.contact_id = outreach_messages.contact_id));
 
 -- Message templates policies (users can manage their own templates + see defaults)
+DROP POLICY IF EXISTS "Users can manage their templates." ON message_templates;
 CREATE POLICY "Users can manage their templates." ON message_templates
     FOR ALL USING (auth.uid() = user_id OR is_default = TRUE);
 
 -- ##############################################################
--- ##                STEP 6: CREATE FUNCTIONS & TRIGGERS     ##
+-- ##            STEP 5: UPDATE REALTIME PUBLICATION         ##
 -- ##############################################################
 
--- Function to automatically create user profile on signup
-CREATE OR REPLACE FUNCTION public.handle_new_user() 
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.users (id, full_name, avatar_url)
-  VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Trigger to call the function on new user signup
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-
--- ##############################################################
--- ##               STEP 7: SETUP REALTIME                   ##
--- ##############################################################
-
--- Create publication for realtime subscriptions (for live updates)
+-- Drop old publication and recreate with correct tables
+DROP PUBLICATION IF EXISTS supabase_realtime;
 CREATE PUBLICATION supabase_realtime FOR TABLE contacts, mail_items, outreach_messages, message_templates;
 
 -- ##############################################################
--- ##                STEP 8: INSERT DEFAULT DATA             ##
+-- ##          STEP 6: INSERT DEFAULT TEMPLATES              ##
 -- ##############################################################
 
--- Insert default bilingual message templates
-INSERT INTO message_templates (template_name, template_type, subject_line, message_body, is_default) VALUES
-(
-  'New Mail Notification',
-  'Initial',
-  'New Mail Received at Mei Way Mail Plus',
-  'Hello {Name},
+-- Insert default message templates (only if they don't exist)
+INSERT INTO message_templates (template_name, template_type, subject_line, message_body, default_channel, is_default)
+SELECT * FROM (VALUES
+    (
+        'New Mail Notification',
+        'Initial',
+        'New Mail Received at Mei Way Mail Plus',
+        'Hello {Name},
 
 You have new mail waiting for you at Mei Way Mail Plus.
 
@@ -191,13 +164,14 @@ Mei Way Mail Plus Team
 
 此致
 美威邮件团队',
-  TRUE
-),
-(
-  'Reminder (Uncollected Mail)',
-  'Reminder',
-  'Reminder: Uncollected Mail - Mei Way Mail Plus',
-  'Dear {Name},
+        'Both',
+        TRUE
+    ),
+    (
+        'Reminder (Uncollected Mail)',
+        'Reminder',
+        'Reminder: Uncollected Mail - Mei Way Mail Plus',
+        'Dear {Name},
 
 This is a friendly reminder that you have uncollected mail at Mei Way Mail Plus.
 
@@ -224,13 +198,14 @@ Mei Way Mail Plus
 
 谢谢
 美威邮件中心',
-  TRUE
-),
-(
-  'Final Notice (After 1 Week)',
-  'Reminder',
-  'Final Notice: Uncollected Mail - Storage Fee Applies',
-  'FINAL NOTICE
+        'Both',
+        TRUE
+    ),
+    (
+        'Final Notice (After 1 Week)',
+        'Reminder',
+        'Final Notice: Uncollected Mail - Storage Fee Applies',
+        'FINAL NOTICE
 
 Dear {Name},
 
@@ -263,25 +238,23 @@ Phone: (555) 123-4567
 
 美威邮件中心
 电话：(555) 123-4567',
-  TRUE
+        'Both',
+        TRUE
+    )
+) AS v(template_name, template_type, subject_line, message_body, default_channel, is_default)
+WHERE NOT EXISTS (
+    SELECT 1 FROM message_templates WHERE template_name = v.template_name
 );
 
 -- ##############################################################
--- ##                     COMPLETE!                          ##
+-- ##                   MIGRATION COMPLETE                   ##
 -- ##############################################################
 
--- Database has been completely reset and rebuilt with:
--- ✅ User profiles (linked to Supabase Auth)
--- ✅ Contacts (customer management)
--- ✅ Mail Items (package/letter tracking)
--- ✅ Outreach Messages (communication tracking)
--- ✅ Message Templates (bilingual notifications)
--- ✅ Row-level security enabled on all tables
--- ✅ Proper security policies for multi-tenant data isolation
--- ✅ Automatic user profile creation on signup
--- ✅ Realtime subscriptions for live updates
--- ✅ 3 default bilingual templates ready to use
--- ✅ Foreign key relationships and data integrity constraints
--- 
--- 🗑️  REMOVED: All Stripe-related tables (products, prices, subscriptions, customers)
--- 📧 Mail management system is now clean and focused!
+-- ✅ Removed unused Stripe tables
+-- ✅ Created mail management system tables
+-- ✅ Enabled RLS on all tables
+-- ✅ Created proper security policies
+-- ✅ Updated realtime subscriptions
+-- ✅ Added default message templates
+
+

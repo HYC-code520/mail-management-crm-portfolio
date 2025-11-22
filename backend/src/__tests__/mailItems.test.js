@@ -241,14 +241,14 @@ describe('Mail Items API', () => {
       expect(response.body).toHaveProperty('error');
     });
 
-    it('should return 400 when status is missing', async () => {
+    it('should return 400 when no update fields provided', async () => {
       const response = await request(app)
         .put('/api/mail-items/mail-1')
         .send({})
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toBe('status is required');
+      expect(response.body.error).toBe('No update fields provided');
     });
   });
 });

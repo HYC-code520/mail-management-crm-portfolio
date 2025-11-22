@@ -44,9 +44,9 @@ describe('NewContact Page', () => {
     render(<NewContact />);
     
     expect(screen.getByText('Add New Customer')).toBeInTheDocument();
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/company/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/full name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/company name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/email/i)).toBeInTheDocument();
   });
 
   it('submits form with valid data', async () => {
@@ -56,13 +56,13 @@ describe('NewContact Page', () => {
     
     render(<NewContact />);
     
-    // Fill out form - match actual field names
-    await user.type(screen.getByLabelText(/^name$/i), 'Jane Doe');
-    await user.type(screen.getByLabelText(/company/i), 'New Company');
-    await user.type(screen.getByLabelText(/unit/i), '201');
-    await user.type(screen.getByRole('textbox', { name: /mailbox/i }), 'MB201');
-    await user.type(screen.getByLabelText(/email/i), 'jane@newcompany.com');
-    await user.type(screen.getByLabelText(/phone/i), '555-1234');
+    // Fill out form - using actual placeholders from component
+    await user.type(screen.getByPlaceholderText(/full name/i), 'Jane Doe');
+    await user.type(screen.getByPlaceholderText(/company name/i), 'New Company');
+    await user.type(screen.getByPlaceholderText(/e\.g\., 101/i), '201'); // Unit #
+    await user.type(screen.getByPlaceholderText(/e\.g\., MB-101/i), 'MB201'); // Mailbox #
+    await user.type(screen.getByPlaceholderText(/email/i), 'jane@newcompany.com');
+    await user.type(screen.getByPlaceholderText(/\+1.*555/i), '555-1234'); // Phone
     
     // Submit form
     await user.click(screen.getByRole('button', { name: /save customer/i }));
@@ -86,7 +86,7 @@ describe('NewContact Page', () => {
     render(<NewContact />);
     
     // Fill only name without mailbox
-    await user.type(screen.getByLabelText(/^name$/i), 'Test Person');
+    await user.type(screen.getByPlaceholderText(/full name/i), 'Test Person');
     
     // Try to submit
     await user.click(screen.getByRole('button', { name: /save customer/i }));
@@ -103,8 +103,8 @@ describe('NewContact Page', () => {
     render(<NewContact />);
     
     // Fill minimum required fields
-    await user.type(screen.getByLabelText(/^name$/i), 'Test Person');
-    await user.type(screen.getByRole('textbox', { name: /mailbox/i }), 'MB001');
+    await user.type(screen.getByPlaceholderText(/full name/i), 'Test Person');
+    await user.type(screen.getByPlaceholderText(/e\.g\., MB-101/i), 'MB001');
     
     await user.click(screen.getByRole('button', { name: /save customer/i }));
     
@@ -128,20 +128,23 @@ describe('NewContact Page', () => {
   it('includes all form fields', () => {
     render(<NewContact />);
     
-    expect(screen.getByLabelText(/^name$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/company/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/unit/i)).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /mailbox/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/phone/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/language/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/full name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/company name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e\.g\., 101/i)).toBeInTheDocument(); // Unit #
+    expect(screen.getByPlaceholderText(/e\.g\., MB-101/i)).toBeInTheDocument(); // Mailbox #
+    expect(screen.getByPlaceholderText(/email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/\+1.*555/i)).toBeInTheDocument(); // Phone: +1 (555) 000-0000
+    expect(screen.getByText(/Preferred Language/i)).toBeInTheDocument();
   });
 
   it('has proper input types for fields', () => {
     render(<NewContact />);
     
-    expect(screen.getByLabelText(/email/i)).toHaveAttribute('type', 'email');
-    expect(screen.getByLabelText(/phone/i)).toHaveAttribute('type', 'tel');
+    const emailInput = screen.getByPlaceholderText(/email/i);
+    const phoneInput = screen.getByPlaceholderText(/\+1.*555/i); // +1 (555) 000-0000
+    
+    expect(emailInput).toHaveAttribute('type', 'email');
+    expect(phoneInput).toHaveAttribute('type', 'tel');
   });
 
   it('disables submit button while loading', async () => {
@@ -154,8 +157,8 @@ describe('NewContact Page', () => {
     render(<NewContact />);
     
     // Fill required fields
-    await user.type(screen.getByLabelText(/^name$/i), 'Test');
-    await user.type(screen.getByRole('textbox', { name: /mailbox/i }), 'MB001');
+    await user.type(screen.getByPlaceholderText(/full name/i), 'Test');
+    await user.type(screen.getByPlaceholderText(/e\.g\., MB-101/i), 'MB001');
     
     const submitButton = screen.getByRole('button', { name: /save customer/i });
     await user.click(submitButton);
@@ -170,8 +173,9 @@ describe('NewContact Page', () => {
     const user = userEvent.setup();
     render(<NewContact />);
     
-    // Fill only mailbox without name or company
-    await user.type(screen.getByRole('textbox', { name: /mailbox/i }), 'MB001');
+    // Fill only mailbox without name or company  
+    const mailboxInput = screen.getByPlaceholderText(/e\.g\., MB-101/i);
+    await user.type(mailboxInput, 'MB001');
     
     // Try to submit
     await user.click(screen.getByRole('button', { name: /save customer/i }));

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, Archive, ArchiveRestore, Eye, MessageSquare, Edit, Trash2 } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
@@ -21,10 +21,14 @@ interface Contact {
 export default function ContactsPage() {
   const navigate = useNavigate();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [allContacts, setAllContacts] = useState<Contact[]>([]); // Store all contacts including archived
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showArchived, setShowArchived] = useState(false); // Toggle for showing archived
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -47,7 +51,15 @@ export default function ContactsPage() {
   const loadContacts = async () => {
     try {
       const data = await api.contacts.getAll();
-      setContacts(Array.isArray(data) ? data : []);
+      const contactsList = Array.isArray(data) ? data : [];
+      setAllContacts(contactsList); // Store all contacts
+      
+      // Filter based on showArchived toggle
+      const filteredContacts = showArchived 
+        ? contactsList.filter(c => c.status === 'No') // Show only archived
+        : contactsList.filter(c => c.status !== 'No'); // Show only active
+      
+      setContacts(filteredContacts);
     } catch (err) {
       console.error('Error loading contacts:', err);
       toast.error('Failed to load contacts');
@@ -56,12 +68,56 @@ export default function ContactsPage() {
     }
   };
 
+  // Re-filter when showArchived toggle changes
+  useEffect(() => {
+    if (allContacts.length > 0) {
+      const filteredContacts = showArchived 
+        ? allContacts.filter(c => c.status === 'No')
+        : allContacts.filter(c => c.status !== 'No');
+      setContacts(filteredContacts);
+    }
+  }, [showArchived, allContacts]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: name === 'service_tier' ? parseInt(value) : value
     }));
+  };
+
+  const openEditModal = (contact: Contact) => {
+    setEditingContact(contact);
+    setFormData({
+      contact_person: contact.contact_person || '',
+      company_name: contact.company_name || '',
+      mailbox_number: contact.mailbox_number || '',
+      unit_number: contact.unit_number || '',
+      email: contact.email || '',
+      phone_number: contact.phone_number || '',
+      wechat: '',
+      language_preference: contact.language_preference || 'English',
+      service_tier: contact.service_tier || 1,
+      status: contact.status || 'Pending'
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingContact(null);
+    setFormData({
+      contact_person: '',
+      company_name: '',
+      mailbox_number: '',
+      unit_number: '',
+      email: '',
+      phone_number: '',
+      wechat: '',
+      language_preference: 'English',
+      service_tier: 1,
+      status: 'Pending'
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,29 +136,61 @@ export default function ContactsPage() {
     setSaving(true);
 
     try {
-      await api.contacts.create(formData);
-      toast.success('Customer added successfully!');
-      setIsModalOpen(false);
-      // Reset form
-      setFormData({
-        contact_person: '',
-        company_name: '',
-        mailbox_number: '',
-        unit_number: '',
-        email: '',
-        phone_number: '',
-        wechat: '',
-        language_preference: 'English',
-        service_tier: 1,
-        status: 'Pending'
-      });
-      // Reload contacts
+      if (editingContact) {
+        // Update existing contact
+        await api.contacts.update(editingContact.contact_id, formData);
+        toast.success('Customer updated successfully!');
+      } else {
+        // Create new contact
+        await api.contacts.create(formData);
+        toast.success('Customer added successfully!');
+      }
+      closeModal();
       loadContacts();
     } catch (err) {
-      console.error('Failed to create contact:', err);
-      toast.error(`Failed to add customer: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Failed to save contact:', err);
+      toast.error(`Failed to ${editingContact ? 'update' : 'add'} customer: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (contactId: string) => {
+    if (!confirm('Are you sure you want to archive this customer? You can restore it later from the archived view.')) {
+      return;
+    }
+
+    setDeletingContactId(contactId);
+
+    try {
+      await api.contacts.delete(contactId);
+      toast.success('Customer archived successfully!');
+      loadContacts();
+    } catch (err) {
+      console.error('Failed to delete contact:', err);
+      toast.error('Failed to archive customer');
+    } finally {
+      setDeletingContactId(null);
+    }
+  };
+
+  const handleRestore = async (contactId: string) => {
+    if (!confirm('Are you sure you want to restore this customer?')) {
+      return;
+    }
+
+    setDeletingContactId(contactId);
+
+    try {
+      // Restore by setting status back to 'Active'
+      await api.contacts.update(contactId, { status: 'Active' });
+      toast.success('Customer restored successfully!');
+      loadContacts();
+    } catch (err) {
+      console.error('Failed to restore contact:', err);
+      toast.error('Failed to restore customer');
+    } finally {
+      setDeletingContactId(null);
     }
   };
 
@@ -137,13 +225,36 @@ export default function ContactsPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Customer Directory</h1>
           <p className="text-gray-600">Manage customer information</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          <span>+</span>
-          <span>Add New Customer</span>
-        </button>
+        <div className="flex items-center gap-4">
+          {/* Show Archived Toggle */}
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              showArchived 
+                ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {showArchived ? (
+              <>
+                <ArchiveRestore className="w-4 h-4" />
+                <span>Viewing Archived</span>
+              </>
+            ) : (
+              <>
+                <Archive className="w-4 h-4" />
+                <span>Show Archived</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <span>+</span>
+            <span>Add New Customer</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -222,25 +333,65 @@ export default function ContactsPage() {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center gap-3 text-sm">
-                        <button
-                          onClick={() => navigate(`/dashboard/contacts/${contact.contact_id}`)}
-                          className="text-green-600 hover:text-green-700 font-medium"
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => navigate(`/dashboard/contacts/${contact.contact_id}/message`)}
-                          className="text-green-600 hover:text-green-700 font-medium"
-                        >
-                          Message
-                        </button>
-                        <button
-                          onClick={() => toast('Edit feature coming soon', { icon: 'ℹ️' })}
-                          className="text-green-600 hover:text-green-700 font-medium"
-                        >
-                          Edit
-                        </button>
+                      <div className="flex items-center gap-2">
+                        {!showArchived && (
+                          <>
+                            <button
+                              onClick={() => navigate(`/dashboard/contacts/${contact.contact_id}`)}
+                              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors group relative"
+                              title="View"
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                View
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => navigate(`/dashboard/contacts/${contact.contact_id}/message`)}
+                              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors group relative"
+                              title="Message"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Message
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => openEditModal(contact)}
+                              className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors group relative"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Edit
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(contact.contact_id)}
+                              disabled={deletingContactId === contact.contact_id}
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed group relative"
+                              title="Archive"
+                            >
+                              <Archive className="w-4 h-4" />
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                {deletingContactId === contact.contact_id ? 'Archiving...' : 'Archive'}
+                              </span>
+                            </button>
+                          </>
+                        )}
+                        {showArchived && (
+                          <button
+                            onClick={() => handleRestore(contact.contact_id)}
+                            disabled={deletingContactId === contact.contact_id}
+                            className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed group relative"
+                            title="Restore"
+                          >
+                            <ArchiveRestore className="w-4 h-4" />
+                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                              {deletingContactId === contact.contact_id ? 'Restoring...' : 'Restore'}
+                            </span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -257,11 +408,11 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* Add Customer Modal */}
+      {/* Add/Edit Customer Modal */}
       <Modal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        title="Add New Customer"
+        onClose={closeModal}
+        title={editingContact ? 'Edit Customer' : 'Add New Customer'}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name & Company */}
@@ -390,7 +541,7 @@ export default function ContactsPage() {
               disabled={saving}
               className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving...' : 'Save Customer'}
+              {saving ? 'Saving...' : (editingContact ? 'Update Customer' : 'Save Customer')}
             </button>
           </div>
         </form>

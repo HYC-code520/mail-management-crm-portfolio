@@ -67,7 +67,7 @@ export function renderWithProviders(
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <MockAuthProvider value={authValue}>
           {children}
         </MockAuthProvider>

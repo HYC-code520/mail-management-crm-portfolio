@@ -9,6 +9,7 @@ interface Contact {
   company_name?: string;
   unit_number?: string;
   mailbox_number?: string;
+  status?: string;
 }
 
 interface TodaysEntry {
@@ -20,7 +21,11 @@ interface TodaysEntry {
   received_date: string;
 }
 
-export default function IntakePage() {
+interface IntakePageProps {
+  embedded?: boolean;
+}
+
+export default function IntakePage({ embedded = false }: IntakePageProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [itemType, setItemType] = useState('Letter');
   const [quantity, setQuantity] = useState(1);
@@ -48,12 +53,19 @@ export default function IntakePage() {
   const searchContacts = async () => {
     try {
       const contacts = await api.contacts.getAll();
-      const filtered = contacts.filter((c: Contact) =>
-        c.contact_person?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.mailbox_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.unit_number?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const filtered = contacts.filter((c: Contact) => {
+        // Exclude archived customers (status: 'No')
+        const isActive = c.status !== 'No';
+        
+        // Match search query
+        const matchesQuery = 
+          c.contact_person?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.mailbox_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.unit_number?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        return isActive && matchesQuery;
+      });
       setSearchResults(filtered.slice(0, 8));
       setShowDropdown(true);
     } catch (err) {
@@ -130,12 +142,14 @@ export default function IntakePage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mail Intake</h1>
-        <p className="text-gray-600">Add new mail items</p>
-      </div>
+    <div className={embedded ? '' : 'max-w-7xl mx-auto px-6 py-8'}>
+      {/* Header - only show if not embedded */}
+      {!embedded && (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mail Intake</h1>
+          <p className="text-gray-600">Add new mail items</p>
+        </div>
+      )}
 
       {/* Add New Mail Form */}
       <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm">

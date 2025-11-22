@@ -175,10 +175,7 @@ exports.deleteContact = async (req, res, next) => {
       throw error;
     }
     
-    res.json({ 
-      message: 'Contact deleted successfully', 
-      data 
-    });
+    res.status(204).send(); // No content on successful deletion
   } catch (error) {
     next(error);
   }

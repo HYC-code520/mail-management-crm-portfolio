@@ -12,6 +12,7 @@ import MailItemsPage from './pages/MailItems.tsx';
 import NewMailItemPage from './pages/NewMailItem.tsx';
 import SendMessagePage from './pages/SendMessage.tsx';
 import TemplatesPage from './pages/Templates.tsx';
+import MailManagementPage from './pages/MailManagement.tsx';
 import IntakePage from './pages/Intake.tsx';
 import LogPage from './pages/Log.tsx';
 import DesignSystemPage from './pages/DesignSystem.tsx';
@@ -37,7 +38,10 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<DashboardPage />} />
+            <Route path="mail" element={<MailManagementPage />} />
+            {/* Keep old routes for backward compatibility */}
             <Route path="intake" element={<IntakePage />} />
+            <Route path="log" element={<LogPage />} />
             <Route path="contacts" element={<ContactsPage />} />
             <Route path="contacts/new" element={<NewContactPage />} />
             <Route path="contacts/:id" element={<ContactDetailPage />} />
@@ -45,7 +49,6 @@ function App() {
             <Route path="mail-items" element={<MailItemsPage />} />
             <Route path="mail-items/new" element={<NewMailItemPage />} />
             <Route path="templates" element={<TemplatesPage />} />
-            <Route path="log" element={<LogPage />} />
             <Route path="design-system" element={<DesignSystemPage />} />
           </Route>
 

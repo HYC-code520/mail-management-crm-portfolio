@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Package, Search, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
+import Modal from '../components/Modal.tsx';
 
 interface MailItem {
   mail_item_id: string;
@@ -12,7 +13,9 @@ interface MailItem {
   pickup_date?: string;
   description?: string;
   last_notified?: string;
+  contact_id: string;
   contacts?: {
+    contact_id: string;
     contact_person?: string;
     company_name?: string;
     mailbox_number?: string;
@@ -20,17 +23,42 @@ interface MailItem {
   };
 }
 
-export default function LogPage() {
+interface Contact {
+  contact_id: string;
+  contact_person?: string;
+  company_name?: string;
+  mailbox_number?: string;
+}
+
+interface LogPageProps {
+  embedded?: boolean;
+}
+
+export default function LogPage({ embedded = false }: LogPageProps) {
   const navigate = useNavigate();
   const [mailItems, setMailItems] = useState<MailItem[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMailItem, setEditingMailItem] = useState<MailItem | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  
+  // Form data
+  const [formData, setFormData] = useState({
+    contact_id: '',
+    item_type: 'Package',
+    description: '',
+    status: 'Received'
+  });
 
   useEffect(() => {
     loadMailItems();
+    loadContacts();
   }, []);
 
   const loadMailItems = async () => {
@@ -42,6 +70,86 @@ export default function LogPage() {
       toast.error('Failed to load mail log');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadContacts = async () => {
+    try {
+      const data = await api.contacts.getAll();
+      setContacts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading contacts:', err);
+    }
+  };
+
+  const openEditModal = (mailItem: MailItem) => {
+    setEditingMailItem(mailItem);
+    setFormData({
+      contact_id: mailItem.contact_id || '',
+      item_type: mailItem.item_type || 'Package',
+      description: mailItem.description || '',
+      status: mailItem.status || 'Received'
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsEditModalOpen(false);
+    setEditingMailItem(null);
+    setFormData({
+      contact_id: '',
+      item_type: 'Package',
+      description: '',
+      status: 'Received'
+    });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.contact_id) {
+      toast.error('Please select a customer');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      if (editingMailItem) {
+        await api.mailItems.update(editingMailItem.mail_item_id, formData);
+        toast.success('Mail item updated successfully!');
+      }
+      closeModal();
+      loadMailItems();
+    } catch (err) {
+      console.error('Failed to update mail item:', err);
+      toast.error('Failed to update mail item');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (mailItemId: string) => {
+    if (!confirm('Are you sure you want to delete this mail item? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingItemId(mailItemId);
+
+    try {
+      await api.mailItems.delete(mailItemId);
+      toast.success('Mail item deleted successfully!');
+      loadMailItems();
+    } catch (err) {
+      console.error('Failed to delete mail item:', err);
+      toast.error('Failed to delete mail item');
+    } finally {
+      setDeletingItemId(null);
     }
   };
 
@@ -78,12 +186,14 @@ export default function LogPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mail Log</h1>
-        <p className="text-gray-600">Complete history of mail activities</p>
-      </div>
+    <div className={embedded ? '' : 'max-w-7xl mx-auto px-6 py-8'}>
+      {/* Header - only show if not embedded */}
+      {!embedded && (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mail Log</h1>
+          <p className="text-gray-600">Complete history of mail activities</p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-4 mb-6">
@@ -144,6 +254,7 @@ export default function LogPage() {
                 <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Status</th>
                 <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Last Notified</th>
                 <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Notes</th>
+                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -195,12 +306,29 @@ export default function LogPage() {
                     <td className="py-4 px-6 text-gray-700">
                       {item.description || '—'}
                     </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2 text-sm">
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.mail_item_id)}
+                          disabled={deletingItemId === item.mail_item_id}
+                          className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deletingItemId === item.mail_item_id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
 
                   {/* Expanded Row Details */}
                   {expandedRows.has(item.mail_item_id) && (
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <td colSpan={7} className="py-6 px-6">
+                      <td colSpan={8} className="py-6 px-6">
                         <div className="space-y-6">
                           {/* Notification History */}
                           <div>
@@ -235,6 +363,98 @@ export default function LogPage() {
           Showing {filteredItems.length} of {mailItems.length} items
         </div>
       )}
+
+      {/* Edit Mail Item Modal */}
+      <Modal 
+        isOpen={isEditModalOpen} 
+        onClose={closeModal}
+        title="Edit Mail Item"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Customer Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Customer *</label>
+            <select
+              name="contact_id"
+              value={formData.contact_id}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Select a customer</option>
+              {contacts.map(contact => (
+                <option key={contact.contact_id} value={contact.contact_id}>
+                  {contact.contact_person || contact.company_name} - {contact.mailbox_number}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mail Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Mail Type *</label>
+            <select
+              name="item_type"
+              value={formData.item_type}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="Letter">Letter</option>
+              <option value="Package">Package</option>
+              <option value="Certified Mail">Certified Mail</option>
+            </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Status *</label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="Received">Received</option>
+              <option value="Pending">Pending</option>
+              <option value="Notified">Notified</option>
+              <option value="Picked Up">Picked Up</option>
+            </select>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Description</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Add any notes about this mail item..."
+              rows={3}
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="flex-1 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? 'Updating...' : 'Update Mail Item'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -85,6 +85,12 @@ How to set up environment variables for development.
 - Frontend `.env` setup
 - Supabase configuration
 
+### [Migration Guide](MIGRATION_GUIDE.md) ⭐ **NEW**
+How to apply database migrations properly.
+- Understanding Supabase migrations
+- Applying the mail management migration
+- Migration best practices
+
 ### [Troubleshooting](TROUBLESHOOTING.md)
 Common issues and their solutions.
 - Connection errors
@@ -226,9 +232,9 @@ When adding new documentation:
 
 ## 📊 Documentation Stats
 
-- **Total Documentation Files:** 14
+- **Total Documentation Files:** 15
 - **Testing Documentation:** 5 files
-- **Setup Guides:** 2 files
+- **Setup Guides:** 3 files
 - **Design Documentation:** 4 files
 - **CI/CD Documentation:** 2 files
 - **Project Management:** 3 files
@@ -236,4 +242,5 @@ When adding new documentation:
 ---
 
 **Last Updated:** November 22, 2025
+
 

@@ -38,6 +38,11 @@ class ApiClient {
       throw new Error(error.error || `Request failed with status ${response.status}`);
     }
 
+    // Handle 204 No Content (common for DELETE requests)
+    if (response.status === 204) {
+      return null;
+    }
+
     return response.json();
   }
 
@@ -91,7 +96,9 @@ export const api = {
   mailItems: {
     getAll: (contactId?: string) => apiClient.get(`/mail-items${contactId ? `?contact_id=${contactId}` : ''}`),
     create: (data: any) => apiClient.post('/mail-items', data),
+    update: (id: string, data: any) => apiClient.put(`/mail-items/${id}`, data),
     updateStatus: (id: string, status: string) => apiClient.put(`/mail-items/${id}`, { status }),
+    delete: (id: string) => apiClient.delete(`/mail-items/${id}`),
   },
   outreachMessages: {
     getAll: (contactId?: string, mailItemId?: string) => {
@@ -104,6 +111,9 @@ export const api = {
   },
   templates: {
     getAll: () => apiClient.get('/templates'),
+    create: (data: any) => apiClient.post('/templates', data),
+    update: (id: string, data: any) => apiClient.put(`/templates/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/templates/${id}`),
   },
 };
 

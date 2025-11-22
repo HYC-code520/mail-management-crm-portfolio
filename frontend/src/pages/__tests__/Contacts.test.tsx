@@ -9,11 +9,15 @@ vi.mock('../../lib/api-client', () => ({
   apiClient: {
     get: vi.fn(),
     delete: vi.fn(),
+    put: vi.fn(),
+    post: vi.fn(),
   },
   api: {
     contacts: {
       getAll: vi.fn(),
       delete: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
@@ -39,15 +43,25 @@ describe('Contacts Page', () => {
   it('renders contacts page with title', async () => {
     render(<Contacts />);
     
-    expect(screen.getByText('Customer Directory')).toBeInTheDocument();
+    // Wait for the title to appear after loading
+    expect(await screen.findByText('Customer Directory')).toBeInTheDocument();
+    
+    // Wait for async loading to complete
+    await waitFor(() => {
+      expect(api.contacts.getAll).toHaveBeenCalled();
+    });
   });
 
+  // Test that contacts display correctly in the table
+  // Contact 1 has a person name, so it shows "John Doe"
+  // Contact 2 has no person name, so it shows "Test Company 2"
   it('displays list of contacts when loaded', async () => {
     render(<Contacts />);
     
+    // Wait for contacts to load - look for the person name (shown first) and company name (when no person)
     await waitFor(() => {
-      expect(screen.getByText('Test Company 1')).toBeInTheDocument();
-      expect(screen.getByText('Test Company 2')).toBeInTheDocument();
+      expect(screen.getByText('John Doe')).toBeInTheDocument(); // Contact 1 shows person name
+      expect(screen.getByText('Test Company 2')).toBeInTheDocument(); // Contact 2 shows company name (no person)
     });
   });
 
@@ -55,27 +69,44 @@ describe('Contacts Page', () => {
     const user = userEvent.setup();
     render(<Contacts />);
     
+    // Wait for contacts to load
     await waitFor(() => {
-      expect(screen.getByText('Test Company 1')).toBeInTheDocument();
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('Test Company 2')).toBeInTheDocument();
     });
     
+    // Search filters locally, not via API call
     const searchInput = screen.getByPlaceholderText(/search/i);
-    await user.type(searchInput, 'Test Company 1');
+    await user.type(searchInput, 'Test Company 2');
     
-    // API should be called with search query
+    // After typing, only Test Company 2 should be visible
     await waitFor(() => {
-      expect(api.contacts.getAll).toHaveBeenCalled();
+      expect(screen.getByText('Test Company 2')).toBeInTheDocument();
+      expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
     });
   });
 
-  it('navigates to add contact page when add button clicked', async () => {
+  it('opens modal when add button clicked', async () => {
     const user = userEvent.setup();
     render(<Contacts />);
     
-    const addButton = await screen.findByRole('button', { name: /add.*contact/i });
-    await user.click(addButton);
+    // Wait for component to load
+    await waitFor(() => {
+      expect(api.contacts.getAll).toHaveBeenCalled();
+    });
     
-    expect(mockNavigate).toHaveBeenCalledWith('/contacts/new');
+    // Find the "Add New Customer" button (there are two - one in header, one in empty state)
+    const addButtons = screen.getAllByRole('button', { name: /add new customer/i });
+    const headerAddButton = addButtons[0]; // The first one is in the header
+    
+    await user.click(headerAddButton);
+    
+    // Should open a modal instead of navigating
+    // Check that a form modal appears with "Add New Customer" title
+    await waitFor(() => {
+      // The modal should have customer form fields
+      expect(screen.getByPlaceholderText(/full name/i)).toBeInTheDocument();
+    });
   });
 
   it('displays contact details', async () => {
@@ -94,7 +125,7 @@ describe('Contacts Page', () => {
     render(<Contacts />);
     
     await waitFor(() => {
-      expect(screen.getByText(/no contacts found/i)).toBeInTheDocument();
+      expect(screen.getByText(/no customers yet/i)).toBeInTheDocument();
     });
   });
 
