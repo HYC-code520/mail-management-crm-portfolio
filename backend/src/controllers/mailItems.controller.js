@@ -47,18 +47,24 @@ exports.getMailItems = async (req, res, next) => {
 exports.createMailItem = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient(req.user.token);
-    const { contact_id, item_type, description, status } = req.body;
+    const { contact_id, item_type, description, status, quantity } = req.body;
 
     // Validate required fields
     if (!contact_id) {
       return res.status(400).json({ error: 'contact_id is required' });
     }
 
+    // Validate quantity if provided
+    if (quantity !== undefined && (quantity < 1 || !Number.isInteger(quantity))) {
+      return res.status(400).json({ error: 'quantity must be a positive integer' });
+    }
+
     const mailItemData = {
       contact_id,
       item_type: item_type || 'Package',
       description,
-      status: status || 'Received'
+      status: status || 'Received',
+      quantity: quantity || 1
     };
 
     const { data: mailItem, error } = await supabase

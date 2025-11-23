@@ -58,6 +58,7 @@ CREATE TABLE mail_items (
     mail_item_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contact_id          UUID REFERENCES contacts(contact_id) ON DELETE CASCADE,
     item_type           TEXT DEFAULT 'Package', -- Package, Letter, Certified Mail, etc.
+    quantity            INTEGER DEFAULT 1, -- Number of items (e.g., 7 letters, 3 packages)
     description         TEXT, -- Brief note about the item
     received_date       TIMESTAMPTZ DEFAULT NOW(),
     status              TEXT DEFAULT 'Received', -- Received, Notified, Picked Up, Returned

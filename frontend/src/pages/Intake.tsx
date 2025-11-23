@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Save, Bell, Mail, Package } from 'lucide-react';
+import { Search, Save, Bell, Mail, Package, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 
@@ -36,6 +36,10 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [todaysEntries, setTodaysEntries] = useState<TodaysEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<'type' | 'customer' | 'status' | 'quantity'>('customer');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     loadTodaysEntries();
@@ -103,14 +107,13 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
     setLoading(true);
 
     try {
-      for (let i = 0; i < quantity; i++) {
-        await api.mailItems.create({
-          contact_id: selectedContact.contact_id,
-          item_type: itemType,
-          description: note,
-          status: 'Received'
-        });
-      }
+      await api.mailItems.create({
+        contact_id: selectedContact.contact_id,
+        item_type: itemType,
+        description: note,
+        status: 'Received',
+        quantity: quantity
+      });
 
       toast.success(`${quantity} mail item(s) added successfully!`);
       
@@ -140,6 +143,43 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
       toast.error('Failed to update status');
     }
   };
+
+  const handleSort = (column: 'type' | 'customer' | 'status' | 'quantity') => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sorting
+  const sortedEntries = [...todaysEntries].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortColumn) {
+      case 'type':
+        comparison = a.item_type.localeCompare(b.item_type);
+        break;
+      case 'customer':
+        const nameA = a.contacts?.contact_person || a.contacts?.company_name || '';
+        const nameB = b.contacts?.contact_person || b.contacts?.company_name || '';
+        comparison = nameA.localeCompare(nameB);
+        break;
+      case 'status':
+        comparison = a.status.localeCompare(b.status);
+        break;
+      case 'quantity':
+        const qtyA = (a as any).quantity || 1;
+        const qtyB = (b as any).quantity || 1;
+        comparison = qtyA - qtyB;
+        break;
+    }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
 
   return (
     <div className={embedded ? '' : 'max-w-7xl mx-auto px-6 py-8'}>
@@ -294,16 +334,74 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Type</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Quantity</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Customer</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Status</th>
+                  {/* Type - Sortable */}
+                  <th 
+                    className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                    onClick={() => handleSort('type')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Type
+                      {sortColumn === 'type' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  
+                  {/* Quantity - Sortable */}
+                  <th 
+                    className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                    onClick={() => handleSort('quantity')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Quantity
+                      {sortColumn === 'quantity' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  
+                  {/* Customer - Sortable */}
+                  <th 
+                    className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                    onClick={() => handleSort('customer')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Customer
+                      {sortColumn === 'customer' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  
+                  {/* Status - Sortable */}
+                  <th 
+                    className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Status
+                      {sortColumn === 'status' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  
                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Note</th>
                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {todaysEntries.map((entry) => (
+                {sortedEntries.map((entry) => {
+                  const quantity = (entry as any).quantity || 1;
+                  return (
                   <tr key={entry.mail_item_id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-6">
                       <span className="flex items-center gap-2">
@@ -315,7 +413,12 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
                         <span className="text-gray-900">{entry.item_type}</span>
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-gray-900">1</td>
+                    <td className="py-4 px-6">
+                      <span className="font-semibold text-gray-900">{quantity}</span>
+                      {quantity > 1 && (
+                        <span className="ml-2 text-xs text-gray-500">({quantity} items)</span>
+                      )}
+                    </td>
                     <td className="py-4 px-6 text-gray-900">
                       {entry.contacts?.contact_person || entry.contacts?.company_name || 'N/A'}
                     </td>
@@ -341,7 +444,8 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

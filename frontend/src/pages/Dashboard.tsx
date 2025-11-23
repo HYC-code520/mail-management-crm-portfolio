@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Mail, Package, Bell, Search } from 'lucide-react';
+import { Mail, Package, Bell, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 
 interface MailItem {
@@ -8,6 +8,7 @@ interface MailItem {
   status: string;
   received_date: string;
   contact_id: string;
+  quantity?: number;
   contacts?: {
     contact_person?: string;
     company_name?: string;
@@ -27,6 +28,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<'date' | 'type' | 'customer' | 'status'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     loadDashboardData();
@@ -75,6 +80,17 @@ export default function DashboardPage() {
     );
   }
 
+  const handleSort = (column: 'date' | 'type' | 'customer' | 'status') => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to descending for date, ascending for others
+      setSortColumn(column);
+      setSortDirection(column === 'date' ? 'desc' : 'asc');
+    }
+  };
+
   const filteredItems = stats?.recentMailItems.filter((item: any) => {
     const matchesStatus = statusFilter === 'All Status' || item.status === statusFilter;
     const matchesSearch = searchTerm === '' || 
@@ -82,6 +98,30 @@ export default function DashboardPage() {
       item.contacts?.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   }) || [];
+
+  // Sorting
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortColumn) {
+      case 'date':
+        comparison = new Date(a.received_date).getTime() - new Date(b.received_date).getTime();
+        break;
+      case 'type':
+        comparison = a.item_type.localeCompare(b.item_type);
+        break;
+      case 'customer':
+        const nameA = a.contacts?.contact_person || a.contacts?.company_name || '';
+        const nameB = b.contacts?.contact_person || b.contacts?.company_name || '';
+        comparison = nameA.localeCompare(nameB);
+        break;
+      case 'status':
+        comparison = a.status.localeCompare(b.status);
+        break;
+    }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -165,22 +205,80 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Date</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Type</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Customer</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Status</th>
+                {/* Date - Sortable */}
+                <th 
+                  className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-2">
+                    Date
+                    {sortColumn === 'date' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </th>
+                
+                {/* Type - Sortable */}
+                <th 
+                  className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                  onClick={() => handleSort('type')}
+                >
+                  <div className="flex items-center gap-2">
+                    Type
+                    {sortColumn === 'type' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </th>
+                
+                {/* Quantity Column - Non-sortable */}
+                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Qty</th>
+                
+                {/* Customer - Sortable */}
+                <th 
+                  className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                  onClick={() => handleSort('customer')}
+                >
+                  <div className="flex items-center gap-2">
+                    Customer
+                    {sortColumn === 'customer' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </th>
+                
+                {/* Status - Sortable */}
+                <th 
+                  className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center gap-2">
+                    Status
+                    {sortColumn === 'status' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.length === 0 ? (
+              {sortedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-12">
+                  <td colSpan={5} className="text-center py-12">
                     <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">No mail items yet</p>
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item: MailItem) => (
+                sortedItems.map((item: MailItem) => (
                   <tr key={item.mail_item_id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6 text-gray-900">
                       {new Date(item.received_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }).replace(/\//g, '-')}
@@ -194,6 +292,9 @@ export default function DashboardPage() {
                         )}
                         <span>{item.item_type}</span>
                       </div>
+                    </td>
+                    <td className="py-4 px-6 text-gray-900 font-semibold">
+                      {item.quantity || 1}
                     </td>
                     <td className="py-4 px-6 text-gray-900">
                       {item.contacts?.contact_person || item.contacts?.company_name || 'Unknown'}

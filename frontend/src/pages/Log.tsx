@@ -14,6 +14,7 @@ interface MailItem {
   description?: string;
   last_notified?: string;
   contact_id: string;
+  quantity?: number;
   contacts?: {
     contact_id: string;
     contact_person?: string;
@@ -47,7 +48,7 @@ export default function LogPage({ embedded = false }: LogPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('All Time');
   const [mailboxFilter, setMailboxFilter] = useState('All Mailboxes');
-  const [sortColumn, setSortColumn] = useState<'date' | 'status' | 'customer' | 'type'>('date');
+  const [sortColumn, setSortColumn] = useState<'date' | 'status' | 'customer' | 'type' | 'quantity'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isFilterExpanded, setIsFilterExpanded] = useState(true); // New state for filter panel
   
@@ -182,7 +183,7 @@ export default function LogPage({ embedded = false }: LogPageProps) {
     setSortDirection('desc');
   };
 
-  const handleSort = (column: 'date' | 'status' | 'customer' | 'type') => {
+  const handleSort = (column: 'date' | 'status' | 'customer' | 'type' | 'quantity') => {
     if (sortColumn === column) {
       // Toggle direction if clicking the same column
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -261,6 +262,11 @@ export default function LogPage({ embedded = false }: LogPageProps) {
         break;
       case 'type':
         comparison = a.item_type.localeCompare(b.item_type);
+        break;
+      case 'quantity':
+        const qtyA = a.quantity || 1;
+        const qtyB = b.quantity || 1;
+        comparison = qtyA - qtyB;
         break;
     }
     
@@ -529,6 +535,21 @@ export default function LogPage({ embedded = false }: LogPageProps) {
                   </div>
                 </th>
                 
+                {/* Quantity Column - Sortable */}
+                <th 
+                  className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                  onClick={() => handleSort('quantity')}
+                >
+                  <div className="flex items-center gap-2">
+                    Qty
+                    {sortColumn === 'quantity' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </th>
+                
                 {/* Customer Column - Sortable */}
                 <th 
                   className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
@@ -594,6 +615,9 @@ export default function LogPage({ embedded = false }: LogPageProps) {
                         )}
                         <span>{item.item_type}</span>
                       </div>
+                    </td>
+                    <td className="py-4 px-6 text-gray-900 font-semibold">
+                      {item.quantity || 1}
                     </td>
                     <td className="py-4 px-6 text-gray-900">
                       {item.contacts?.contact_person || item.contacts?.company_name || 'Unknown'}
