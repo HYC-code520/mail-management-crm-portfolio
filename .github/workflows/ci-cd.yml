@@ -31,6 +31,7 @@ jobs:
       run: |
         cd backend
         npm ci
+        npm install --save-dev @jest/test-sequencer@27.5.1
     
     - name: 🧪 Run backend tests
       run: |
@@ -134,6 +135,7 @@ jobs:
       run: |
         cd backend
         npm ci
+        npm install --save-dev @jest/test-sequencer@27.5.1
     
     - name: ✅ Verify server can start
       run: |
