@@ -183,6 +183,52 @@ describe('Mail Items API', () => {
       expect(response.body).toHaveProperty('error');
       expect(response.body.error).toBe('contact_id is required');
     });
+
+    it('should return 400 when status is invalid', async () => {
+      const invalidMailItem = {
+        contact_id: 'contact-123',
+        item_type: 'Package',
+        status: 'Invalid Status'
+      };
+
+      const response = await request(app)
+        .post('/api/mail-items')
+        .send(invalidMailItem)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toContain('Invalid status');
+    });
+
+    it('should create mail item with new status values', async () => {
+      const newStatuses = ['Scanned Document', 'Forward', 'Abandoned Package'];
+      
+      for (const status of newStatuses) {
+        const mailItem = {
+          contact_id: 'contact-123',
+          item_type: 'Package',
+          status: status
+        };
+
+        const createdItem = {
+          mail_item_id: 'mail-1',
+          ...mailItem,
+          received_date: new Date().toISOString()
+        };
+
+        mockSupabaseClient.single.mockResolvedValue({
+          data: createdItem,
+          error: null
+        });
+
+        const response = await request(app)
+          .post('/api/mail-items')
+          .send(mailItem)
+          .expect(201);
+
+        expect(response.body.status).toBe(status);
+      }
+    });
   });
 
   describe('PUT /api/mail-items/:id', () => {
@@ -249,6 +295,39 @@ describe('Mail Items API', () => {
 
       expect(response.body).toHaveProperty('error');
       expect(response.body.error).toBe('No update fields provided');
+    });
+
+    it('should update mail item with new status values', async () => {
+      const newStatuses = ['Scanned Document', 'Forward', 'Abandoned Package'];
+      
+      for (const status of newStatuses) {
+        const updatedItem = {
+          mail_item_id: 'mail-1',
+          status: status
+        };
+
+        mockSupabaseClient.single.mockResolvedValue({
+          data: updatedItem,
+          error: null
+        });
+
+        const response = await request(app)
+          .put('/api/mail-items/mail-1')
+          .send({ status: status })
+          .expect(200);
+
+        expect(response.body.mailItem.status).toBe(status);
+      }
+    });
+
+    it('should return 400 when updating with invalid status', async () => {
+      const response = await request(app)
+        .put('/api/mail-items/mail-1')
+        .send({ status: 'Invalid Status' })
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toContain('Invalid status');
     });
   });
 });

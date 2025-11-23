@@ -54,6 +54,12 @@ exports.createMailItem = async (req, res, next) => {
       return res.status(400).json({ error: 'contact_id is required' });
     }
 
+    // Validate status if provided
+    const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned Document', 'Forward', 'Abandoned Package'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
     // Validate quantity if provided
     if (quantity !== undefined && (quantity < 1 || !Number.isInteger(quantity))) {
       return res.status(400).json({ error: 'quantity must be a positive integer' });
@@ -98,6 +104,11 @@ exports.updateMailItemStatus = async (req, res, next) => {
     const updateData = {};
     
     if (status !== undefined) {
+      // Validate status
+      const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned Document', 'Forward', 'Abandoned Package'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+      }
       updateData.status = status;
       // If status is 'Picked Up', set pickup_date to now
       if (status === 'Picked Up') {

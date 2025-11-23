@@ -61,7 +61,7 @@ CREATE TABLE mail_items (
     quantity            INTEGER DEFAULT 1, -- Number of items (e.g., 7 letters, 3 packages)
     description         TEXT, -- Brief note about the item
     received_date       TIMESTAMPTZ DEFAULT NOW(),
-    status              TEXT DEFAULT 'Received', -- Received, Notified, Picked Up, Returned
+    status              TEXT DEFAULT 'Received', -- Received, Notified, Picked Up, Pending, Scanned Document, Forward, Abandoned Package
     pickup_date         TIMESTAMPTZ,
     created_at          TIMESTAMPTZ DEFAULT NOW()
 );

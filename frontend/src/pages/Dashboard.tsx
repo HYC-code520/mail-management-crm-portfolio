@@ -328,10 +328,15 @@ export default function DashboardPage() {
                       {item.contacts?.contact_person || item.contacts?.company_name || 'Unknown'}
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        item.status === 'Pending' ? 'badge-pending' :
-                        item.status === 'Notified' ? 'badge-notified' :
-                        'badge-neutral'
+                      <span className={`px-3 py-1 rounded text-xs font-medium ${
+                        item.status === 'Received' ? 'bg-blue-100 text-blue-700' :
+                        item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                        item.status === 'Notified' ? 'bg-purple-100 text-purple-700' :
+                        item.status === 'Picked Up' ? 'bg-green-100 text-green-700' :
+                        item.status === 'Scanned Document' ? 'bg-cyan-100 text-cyan-700' :
+                        item.status === 'Forward' ? 'bg-orange-100 text-orange-700' :
+                        item.status === 'Abandoned Package' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-200 text-gray-700'
                       }`}>
                         {item.status}
                       </span>

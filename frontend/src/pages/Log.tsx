@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Package, Search, ChevronRight, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Edit, Trash2 } from 'lucide-react';
+import { Mail, Package, Search, ChevronRight, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Edit, Trash2, Bell, CheckCircle, FileText, Send, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
@@ -253,6 +253,17 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       toast.error('Failed to delete mail item');
     } finally {
       setDeletingItemId(null);
+    }
+  };
+
+  const quickStatusUpdate = async (mailItemId: string, newStatus: string) => {
+    try {
+      await api.mailItems.update(mailItemId, { status: newStatus });
+      toast.success(`Status updated to ${newStatus}`);
+      loadMailItems();
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      toast.error('Failed to update status');
     }
   };
 
@@ -568,8 +579,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 >
                   <option>All Status</option>
                   <option>Received</option>
+                  <option>Pending</option>
                   <option>Notified</option>
                   <option>Picked Up</option>
+                  <option>Scanned Document</option>
+                  <option>Forward</option>
+                  <option>Abandoned Package</option>
                 </select>
               </div>
 
@@ -801,16 +816,16 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 </th>
                 
                 {/* Non-sortable columns */}
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Last Notified</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Notes</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Actions</th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Last Notified</th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Notes</th>
+                  <th className="sticky right-0 bg-white text-left py-3 px-6 text-sm font-semibold text-gray-700 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.1)] z-10">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sortedItems.map((item) => (
-                <React.Fragment key={item.mail_item_id}>
-                  {/* Main Row */}
-                  <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <React.Fragment key={item.mail_item_id}>
+                    {/* Main Row */}
+                    <tr className="group border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6">
                       <button
                         onClick={() => toggleRow(item.mail_item_id)}
@@ -844,9 +859,13 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                     </td>
                     <td className="py-4 px-6">
                       <span className={`px-3 py-1 rounded text-xs font-medium ${
-                        item.status === 'Pending' ? 'bg-black text-white' :
-                        item.status === 'Notified' ? 'bg-gray-200 text-gray-700' :
-                        item.status === 'Picked Up' ? 'bg-gray-200 text-gray-700' :
+                        item.status === 'Received' ? 'bg-blue-100 text-blue-700' :
+                        item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                        item.status === 'Notified' ? 'bg-purple-100 text-purple-700' :
+                        item.status === 'Picked Up' ? 'bg-green-100 text-green-700' :
+                        item.status === 'Scanned Document' ? 'bg-cyan-100 text-cyan-700' :
+                        item.status === 'Forward' ? 'bg-orange-100 text-orange-700' :
+                        item.status === 'Abandoned Package' ? 'bg-red-100 text-red-700' :
                         'bg-gray-200 text-gray-700'
                       }`}>
                         {item.status}
@@ -858,23 +877,76 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                     <td className="py-4 px-6 text-gray-700">
                       {item.description || '—'}
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-sm">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group relative"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.mail_item_id)}
-                          disabled={deletingItemId === item.mail_item_id}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed group relative"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                    <td className="sticky right-0 bg-white group-hover:bg-gray-50 py-4 px-6 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.1)] transition-colors z-10">
+                      <div className="flex items-center justify-end gap-2 text-sm">
+                        {/* Quick Status Actions - Show contextual buttons based on current status */}
+                        <div className="flex items-center gap-2 min-w-[120px]">
+                          {item.status === 'Received' && (
+                            <>
+                              <button
+                                onClick={() => quickStatusUpdate(item.mail_item_id, 'Notified')}
+                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors group relative"
+                                title="Mark as Notified"
+                              >
+                                <Bell className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => quickStatusUpdate(item.mail_item_id, 'Scanned Document')}
+                                className="p-2 text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors group relative"
+                                title="Mark as Scanned"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          {(item.status === 'Notified' || item.status === 'Pending') && (
+                            <>
+                              <button
+                                onClick={() => quickStatusUpdate(item.mail_item_id, 'Picked Up')}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group relative"
+                                title="Mark as Picked Up"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => quickStatusUpdate(item.mail_item_id, 'Forward')}
+                                className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors group relative"
+                                title="Mark as Forward"
+                              >
+                                <Send className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          {(item.status === 'Received' || item.status === 'Notified' || item.status === 'Pending') && (
+                            <button
+                              onClick={() => quickStatusUpdate(item.mail_item_id, 'Abandoned Package')}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group relative"
+                              title="Mark as Abandoned"
+                            >
+                              <AlertTriangle className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Always show Edit and Delete - Fixed on the right */}
+                        <div className="border-l border-gray-300 h-6 mx-1"></div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group relative"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.mail_item_id)}
+                            disabled={deletingItemId === item.mail_item_id}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed group relative"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -1021,6 +1093,9 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               <option value="Pending">Pending</option>
               <option value="Notified">Notified</option>
               <option value="Picked Up">Picked Up</option>
+              <option value="Scanned Document">Scanned Document</option>
+              <option value="Forward">Forward</option>
+              <option value="Abandoned Package">Abandoned Package</option>
             </select>
           </div>
 
