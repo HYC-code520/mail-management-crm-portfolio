@@ -70,7 +70,7 @@ This application helps manage:
    - Optionally, seed sample data using scripts in the `scripts/` folder
 
 3. **Configure Backend**
-   
+
    ```bash
    cd backend
    npm install

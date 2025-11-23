@@ -64,7 +64,9 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     contact_id: '',
     item_type: 'Package',
     description: '',
-    status: 'Received'
+    status: 'Received',
+    received_date: '',
+    quantity: 1
   });
   
   // Add form states (for showAddForm)
@@ -182,7 +184,9 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       contact_id: mailItem.contact_id || '',
       item_type: mailItem.item_type || 'Package',
       description: mailItem.description || '',
-      status: mailItem.status || 'Received'
+      status: mailItem.status || 'Received',
+      received_date: mailItem.received_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+      quantity: (mailItem as any).quantity || 1
     });
     setIsEditModalOpen(true);
   };
@@ -194,13 +198,18 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       contact_id: '',
       item_type: 'Package',
       description: '',
-      status: 'Received'
+      status: 'Received',
+      received_date: '',
+      quantity: 1
     });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: name === 'quantity' ? parseInt(value) || 1 : value 
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -933,6 +942,36 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Date and Quantity - Two Column Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Received Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Date *</label>
+              <input
+                type="date"
+                name="received_date"
+                value={formData.received_date}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            {/* Quantity */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Quantity *</label>
+              <input
+                type="number"
+                name="quantity"
+                min="1"
+                value={formData.quantity}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
           </div>
 
           {/* Mail Type */}
