@@ -258,3 +258,4 @@ WHERE NOT EXISTS (
 -- ✅ Added default message templates
 
 
+

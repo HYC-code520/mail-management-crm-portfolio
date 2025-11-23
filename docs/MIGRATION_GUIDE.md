@@ -67,3 +67,4 @@ The migration is **idempotent** - it's safe to run multiple times. It won't brea
 **Need Help?** The migration file has detailed comments explaining each step!
 
 
+

@@ -260,3 +260,4 @@ No database migration required! The `status` field is already TEXT type, so any 
 
 Existing data remains valid and will continue to work correctly.
 
+

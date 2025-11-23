@@ -104,3 +104,4 @@ November 23, 2025
 - Support additional languages (Spanish, etc.)
 - Automatic language detection based on user's browser settings
 
+

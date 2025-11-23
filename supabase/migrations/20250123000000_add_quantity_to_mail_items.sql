@@ -13,3 +13,4 @@ WHERE quantity IS NULL;
 ALTER TABLE mail_items
 ADD CONSTRAINT mail_items_quantity_positive CHECK (quantity > 0);
 
+

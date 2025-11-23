@@ -70,3 +70,4 @@ Or we could add an optional "Include archived" checkbox if this becomes a common
 - `frontend/src/pages/Intake.tsx` - Customer search logic
 - `frontend/src/pages/Contacts.tsx` - Where customers are archived/restored
 
+
