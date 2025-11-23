@@ -67,6 +67,15 @@ export default function NewContactPage() {
       return;
     }
 
+    // Validate phone number if provided
+    if (formData.phone) {
+      const digitsOnly = formData.phone.replace(/\D/g, '');
+      if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
+        toast.error('Phone number must be exactly 10 digits');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
