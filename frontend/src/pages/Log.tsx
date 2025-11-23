@@ -936,11 +936,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="">Select a customer</option>
-              {contacts.map(contact => (
-                <option key={contact.contact_id} value={contact.contact_id}>
-                  {contact.contact_person || contact.company_name} - {contact.mailbox_number}
-                </option>
-              ))}
+              {contacts
+                .filter(contact => (contact as any).status !== 'No')
+                .map(contact => (
+                  <option key={contact.contact_id} value={contact.contact_id}>
+                    {contact.contact_person || contact.company_name} - {contact.mailbox_number}
+                  </option>
+                ))
+              }
             </select>
           </div>
 
