@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Package, Bell, Search, ArrowUpDown, ArrowUp, ArrowDown, UserPlus, Plus, FileText, Clock, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { api } from '../lib/api-client.ts';
+import Modal from '../components/Modal.tsx';
+import toast from 'react-hot-toast';
 
 interface MailItem {
   mail_item_id: string;
@@ -53,9 +55,112 @@ export default function DashboardPage() {
   const [sortColumn, setSortColumn] = useState<'date' | 'type' | 'customer' | 'status'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  // Add Customer Modal states
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    contact_person: '',
+    company_name: '',
+    mailbox_number: '',
+    unit_number: '',
+    email: '',
+    phone_number: '',
+    language_preference: 'English',
+    service_tier: 1,
+    status: 'Pending'
+  });
+
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Format phone number as user types: 917-822-5751
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    const limitedDigits = digits.slice(0, 10);
+    
+    // Format: XXX-XXX-XXXX
+    if (limitedDigits.length <= 3) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 6) {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+    } else {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6)}`;
+    }
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    // Apply phone formatting if the field is 'phone_number'
+    if (name === 'phone_number') {
+      const formatted = formatPhoneNumber(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: formatted
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const closeAddCustomerModal = () => {
+    setIsAddCustomerModalOpen(false);
+    setFormData({
+      contact_person: '',
+      company_name: '',
+      mailbox_number: '',
+      unit_number: '',
+      email: '',
+      phone_number: '',
+      language_preference: 'English',
+      service_tier: 1,
+      status: 'Pending'
+    });
+  };
+
+  const handleAddCustomerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.contact_person && !formData.company_name) {
+      toast.error('Please enter either a name or company name');
+      return;
+    }
+
+    if (!formData.mailbox_number) {
+      toast.error('Mailbox number is required');
+      return;
+    }
+
+    // Validate phone number if provided
+    if (formData.phone_number) {
+      const digitsOnly = formData.phone_number.replace(/\D/g, '');
+      if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
+        toast.error('Phone number must be exactly 10 digits');
+        return;
+      }
+    }
+
+    setSaving(true);
+
+    try {
+      await api.contacts.create(formData);
+      toast.success('Customer added successfully!');
+      closeAddCustomerModal();
+      loadDashboardData(); // Refresh dashboard data
+    } catch (err) {
+      console.error('Failed to create contact:', err);
+      toast.error(`Failed to add customer: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -254,21 +359,21 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <button
           onClick={() => navigate('/dashboard/mail')}
-          className="flex items-center justify-center gap-3 px-6 py-4 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+          className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
         >
           <Mail className="w-5 h-5" />
           <span>Log New Mail</span>
         </button>
         <button
-          onClick={() => navigate('/dashboard/contacts/new')}
-          className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+          onClick={() => setIsAddCustomerModalOpen(true)}
+          className="flex items-center justify-center gap-3 px-6 py-4 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
         >
           <UserPlus className="w-5 h-5" />
           <span>Add Customer</span>
         </button>
         <button
           onClick={() => navigate('/dashboard/templates')}
-          className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+          className="flex items-center justify-center gap-3 px-6 py-4 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
         >
           <FileText className="w-5 h-5" />
           <span>View Templates</span>
@@ -282,10 +387,10 @@ export default function DashboardPage() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-gray-600 text-sm mb-1">Today's Mail</p>
-              <p className="text-4xl font-bold text-blue-600">{stats?.todaysMail || 0}</p>
+              <p className="text-4xl font-bold text-gray-900">{stats?.todaysMail || 0}</p>
               <p className="text-gray-500 text-sm mt-1">items received</p>
             </div>
-            <Mail className="w-8 h-8 text-blue-600" />
+            <Mail className="w-8 h-8 text-gray-900" />
           </div>
         </div>
 
@@ -294,27 +399,27 @@ export default function DashboardPage() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-gray-600 text-sm mb-1">Pending Pickups</p>
-              <p className="text-4xl font-bold text-purple-600">{stats?.pendingPickups || 0}</p>
+              <p className="text-4xl font-bold text-gray-900">{stats?.pendingPickups || 0}</p>
               <p className="text-gray-500 text-sm mt-1">awaiting collection</p>
             </div>
-            <Package className="w-8 h-8 text-purple-600" />
+            <Package className="w-8 h-8 text-gray-900" />
           </div>
         </div>
 
         {/* Overdue! */}
-        <div className="bg-white border border-red-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <p className="text-red-600 text-sm mb-1 font-semibold">Overdue!</p>
-              <p className="text-4xl font-bold text-red-600">{stats?.overdueMail || 0}</p>
+              <p className="text-gray-600 text-sm mb-1 font-semibold">Overdue!</p>
+              <p className="text-4xl font-bold text-gray-900">{stats?.overdueMail || 0}</p>
               <p className="text-gray-500 text-sm mt-1">&gt;7 days notified</p>
             </div>
-            <AlertCircle className="w-8 h-8 text-red-600" />
+            <AlertCircle className="w-8 h-8 text-gray-900" />
           </div>
         </div>
 
         {/* Completed Today */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-gray-600 text-sm mb-1">Completed Today</p>
@@ -328,13 +433,13 @@ export default function DashboardPage() {
 
       {/* Needs Follow-Up Widget - HIGH PRIORITY */}
       {stats && stats.needsFollowUp.length > 0 && (
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-lg mb-8">
+        <div className="bg-gray-50 border-2 border-gray-300 rounded-lg mb-8">
           <div 
-            className="p-4 cursor-pointer hover:bg-amber-100 transition-colors flex items-center justify-between"
+            className="p-4 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
             onClick={() => setIsFollowUpExpanded(!isFollowUpExpanded)}
           >
             <div className="flex items-center gap-3">
-              <Clock className="w-6 h-6 text-amber-600" />
+              <Clock className="w-6 h-6 text-gray-900" />
               <div>
                 <h3 className="text-lg font-bold text-gray-900">⚠️ Needs Follow-Up</h3>
                 <p className="text-sm text-gray-600">{stats.needsFollowUp.length} items require attention</p>
@@ -353,11 +458,11 @@ export default function DashboardPage() {
                   <div
                     key={item.mail_item_id}
                     className={`flex items-center justify-between p-4 bg-white rounded-lg border-2 ${
-                      isUrgent ? 'border-red-300' : 'border-yellow-300'
+                      isUrgent ? 'border-gray-400' : 'border-gray-300'
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-3 h-3 rounded-full ${isUrgent ? 'bg-red-600' : 'bg-yellow-600'}`}></div>
+                      <div className={`w-3 h-3 rounded-full ${isUrgent ? 'bg-gray-900' : 'bg-gray-600'}`}></div>
                       <div>
                         <p className="font-medium text-gray-900">
                           {item.contacts?.contact_person || item.contacts?.company_name || 'Unknown Customer'}
@@ -370,12 +475,12 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       {item.status === 'Received' && (
-                        <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded">
                           Need to Notify
                         </span>
                       )}
                       {isUrgent && (
-                        <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">
+                        <span className="px-3 py-1 bg-gray-900 text-white text-xs font-medium rounded">
                           Urgent!
                         </span>
                       )}
@@ -399,7 +504,7 @@ export default function DashboardPage() {
         {/* Mail Volume Chart */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
-            <TrendingUp className="w-6 h-6 text-blue-600" />
+            <TrendingUp className="w-6 h-6 text-gray-900" />
             <div>
               <h2 className="text-xl font-bold text-gray-900">Mail Volume</h2>
               <p className="text-sm text-gray-600">Last 7 days</p>
@@ -425,7 +530,7 @@ export default function DashboardPage() {
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
               />
-              <Bar dataKey="count" fill="#3B82F6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="count" fill="#10B981" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -666,6 +771,148 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Add Customer Modal */}
+      <Modal 
+        isOpen={isAddCustomerModalOpen} 
+        onClose={closeAddCustomerModal}
+        title="Add New Customer"
+      >
+        <form onSubmit={handleAddCustomerSubmit} className="space-y-6">
+          {/* Name & Company */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="contact_person"
+                value={formData.contact_person}
+                onChange={handleFormChange}
+                placeholder="Full name"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Company</label>
+              <input
+                type="text"
+                name="company_name"
+                value={formData.company_name}
+                onChange={handleFormChange}
+                placeholder="Company name"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
+
+          {/* Mailbox & Language */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Mailbox # <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="mailbox_number"
+                value={formData.mailbox_number}
+                onChange={handleFormChange}
+                placeholder="e.g., A1"
+                required
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Preferred Language</label>
+              <select
+                name="language_preference"
+                value={formData.language_preference}
+                onChange={handleFormChange}
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="English">English</option>
+                <option value="Chinese">Chinese</option>
+                <option value="Both">Both</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Email & Phone */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleFormChange}
+                placeholder="email@example.com"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Phone</label>
+              <input
+                type="tel"
+                name="phone_number"
+                value={formData.phone_number}
+                onChange={handleFormChange}
+                placeholder="917-822-5751"
+                maxLength={12}
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
+
+          {/* Unit & Service Tier */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Unit #</label>
+              <input
+                type="text"
+                name="unit_number"
+                value={formData.unit_number}
+                onChange={handleFormChange}
+                placeholder="e.g., 101"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Service Tier</label>
+              <select
+                name="service_tier"
+                value={formData.service_tier}
+                onChange={handleFormChange}
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value={1}>Tier 1 - Basic</option>
+                <option value={2}>Tier 2 - Standard</option>
+                <option value={3}>Tier 3 - Premium</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-4 pt-4">
+            <button
+              type="button"
+              onClick={closeAddCustomerModal}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save Customer'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

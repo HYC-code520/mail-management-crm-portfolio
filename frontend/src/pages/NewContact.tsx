@@ -12,7 +12,7 @@ export default function NewContactPage() {
     mailbox_number: '',
     unit_number: '',
     email: '',
-    phone: '',
+    phone_number: '',
     language_preference: 'English',
     customer_type: 'Tenant',
     status: 'Pending'
@@ -39,8 +39,8 @@ export default function NewContactPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Apply phone formatting if the field is 'phone'
-    if (name === 'phone') {
+    // Apply phone formatting if the field is 'phone_number'
+    if (name === 'phone_number') {
       const formatted = formatPhoneNumber(value);
       setFormData(prev => ({
         ...prev,
@@ -68,8 +68,8 @@ export default function NewContactPage() {
     }
 
     // Validate phone number if provided
-    if (formData.phone) {
-      const digitsOnly = formData.phone.replace(/\D/g, '');
+    if (formData.phone_number) {
+      const digitsOnly = formData.phone_number.replace(/\D/g, '');
       if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
         toast.error('Phone number must be exactly 10 digits');
         return;
@@ -197,8 +197,8 @@ export default function NewContactPage() {
               </label>
               <input
                 type="tel"
-                name="phone"
-                value={formData.phone}
+                name="phone_number"
+                value={formData.phone_number}
                 onChange={handleChange}
                 placeholder="917-822-5751"
                 maxLength={12}

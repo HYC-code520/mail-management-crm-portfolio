@@ -42,7 +42,6 @@ export default function ContactsPage() {
     unit_number: '',
     email: '',
     phone_number: '',
-    wechat: '',
     language_preference: 'English',
     service_tier: 1,
     status: 'Pending'
@@ -127,7 +126,6 @@ export default function ContactsPage() {
       unit_number: contact.unit_number || '',
       email: contact.email || '',
       phone_number: contact.phone_number || '',
-      wechat: '',
       language_preference: contact.language_preference || 'English',
       service_tier: contact.service_tier || 1,
       status: contact.status || 'Pending'
@@ -145,7 +143,6 @@ export default function ContactsPage() {
       unit_number: '',
       email: '',
       phone_number: '',
-      wechat: '',
       language_preference: 'English',
       service_tier: 1,
       status: 'Pending'

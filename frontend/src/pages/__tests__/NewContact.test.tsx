@@ -75,7 +75,7 @@ describe('NewContact Page', () => {
           unit_number: '201',
           mailbox_number: 'MB201',
           email: 'jane@newcompany.com',
-          phone: '555-123-4567', // Formatted by the phone formatter
+          phone_number: '555-123-4567', // Formatted by the phone formatter
         })
       );
     });
