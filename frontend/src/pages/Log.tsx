@@ -948,7 +948,16 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           <div className="grid grid-cols-2 gap-4">
             {/* Received Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Date *</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Date *</label>
+              {editingMailItem && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Current: {new Date(editingMailItem.received_date).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </p>
+              )}
               <input
                 type="date"
                 name="received_date"
@@ -961,7 +970,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Quantity *</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Quantity *</label>
+              {editingMailItem && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Current: {(editingMailItem as any).quantity || 1} item(s)
+                </p>
+              )}
               <input
                 type="number"
                 name="quantity"
