@@ -1142,8 +1142,8 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   </button>
                                 )}
                                 
-                                {/* Mark as Picked Up - For Notified/Pending */}
-                                {(item.status === 'Notified' || item.status === 'Pending') && (
+                                {/* Mark as Picked Up - For Received/Notified/Pending */}
+                                {(item.status === 'Received' || item.status === 'Notified' || item.status === 'Pending') && (
                                   <button
                                     onClick={() => {
                                       quickStatusUpdate(item.mail_item_id, 'Picked Up', item.status);
