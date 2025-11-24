@@ -47,7 +47,7 @@ exports.getMailItems = async (req, res, next) => {
 exports.createMailItem = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient(req.user.token);
-    const { contact_id, item_type, description, status, quantity } = req.body;
+    const { contact_id, item_type, description, status, quantity, received_date } = req.body;
 
     // Validate required fields
     if (!contact_id) {
@@ -72,6 +72,11 @@ exports.createMailItem = async (req, res, next) => {
       status: status || 'Received',
       quantity: quantity || 1
     };
+
+    // Only include received_date if provided (otherwise use database default)
+    if (received_date) {
+      mailItemData.received_date = received_date;
+    }
 
     const { data: mailItem, error } = await supabase
       .from('mail_items')

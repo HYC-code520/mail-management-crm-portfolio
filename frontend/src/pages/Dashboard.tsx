@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Package, Bell, Search, ArrowUpDown, ArrowUp, ArrowDown, UserPlus, Plus, FileText, Clock, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, Package, Bell, Search, ArrowUpDown, ArrowUp, ArrowDown, UserPlus, Plus, FileText, Clock, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';
@@ -14,6 +14,7 @@ interface MailItem {
   received_date: string;
   contact_id: string;
   quantity?: number;
+  last_notified?: string;
   contacts?: {
     contact_person?: string;
     company_name?: string;
@@ -51,6 +52,7 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFollowUpExpanded, setIsFollowUpExpanded] = useState(true);
+  const [followUpDisplayCount, setFollowUpDisplayCount] = useState(10); // Show 10 initially
   
   // Sorting states
   const [sortColumn, setSortColumn] = useState<'date' | 'type' | 'customer' | 'status'>('date');
@@ -222,7 +224,12 @@ export default function DashboardPage() {
           return true;
         }
         return false;
-      }).slice(0, 10); // Limit to 10 items
+      }).sort((a: MailItem, b: MailItem) => {
+        // Sort by date - oldest first (most urgent)
+        const dateA = a.last_notified || a.received_date;
+        const dateB = b.last_notified || b.received_date;
+        return new Date(dateA).getTime() - new Date(dateB).getTime();
+      }); // Don't limit here - let the UI handle display count
 
       // Calculate 7-day mail volume
       const mailVolumeData = [];
@@ -313,6 +320,19 @@ export default function DashboardPage() {
   const openQuickNotifyModal = (item: MailItem) => {
     setNotifyingMailItem(item);
     setIsQuickNotifyModalOpen(true);
+  };
+
+  const handleQuickStatusUpdate = async (mailItemId: string, oldStatus: string, newStatus: string) => {
+    try {
+      await api.mailItems.updateStatus(mailItemId, newStatus);
+      toast.success(`Mail marked as ${newStatus}!`, {
+        duration: 5000,
+      });
+      loadDashboardData();
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast.error('Failed to update mail status');
+    }
   };
 
   const handleQuickNotifySuccess = () => {
@@ -479,12 +499,13 @@ export default function DashboardPage() {
           
           {isFollowUpExpanded && (
             <div className="p-4 pt-0 space-y-3">
-              {stats.needsFollowUp.map((item) => {
+              {stats.needsFollowUp.slice(0, followUpDisplayCount).map((item) => {
                 // Calculate days since notified (use last_notified for Notified status, received_date for Received)
                 const dateToUse = item.status === 'Notified' && item.last_notified 
                   ? item.last_notified 
                   : item.received_date;
                 const daysSince = getDaysSince(dateToUse);
+                const isAbandoned = daysSince >= 30; // 30+ days old
                 const isUrgent = item.status === 'Notified' && daysSince > 2;
                 
                 return (
@@ -495,29 +516,64 @@ export default function DashboardPage() {
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-3 h-3 rounded-full ${isUrgent ? 'bg-gray-900' : 'bg-gray-600'}`}></div>
+                      <div className={`w-3 h-3 rounded-full ${
+                        isAbandoned ? 'bg-red-600' : 
+                        isUrgent ? 'bg-gray-900' : 'bg-gray-600'
+                      }`}></div>
                       <div>
                         <p className="font-medium text-gray-900">
                           {item.contacts?.contact_person || item.contacts?.company_name || 'Unknown Customer'}
                         </p>
                         <p className="text-sm text-gray-600">
-                          📮 {item.contacts?.mailbox_number} • {item.item_type}
-                          {isUrgent ? ` • Notified ${daysSince} days ago` : ' • Not yet notified'}
+                          📮 {item.contacts?.mailbox_number} • {item.item_type} • {daysSince} {daysSince === 1 ? 'day' : 'days'} old
+                          {isAbandoned && (
+                            <span className="font-semibold text-gray-900"> • ⚠️ ABANDONED</span>
+                          )}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openQuickNotifyModal(item)}
-                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 text-sm rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <Bell className="w-4 h-4" />
-                        Mark as Notified
-                      </button>
+                      {isAbandoned ? (
+                        <button
+                          onClick={() => handleQuickStatusUpdate(item.mail_item_id, item.status, 'Abandoned Package')}
+                          className="px-4 py-2 bg-red-200 hover:bg-red-300 text-gray-900 text-sm rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          Mark as Abandoned
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openQuickNotifyModal(item)}
+                          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 text-sm rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <Bell className="w-4 h-4" />
+                          Mark as Notified
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
               })}
+              
+              {/* Load More Button */}
+              {stats.needsFollowUp.length > followUpDisplayCount && (
+                <button
+                  onClick={() => setFollowUpDisplayCount(prev => prev + 10)}
+                  className="w-full py-3 mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                >
+                  Load More ({stats.needsFollowUp.length - followUpDisplayCount} remaining)
+                </button>
+              )}
+              
+              {/* Show Less Button (if showing more than initial) */}
+              {followUpDisplayCount > 10 && followUpDisplayCount >= stats.needsFollowUp.length && (
+                <button
+                  onClick={() => setFollowUpDisplayCount(10)}
+                  className="w-full py-3 mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                >
+                  Show Less
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -186,7 +186,8 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
         item_type: itemType,
         description: note,
         status: 'Received',
-        quantity: quantity
+        quantity: quantity,
+        received_date: date // Use the selected date from the form
       });
 
       toast.success(`${quantity} mail item(s) added successfully!`);
