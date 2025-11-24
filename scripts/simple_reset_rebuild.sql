@@ -145,9 +145,19 @@ CREATE POLICY "Users can view notification history for their contacts." ON notif
 CREATE POLICY "Users can create notifications for their contacts." ON notification_history
     FOR INSERT WITH CHECK (auth.uid() = (SELECT contacts.user_id FROM contacts WHERE contacts.contact_id = notification_history.contact_id));
 
--- Message templates policies (users can manage their own templates + see defaults)
-CREATE POLICY "Users can manage their templates." ON message_templates
-    FOR ALL USING (auth.uid() = user_id OR is_default = TRUE);
+-- Message templates policies (users can manage their own templates + edit defaults)
+CREATE POLICY "Users can view templates." ON message_templates
+    FOR SELECT USING (auth.uid() = user_id OR is_default = TRUE);
+
+CREATE POLICY "Users can create templates." ON message_templates
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update templates." ON message_templates
+    FOR UPDATE USING (auth.uid() = user_id OR is_default = TRUE)
+    WITH CHECK (auth.uid() = user_id OR is_default = TRUE);
+
+CREATE POLICY "Users can delete own templates." ON message_templates
+    FOR DELETE USING (auth.uid() = user_id AND is_default = FALSE);
 
 -- ##############################################################
 -- ##                STEP 6: CREATE FUNCTIONS & TRIGGERS     ##

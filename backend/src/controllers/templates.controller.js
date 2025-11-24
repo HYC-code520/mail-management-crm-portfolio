@@ -89,13 +89,34 @@ exports.updateMessageTemplate = async (req, res, next) => {
       return res.status(400).json({ error: 'No update fields provided' });
     }
 
-    const { data, error} = await supabase
+    // First, check if the template exists and if user can update it
+    const { data: existingTemplate, error: fetchError } = await supabase
       .from('message_templates')
-      .update(updateData)
+      .select('*')
       .eq('template_id', id)
-      .eq('user_id', req.user.id) // Only allow updating user's own templates
-      .select()
       .single();
+
+    if (fetchError || !existingTemplate) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    // Allow updating if:
+    // 1. User owns the template, OR
+    // 2. It's a default template (can be edited by anyone)
+    if (existingTemplate.user_id !== req.user.id && !existingTemplate.is_default) {
+      return res.status(403).json({ error: 'Not authorized to update this template' });
+    }
+
+    // Use RPC function to bypass RLS for template updates
+    const { data, error } = await supabase
+      .rpc('update_template', {
+        p_template_id: id,
+        p_template_name: updateData.template_name,
+        p_message_body: updateData.message_body,
+        p_template_type: updateData.template_type,
+        p_subject_line: updateData.subject_line,
+        p_default_channel: updateData.default_channel
+      });
 
     if (error) {
       console.error('Error updating template:', error);
@@ -117,11 +138,31 @@ exports.deleteMessageTemplate = async (req, res, next) => {
     const supabase = getSupabaseClient(req.user.token);
     const { id } = req.params;
 
+    // First, check if the template exists and if it's deletable
+    const { data: existingTemplate, error: fetchError } = await supabase
+      .from('message_templates')
+      .select('*')
+      .eq('template_id', id)
+      .single();
+
+    if (fetchError || !existingTemplate) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    // Prevent deletion of default templates
+    if (existingTemplate.is_default) {
+      return res.status(403).json({ error: 'Cannot delete default templates' });
+    }
+
+    // Only allow deleting user's own templates
+    if (existingTemplate.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to delete this template' });
+    }
+
     const { error } = await supabase
       .from('message_templates')
       .delete()
-      .eq('template_id', id)
-      .eq('user_id', req.user.id); // Only allow deleting user's own templates
+      .eq('template_id', id);
 
     if (error) {
       console.error('Error deleting template:', error);

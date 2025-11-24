@@ -85,10 +85,6 @@ export default function TemplatesPage() {
   };
 
   const openEditModal = (template: Template) => {
-    if (template.is_default) {
-      toast.error('Cannot edit default templates');
-      return;
-    }
     setEditingTemplate(template);
     
     // Split the message_body into English and Chinese
@@ -274,25 +270,23 @@ export default function TemplatesPage() {
                           <span className="ml-2 text-xs text-gray-500">(default)</span>
                         )}
                       </button>
-                      {!template.is_default && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                          <button
-                            onClick={() => openEditModal(template)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Edit"
-                          >
-                            <Edit className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(template)}
-                            disabled={deletingTemplateId === template.template_id}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded disabled:opacity-50"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <button
+                          onClick={() => openEditModal(template)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Edit"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(template)}
+                          disabled={deletingTemplateId === template.template_id || template.is_default}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={template.is_default ? "Cannot delete default templates" : "Delete"}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -306,25 +300,24 @@ export default function TemplatesPage() {
               {/* Action Buttons */}
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">{selectedTemplate.template_name}</h2>
-                {!selectedTemplate.is_default && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openEditModal(selectedTemplate)}
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(selectedTemplate)}
-                      disabled={deletingTemplateId === selectedTemplate.template_id}
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-red-300 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>{deletingTemplateId === selectedTemplate.template_id ? 'Deleting...' : 'Delete'}</span>
-                    </button>
-                  </div>
-                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEditModal(selectedTemplate)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(selectedTemplate)}
+                    disabled={deletingTemplateId === selectedTemplate.template_id || selectedTemplate.is_default}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-red-300 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={selectedTemplate.is_default ? "Cannot delete default templates" : "Delete"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{deletingTemplateId === selectedTemplate.template_id ? 'Deleting...' : 'Delete'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Three Column Template Display */}
@@ -430,6 +423,15 @@ export default function TemplatesPage() {
         title={editingTemplate ? 'Edit Template' : 'Create New Template'}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Default Template Warning */}
+          {editingTemplate?.is_default && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                ℹ️ You're editing a <strong>default template</strong>. Changes will affect all users using this template.
+              </p>
+            </div>
+          )}
+
           {/* Template Name */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">Template Name *</label>

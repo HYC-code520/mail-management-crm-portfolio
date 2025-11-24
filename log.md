@@ -314,3 +314,154 @@
 
 ---
 
+**Timestamp:** `2025-11-23 20:30:00 - 21:40:00`  
+**Category:** `SECURITY`  
+**Status:** `SOLVED`  
+**Error Message:** `Failed to update template: Error 500 (Internal Server Error)` and `PGRST116: Cannot coerce the result to a single JSON object - The result contains 0 rows`  
+**Context:** Staff unable to edit default notification templates. System was blocking all edit attempts on default templates, which was too restrictive for business needs.
+
+**Root Cause Analysis:**  
+1. **Frontend Restriction**: `Templates.tsx` had guard clause blocking edit modal for default templates
+2. **Backend Authorization**: Controller filtered updates by `user_id`, blocking default templates (which have `user_id = NULL`)
+3. **Database RLS Policy**: Row Level Security prevented updates where `user_id` didn't match authenticated user
+4. **PostgreSQL NULL Handling**: `NULL = anything` returns `NULL` (not `TRUE`), causing `WITH CHECK` clause to fail even after policy updates
+
+**Solution Implemented:**  
+1. **Frontend Changes** (`frontend/src/pages/Templates.tsx`):
+   - Removed `if (template.is_default) { toast.error(...); return; }` guard
+   - Made edit buttons visible for ALL templates (but delete button disabled for defaults)
+   - Added blue warning banner in edit modal: "You're editing a default template"
+
+2. **Backend Changes** (`backend/src/controllers/templates.controller.js`):
+   - Added permission check: Allow if user owns template OR it's a default template
+   - Switched from direct UPDATE to RPC function call to bypass RLS
+   - Enhanced delete protection with explicit `is_default` check
+
+3. **Database Changes** (Migration `20250124000000_allow_edit_default_templates.sql`):
+   - Split single policy into separate SELECT/INSERT/UPDATE/DELETE policies
+   - Created `update_template()` PostgreSQL function with `SECURITY DEFINER`
+   - Function bypasses RLS while backend maintains authorization logic
+   - DELETE policy explicitly blocks: `is_default = FALSE`
+
+**Prevention Strategy:**  
+1. **NULL-Safe Comparisons**: When designing RLS policies, account for NULL values in user_id columns
+2. **SECURITY DEFINER Pattern**: For complex permission scenarios, use stored functions to bypass RLS
+3. **Layered Security**: Maintain authorization checks in backend even when using SECURITY DEFINER
+4. **Visual Warnings**: Show clear UI indicators when editing system-critical data
+
+**Tests Added:**  
+- ✅ Edit default template: Works
+- ✅ Delete default template: Blocked (frontend + backend + database)
+- ✅ Edit custom template: Works
+- ✅ Delete custom template: Works
+
+**Additional Notes:**  
+- PostgreSQL `SECURITY DEFINER` runs function with owner's permissions (bypasses RLS)
+- Security still maintained through backend controller authorization
+- Default templates needed to be editable for business needs (fix typos, adapt wording)
+- Template deletion still properly protected at all layers
+
+---
+
+**Timestamp:** `2025-11-23 20:00:00 - 20:15:00`  
+**Category:** `BUILD`  
+**Status:** `SOLVED`  
+**Error Message:** Date defaulting to next day (11/24/25) when today is 11/23/25  
+**Context:** Mail Log "Add New Mail" form's date field was defaulting to tomorrow's date due to UTC vs local timezone mismatch.
+
+**Root Cause Analysis:**  
+1. **UTC vs Local Time**: `new Date().toISOString().split('T')[0]` returns UTC date
+2. **Timezone Offset**: User in PST/PDT (UTC-8) sees UTC date which is +8 hours ahead
+3. **Example**: 11:00 PM PST Nov 23 = 7:00 AM UTC Nov 24 → shows Nov 24 ❌
+
+**Solution Implemented:**  
+1. **Created Local Date Helper** (`frontend/src/pages/Log.tsx`):
+   ```typescript
+   const getTodayLocal = () => {
+     const today = new Date();
+     const year = today.getFullYear();
+     const month = String(today.getMonth() + 1).padStart(2, '0');
+     const day = String(today.getDate()).padStart(2, '0');
+     return `${year}-${month}-${day}`;
+   };
+   ```
+
+2. **Updated Date State**: Changed from `new Date().toISOString()` to `getTodayLocal()`
+
+3. **Added Future Date Prevention**:
+   - Added `max={getTodayLocal()}` to date inputs
+   - Added helper text: "Cannot select future dates"
+   - Applied to both "Add New Mail" form and "Edit Mail" modal
+
+**Prevention Strategy:**  
+1. **Always Use Local Time for Dates**: Use `new Date()` methods directly, not `.toISOString()`
+2. **Validate Date Inputs**: Add `max` attribute to prevent future dates when not allowed
+3. **User Timezone Awareness**: Remember users may be in different timezones than server
+4. **Test Across Timezones**: Test date logic at different times of day (especially near midnight)
+
+**Tests Added:**  
+- Manual verification: Date now shows correct local date (11/23/25)
+- Future dates cannot be selected via date picker
+- Works correctly in "Add New Mail" form and "Edit Mail" modal
+
+**Additional Notes:**  
+- This is a common gotcha when working with JavaScript dates
+- `.toISOString()` always returns UTC, not local time
+- HTML `<input type="date">` works with YYYY-MM-DD format in local timezone
+- Similar issue likely exists in Dashboard if using `.toISOString()` for charts
+
+---
+
+**Timestamp:** `2025-11-23 18:00:00 - 19:00:00`  
+**Category:** `BUILD`  
+**Status:** `SOLVED`  
+**Error Message:** None (UX improvement: no validation for service tier and customer status when logging mail)  
+**Context:** Staff could accidentally log mail for pending (not onboarded) customers or log packages for Tier 1 customers (who shouldn't receive packages per business rules).
+
+**Root Cause Analysis:**  
+1. **Missing Business Logic**: No validation for service tier restrictions (Tier 1 = no packages)
+2. **Pending Customer Risk**: No warning when logging mail for customers with "Pending" status
+3. **No Visual Indicators**: Customer status not visible in search dropdown or selected customer display
+
+**Solution Implemented:**  
+1. **Service Tier 1 Package Validation** (`frontend/src/pages/Log.tsx`):
+   - Added confirmation dialog when selecting "Package" for Tier 1 customer
+   - Warning: "Tier 1 customers typically don't receive packages"
+   - Shows amber warning indicator below Type dropdown if Package selected
+
+2. **Pending Customer Validation**:
+   - Added confirmation dialog when selecting customer with "Pending" status
+   - Warning: "Customer has Pending status and may not be fully onboarded"
+   - Shows amber background with warning message in selected customer display
+
+3. **Status Badges in Search Dropdown**:
+   - Added colored badges showing customer status (Active/Pending/Archived)
+   - Green for Active, Amber for Pending, Gray for Archived
+   - Visible before selecting customer
+
+4. **Enhanced Selected Customer Display**:
+   - Color-coded background based on status (green/amber/gray)
+   - Status badge next to customer name
+   - Warning icon and text for Pending customers
+
+5. **Removed Tier 3**: System now only supports Tier 1 and Tier 2 (per business requirements)
+
+**Prevention Strategy:**  
+1. **Business Rule Validation**: Encode business rules as code validation, not just documentation
+2. **Progressive Warnings**: Show warnings at point of selection, not just at submission
+3. **Visual Indicators**: Use color coding to communicate status before user takes action
+4. **Confirmation Dialogs**: For edge cases, allow override with explicit confirmation
+
+**Tests Added:**  
+- Manual verification: Tier 1 + Package = shows warning, allows override
+- Manual verification: Pending customer = shows warning, allows override
+- Status badges visible in search results
+- Color-coded customer display after selection
+
+**Additional Notes:**  
+- Warnings don't block actions (allows flexibility for edge cases)
+- Multiple layers of warning (dialog + visual indicators + helper text)
+- Matches real-world workflow where exceptions occasionally happen
+- Removed Tier 3 from Contacts page and Dashboard "Add Customer" modal
+
+---
