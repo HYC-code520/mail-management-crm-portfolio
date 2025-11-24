@@ -12,6 +12,7 @@ interface MailItem {
   item_type: string;
   status: string;
   received_date: string;
+  pickup_date?: string;
   contact_id: string;
   quantity?: number;
   last_notified?: string;
@@ -174,7 +175,16 @@ export default function DashboardPage() {
         api.mailItems.getAll()
       ]);
 
-      const today = new Date().toISOString().split('T')[0];
+      // Get today's date in local timezone (not UTC)
+      const getTodayLocal = () => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const today = getTodayLocal();
       const now = new Date();
       
       // Filter active customers (not archived)
@@ -197,17 +207,20 @@ export default function DashboardPage() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
       const overdueMail = mailItems.filter((item: MailItem) => {
-        if (item.status === 'Notified') {
-          const receivedDate = new Date(item.received_date);
-          return receivedDate < sevenDaysAgo;
+        if (item.status === 'Notified' && item.last_notified) {
+          const notifiedDate = new Date(item.last_notified);
+          return notifiedDate < sevenDaysAgo;
         }
         return false;
       }).length;
 
-      // Calculate completed today
-      const completedToday = mailItems.filter((item: MailItem) => 
-        item.status === 'Picked Up' && item.received_date?.startsWith(today)
-      ).length;
+      // Calculate completed today (picked up today)
+      const completedToday = mailItems.filter((item: MailItem) => {
+        if (item.status === 'Picked Up' && item.pickup_date) {
+          return item.pickup_date.startsWith(today);
+        }
+        return false;
+      }).length;
 
       // Find mail that needs follow-up
       const twoDaysAgo = new Date(now);
