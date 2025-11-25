@@ -465,3 +465,50 @@
 - Removed Tier 3 from Contacts page and Dashboard "Add Customer" modal
 
 ---
+
+## 8. Backend Environment Variables Not Loading (.env file issue)
+
+**Timestamp:** `2025-11-24 14:40:00`  
+**Category:** `DEPLOYMENT`  
+**Status:** `SOLVED`  
+**Error Message:** `[dotenv@17.2.3] injecting env (0) from .env` and `Error: Missing Supabase environment variables` and `ERR_CONNECTION_REFUSED` from frontend  
+**Context:** Backend server was failing to start after manual `.env` file edits. The dotenv library reported loading 0 environment variables despite the `.env` file containing all required variables (PORT, NODE_ENV, FRONTEND_URL, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY).
+
+**Root Cause Analysis:**  
+1. **Variable Order Issue**: The `.env` file had `SUPABASE_ANON_KEY` listed BEFORE `SUPABASE_URL`, which caused dotenv parsing to fail silently
+2. **No Error Feedback**: dotenv doesn't throw errors for parsing issues - it just silently fails and loads 0 variables
+3. **Manual Editing Issues**: When manually editing `.env` files, it's easy to introduce invisible characters, wrong line endings, or incorrect variable ordering
+
+**Solution Implemented:**  
+1. Reordered the `.env` file to have `SUPABASE_URL` BEFORE `SUPABASE_ANON_KEY`:
+```env
+PORT=5000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+SUPABASE_URL=https://euspsnrxklenzrmzoesf.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1c3BzbnJ4a2xlbnpybXpvZXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDM3MDIsImV4cCI6MjA3ODk3OTcwMn0.j7uaXnYN_KlaKlPpukmCdPokxIU0zAlpQ1aTnDIbeWs
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1c3BzbnJ4a2xlbnpybXpvZXNmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzQwMzcwMiwiZXhwIjoyMDc4OTc5NzAyfQ.RVpaY6WhMtL0cN-3p3M4RuZ7zM4uNDX--Dc5gvBzeLo
+```
+2. Ensured no blank lines at the beginning or end of the file
+3. Restarted backend server with `npm start`
+4. Verified with `curl http://localhost:5000/health` - backend responded successfully
+
+**Prevention Strategy:**  
+1. **Use `.env.example` as Template**: Always copy from `.env.example` and fill in values rather than manually typing
+2. **Variable Order Matters**: Keep related variables together and maintain a consistent order (general config first, then service-specific)
+3. **Validation Script**: Add a startup validation script that checks if all required env vars are loaded before starting the server
+4. **No Manual Editing**: When possible, use CLI tools or scripts to update `.env` files to avoid human error
+5. **Version Control `.env.example`**: Keep `.env.example` up-to-date with correct variable order and documentation
+
+**Tests Added:**  
+- Verified backend health endpoint responds after fresh start
+- Confirmed frontend can connect to backend (no CORS errors)
+- Validated all environment variables are loaded correctly
+
+**Additional Notes:**  
+- dotenv loads variables in order, and some variable dependencies may require specific ordering
+- The `injecting env (X) from .env` message shows how many variables were successfully loaded - watch for `(0)`!
+- Always check dotenv output during startup to catch parsing issues early
+- For production deployments (Vercel, Render), environment variables are set through the platform UI, not `.env` files
+
+---

@@ -17,15 +17,17 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // Allow localhost and ngrok URLs
+    // Allow localhost, ngrok URLs, and Vercel URLs
     if (origin.includes('localhost') || 
+        origin.includes('127.0.0.1') ||
         origin.includes('ngrok-free.app') || 
         origin.includes('ngrok.io') ||
-        origin.includes('ngrok.app')) {
+        origin.includes('ngrok.app') ||
+        origin.includes('vercel.app')) {
       return callback(null, true);
     }
     
-    // If not allowed, still return true but log it
+    // If not allowed, log it and reject
     console.log('CORS: Origin not in whitelist:', origin);
     return callback(null, false);
   },
