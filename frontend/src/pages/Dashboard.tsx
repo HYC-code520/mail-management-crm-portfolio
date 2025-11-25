@@ -418,32 +418,38 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Mail activity overview and quick actions</p>
+        <p className="text-gray-600">Today's mail activity, metrics, and customer insights</p>
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <button
-          onClick={() => navigate('/dashboard/templates')}
-          className="flex items-center justify-center gap-3 px-6 py-4 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
-        >
-          <FileText className="w-5 h-5" />
-          <span>View Templates</span>
-        </button>
-        <button
-          onClick={() => setIsAddCustomerModalOpen(true)}
-          className="flex items-center justify-center gap-3 px-6 py-4 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
-        >
-          <UserPlus className="w-5 h-5" />
-          <span>Add Customer</span>
-        </button>
-        <button
-          onClick={() => navigate('/dashboard/mail')}
-          className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
-        >
-          <Mail className="w-5 h-5" />
-          <span>Log New Mail</span>
-        </button>
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-1 h-6 bg-green-600 rounded-full"></div>
+          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <button
+            onClick={() => navigate('/dashboard/templates')}
+            className="flex items-center justify-center gap-3 px-6 py-4 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+          >
+            <FileText className="w-5 h-5" />
+            <span>View Templates</span>
+          </button>
+          <button
+            onClick={() => setIsAddCustomerModalOpen(true)}
+            className="flex items-center justify-center gap-3 px-6 py-4 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+          >
+            <UserPlus className="w-5 h-5" />
+            <span>Add Customer</span>
+          </button>
+          <button
+            onClick={() => navigate('/dashboard/mail')}
+            className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+          >
+            <Mail className="w-5 h-5" />
+            <span>Log New Mail</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards - 4 columns */}

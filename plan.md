@@ -818,7 +818,25 @@
 
 **Long-term enhancements for scaling and advanced automation. Estimated for Month 3+ after MVP launch.**
 
-1. **Photo Upload & Storage:**
+1. **Multi-User Workspace / Organization Support:**
+   - **Problem:** Currently, each Supabase user account has isolated data (filtered by `user_id`). Multiple staff members cannot share access to the same customer database and mail logs.
+   - **Current Workaround:** Staff share one login account (simple, works for 2-person team)
+   - **P2 Solution:** Implement workspace/organization model where:
+     - Multiple users can belong to the same organization
+     - Data is shared across all members of an organization (filtered by `organization_id` instead of `user_id`)
+     - User invitation system (invite staff via email)
+     - Role-based permissions (Admin, Staff, Read-Only)
+     - Audit trail (track who logged/updated each mail item)
+   - **Implementation Requirements:**
+     - New database tables: `organizations`, `organization_members`, `user_roles`
+     - Refactor all queries to filter by `organization_id` instead of `user_id`
+     - Update RLS policies to check organization membership
+     - Add invitation flow (send email, accept invite, join organization)
+     - Add organization settings page (manage members, view audit logs)
+   - **Estimated Effort:** 2-3 weeks (major architectural change)
+   - **Business Value:** Essential for scaling to larger teams (3+ staff) or multi-location businesses
+
+2. **Photo Upload & Storage:**
    - Supabase Storage integration for package photos and signature images
    - OCR (Optical Character Recognition) for automatic label data extraction
    - Photo gallery view for each mail item
