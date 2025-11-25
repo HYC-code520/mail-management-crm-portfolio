@@ -512,3 +512,61 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 - For production deployments (Vercel, Render), environment variables are set through the platform UI, not `.env` files
 
 ---
+
+## 9. Vercel Deployment - Supabase URL Typo
+
+**Timestamp:** `2025-11-24 20:50:00`  
+**Category:** `DEPLOYMENT`  
+**Status:** `SOLVED`  
+**Error Message:** `Failed to load resource: net::ERR_NAME_NOT_RESOLVED` for `euspsnrxklenzrzoesf` and `TypeErrors: Failed to fetch` during login attempts  
+**Context:** After successfully deploying frontend to Vercel and backend to Render, users could not login on the production site. The login page loaded but authentication failed with network errors. Local development worked fine.
+
+**Root Cause Analysis:**  
+1. **Typo in Environment Variable**: The `VITE_SUPABASE_URL` on Vercel had a typo: `euspsnrxklenzr**z**oesf` instead of `euspsnrxklenzr**m**zoesf` (z vs m)
+2. **Browser Cache**: After fixing the typo, the browser cached the old failed requests, making it appear the issue persisted
+3. **Rebuild Required**: Environment variable changes on Vercel require a fresh deployment to take effect, not just saving the variable
+4. **Build Cache**: Using Vercel's build cache prevented the new environment variables from being picked up
+
+**Solution Implemented:**  
+1. **Fixed Supabase URL on Vercel**:
+   - Went to Vercel → Settings → Environment Variables
+   - Edited `VITE_SUPABASE_URL` to correct value: `https://euspsnrxklenzrmzoesf.supabase.co`
+   - Verified the spelling carefully (m not z in the subdomain)
+
+2. **Triggered Fresh Deployment**:
+   - Went to Vercel → Deployments → Selected latest deployment
+   - Clicked "Redeploy"
+   - **IMPORTANT**: Unchecked "Use existing Build Cache" to force a fresh build
+   - Waited for deployment to complete (~30 seconds)
+
+3. **Updated Render Backend Environment**:
+   - Set `FRONTEND_URL` to `https://mail-management-system-git-develop-mei-ways-projects.vercel.app`
+   - Set `NODE_ENV` to `production`
+   - Verified all Supabase variables were correct
+
+4. **Cleared Browser Cache**:
+   - Performed hard refresh (Cmd + Shift + R on Mac)
+   - Opened in incognito/private window to test
+
+**Prevention Strategy:**  
+1. **Copy-Paste URLs**: Never manually type long URLs or API keys - always copy-paste from source
+2. **Verify Before Saving**: Double-check environment variable values before saving, especially long strings
+3. **Fresh Deployments**: After changing env vars, always trigger a fresh deployment without build cache
+4. **Test in Incognito**: Always test production deployments in incognito mode to avoid cache issues
+5. **Document Correct Values**: Keep a secure document with correct environment variable values for reference
+6. **Use .env.example**: Maintain an up-to-date `.env.example` file with placeholder values showing the correct format
+
+**Tests Added:**  
+- Verified login works on production Vercel deployment
+- Confirmed no console errors after fresh deployment
+- Tested in both regular and incognito browser windows
+- Verified backend API calls are reaching Render successfully
+
+**Additional Notes:**  
+- Vercel environment variables are build-time variables for frontend (they get baked into the bundle)
+- Any change to `VITE_*` variables requires a full redeploy to take effect
+- The "Use existing Build Cache" option should be unchecked when env vars change
+- Typos in Supabase URLs cause `ERR_NAME_NOT_RESOLVED` because DNS cannot resolve the malformed subdomain
+- Always check Vercel deployment logs for "Building for production" to confirm a fresh build
+
+---
