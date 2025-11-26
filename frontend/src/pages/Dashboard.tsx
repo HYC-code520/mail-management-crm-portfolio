@@ -5,7 +5,9 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';
 import QuickNotifyModal from '../components/QuickNotifyModal.tsx';
+import ActionModal from '../components/ActionModal.tsx';
 import toast from 'react-hot-toast';
+import { getTodayNY, toNYDateString, getChartDateRange } from '../utils/timezone.ts';
 
 interface MailItem {
   mail_item_id: string;
@@ -68,6 +70,12 @@ export default function DashboardPage() {
   const [notifyingMailItem, setNotifyingMailItem] = useState<MailItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [openFollowUpDropdownId, setOpenFollowUpDropdownId] = useState<string | null>(null);
+  
+  // Action Modal states (for picked up, forward, abandoned actions)
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [actionModalType, setActionModalType] = useState<'picked_up' | 'forward' | 'abandoned'>('picked_up');
+  const [actionMailItem, setActionMailItem] = useState<MailItem | null>(null);
+  
   const [formData, setFormData] = useState({
     contact_person: '',
     company_name: '',
@@ -179,25 +187,19 @@ export default function DashboardPage() {
         api.mailItems.getAll()
       ]);
 
-      // Get today's date in local timezone (not UTC)
-      const getTodayLocal = () => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-      
-      const today = getTodayLocal();
+      // Get today's date in NY timezone
+      const today = getTodayNY();
       const now = new Date();
       
       // Filter active customers (not archived)
       const activeContacts = contacts.filter((c: Contact) => c.status !== 'No');
       
-      // Get customers added today
-      const newCustomersToday = activeContacts.filter((c: Contact) => 
-        c.created_at?.startsWith(today)
-      ).length;
+      // Get customers added today (NY timezone)
+      const newCustomersToday = activeContacts.filter((c: Contact) => {
+        if (!c.created_at) return false;
+        const createdDateNY = toNYDateString(c.created_at);
+        return createdDateNY === today;
+      }).length;
       
       // Get recent customers (last 5)
       const recentCustomers = activeContacts
@@ -213,7 +215,12 @@ export default function DashboardPage() {
       const overdueMail = mailItems
         .filter((item: MailItem) => {
           // Only count mail that's still pending pickup (not completed statuses)
-          if (item.status === 'Picked Up' || item.status === 'Forward' || item.status === 'Scanned Document' || item.status === 'Abandoned Package') {
+          if (item.status === 'Picked Up' || 
+              item.status === 'Forward' || 
+              item.status === 'Scanned Document' || 
+              item.status === 'Scanned' || 
+              item.status === 'Abandoned Package' ||
+              item.status === 'Abandoned') {
             return false;
           }
           // Check if received_date is 7+ days old
@@ -222,11 +229,12 @@ export default function DashboardPage() {
         })
         .reduce((sum: number, item: MailItem) => sum + (item.quantity || 1), 0);
 
-      // Calculate completed today (picked up today)
+      // Calculate completed today (picked up today) - NY timezone
       const completedToday = mailItems
         .filter((item: MailItem) => {
           if (item.status === 'Picked Up' && item.pickup_date) {
-            return item.pickup_date.startsWith(today);
+            const pickupDateNY = toNYDateString(item.pickup_date);
+            return pickupDateNY === today;
           }
           return false;
         })
@@ -254,52 +262,37 @@ export default function DashboardPage() {
         return new Date(dateA).getTime() - new Date(dateB).getTime();
       }); // Don't limit here - let the UI handle display count
 
-      // Calculate mail volume based on selected time range
-      const mailVolumeData = [];
-      for (let i = chartTimeRange - 1; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        // Sum up quantities instead of counting entries
+      // Calculate mail volume based on selected time range (using NY timezone)
+      const mailVolumeData = getChartDateRange(chartTimeRange).map(({ dateStr, displayDate }) => {
+        // Sum up quantities for items received on this date (NY timezone)
         const count = mailItems
-          .filter((item: MailItem) => item.received_date?.startsWith(dateStr))
+          .filter((item: MailItem) => {
+            if (!item.received_date) return false;
+            const itemDateNY = toNYDateString(item.received_date);
+            return itemDateNY === dateStr;
+          })
           .reduce((sum: number, item: MailItem) => sum + (item.quantity || 1), 0);
-        mailVolumeData.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        
+        return {
+          date: displayDate,
           count
-        });
-      }
+        };
+      });
 
-      // Calculate customer growth based on selected time range
-      const customerGrowthData = [];
-      
-      if (activeContacts.length > 0) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+      // Calculate customer growth based on selected time range (NY timezone)
+      const customerGrowthData = getChartDateRange(chartTimeRange).map(({ dateStr, displayDate }) => {
+        // Count NEW customers added on THIS SPECIFIC DAY (NY timezone)
+        const newCustomersOnDate = activeContacts.filter((c: Contact) => {
+          if (!c.created_at) return false;
+          const createdDateNY = toNYDateString(c.created_at);
+          return createdDateNY === dateStr;
+        }).length;
         
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - (chartTimeRange - 1));
-        startDate.setHours(0, 0, 0, 0);
-        
-        // Generate one point per day for selected range
-        for (let i = 0; i < chartTimeRange; i++) {
-          const date = new Date(startDate);
-          date.setDate(date.getDate() + i);
-          const dateStr = date.toISOString().split('T')[0];
-          
-          // Count NEW customers added on THIS SPECIFIC DAY
-          const newCustomersOnDate = activeContacts.filter((c: Contact) => {
-            if (!c.created_at) return false;
-            const createdDate = c.created_at.split('T')[0];
-            return createdDate === dateStr; // Exact match for this day only
-          }).length;
-          
-          customerGrowthData.push({
-            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            customers: newCustomersOnDate
-          });
-        }
-      }
+        return {
+          date: displayDate,
+          customers: newCustomersOnDate
+        };
+      });
       
       console.log('Customer Growth Data (new per day):', customerGrowthData);
       console.log('Data points:', customerGrowthData.length);
@@ -307,7 +300,11 @@ export default function DashboardPage() {
       
       setStats({
         todaysMail: mailItems
-          .filter((item: MailItem) => item.received_date?.startsWith(today))
+          .filter((item: MailItem) => {
+            if (!item.received_date) return false;
+            const receivedDateNY = toNYDateString(item.received_date);
+            return receivedDateNY === today;
+          })
           .reduce((sum: number, item: MailItem) => sum + (item.quantity || 1), 0),
         pendingPickups: mailItems
           .filter((item: MailItem) => 
@@ -335,11 +332,19 @@ export default function DashboardPage() {
   };
 
   const getDaysSince = (dateStr: string) => {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    // Get today's date in NY timezone
+    const todayNY = getTodayNY();
+    const todayDate = new Date(todayNY + 'T00:00:00');
+    
+    // Convert the input date to NY timezone
+    const itemDateNY = toNYDateString(dateStr);
+    const itemDate = new Date(itemDateNY + 'T00:00:00');
+    
+    // Calculate difference in days
+    const diffTime = todayDate.getTime() - itemDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, diffDays); // Return 0 for same day, prevent negative
   };
 
   const openQuickNotifyModal = (item: MailItem) => {
@@ -347,17 +352,10 @@ export default function DashboardPage() {
     setIsQuickNotifyModalOpen(true);
   };
 
-  const handleQuickStatusUpdate = async (mailItemId: string, oldStatus: string, newStatus: string) => {
-    try {
-      await api.mailItems.updateStatus(mailItemId, newStatus);
-      toast.success(`Mail marked as ${newStatus}!`, {
-        duration: 5000,
-      });
-      loadDashboardData();
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      toast.error('Failed to update mail status');
-    }
+  const handleActionSuccess = () => {
+    loadDashboardData();
+    setIsActionModalOpen(false);
+    setActionMailItem(null);
   };
 
   const handleQuickNotifySuccess = () => {
@@ -571,7 +569,11 @@ export default function DashboardPage() {
                       {/* Primary Action Button - Most Common/Urgent Action */}
                       {isAbandoned ? (
                         <button
-                          onClick={() => handleQuickStatusUpdate(item.mail_item_id, item.status, 'Abandoned Package')}
+                          onClick={() => {
+                            setActionMailItem(item);
+                            setActionModalType('abandoned');
+                            setIsActionModalOpen(true);
+                          }}
                           className="px-4 py-2 bg-red-200 hover:bg-red-300 text-gray-900 text-sm rounded-lg transition-colors flex items-center gap-2"
                         >
                           <AlertTriangle className="w-4 h-4" />
@@ -618,24 +620,24 @@ export default function DashboardPage() {
                                 right: `${window.innerWidth - (document.getElementById(`followup-more-btn-${item.mail_item_id}`)?.getBoundingClientRect().right ?? 0)}px`,
                               }}
                             >
-                              {/* Mark as Notified - For Received status */}
-                              {item.status === 'Received' && !isAbandoned && (
-                                <button
-                                  onClick={() => {
-                                    openQuickNotifyModal(item);
-                                    setOpenFollowUpDropdownId(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-purple-50 flex items-center gap-3"
-                                >
-                                  <Bell className="w-4 h-4 text-purple-600" />
-                                  Mark as Notified
-                                </button>
-                              )}
+                              {/* Mark as Notified - Always visible */}
+                              <button
+                                onClick={() => {
+                                  openQuickNotifyModal(item);
+                                  setOpenFollowUpDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-purple-50 flex items-center gap-3"
+                              >
+                                <Bell className="w-4 h-4 text-purple-600" />
+                                Mark as Notified
+                              </button>
                               
                               {/* Mark as Picked Up - For all statuses */}
                               <button
                                 onClick={() => {
-                                  handleQuickStatusUpdate(item.mail_item_id, item.status, 'Picked Up');
+                                  setActionMailItem(item);
+                                  setActionModalType('picked_up');
+                                  setIsActionModalOpen(true);
                                   setOpenFollowUpDropdownId(null);
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-green-50 flex items-center gap-3"
@@ -644,47 +646,47 @@ export default function DashboardPage() {
                                 Mark as Picked Up
                               </button>
                               
-                              {/* Mark as Scanned - For Received status */}
-                              {item.status === 'Received' && (
-                                <button
-                                  onClick={() => {
-                                    handleQuickStatusUpdate(item.mail_item_id, item.status, 'Scanned Document');
-                                    setOpenFollowUpDropdownId(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cyan-50 flex items-center gap-3"
-                                >
-                                  <FileText className="w-4 h-4 text-cyan-600" />
-                                  Mark as Scanned
-                                </button>
-                              )}
+                              {/* Mark as Scanned - Always visible */}
+                              <button
+                                onClick={() => {
+                                  setActionMailItem(item);
+                                  setActionModalType('scanned');
+                                  setIsActionModalOpen(true);
+                                  setOpenFollowUpDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cyan-50 flex items-center gap-3"
+                              >
+                                <FileText className="w-4 h-4 text-cyan-600" />
+                                Mark as Scanned
+                              </button>
                               
-                              {/* Forward - For Notified/Pending */}
-                              {(item.status === 'Notified' || item.status === 'Pending') && (
-                                <button
-                                  onClick={() => {
-                                    handleQuickStatusUpdate(item.mail_item_id, item.status, 'Forward');
-                                    setOpenFollowUpDropdownId(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3"
-                                >
-                                  <Send className="w-4 h-4 text-orange-600" />
-                                  Forward
-                                </button>
-                              )}
+                              {/* Forward - Always visible */}
+                              <button
+                                onClick={() => {
+                                  setActionMailItem(item);
+                                  setActionModalType('forward');
+                                  setIsActionModalOpen(true);
+                                  setOpenFollowUpDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3"
+                              >
+                                <Send className="w-4 h-4 text-orange-600" />
+                                Forward
+                              </button>
                               
-                              {/* Mark as Abandoned - For all statuses */}
-                              {!isAbandoned && (
-                                <button
-                                  onClick={() => {
-                                    handleQuickStatusUpdate(item.mail_item_id, item.status, 'Abandoned Package');
-                                    setOpenFollowUpDropdownId(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3"
-                                >
-                                  <AlertTriangle className="w-4 h-4 text-red-600" />
-                                  Mark as Abandoned
-                                </button>
-                              )}
+                              {/* Mark as Abandoned - Always visible */}
+                              <button
+                                onClick={() => {
+                                  setActionMailItem(item);
+                                  setActionModalType('abandoned');
+                                  setIsActionModalOpen(true);
+                                  setOpenFollowUpDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3"
+                              >
+                                <AlertTriangle className="w-4 h-4 text-red-600" />
+                                Mark as Abandoned
+                              </button>
                             </div>
                           </>
                         )}
@@ -995,6 +997,25 @@ export default function DashboardPage() {
           contactId={notifyingMailItem.contact_id}
           customerName={notifyingMailItem.contacts?.contact_person || notifyingMailItem.contacts?.company_name || 'Customer'}
           onSuccess={handleQuickNotifySuccess}
+        />
+      )}
+      
+      {/* Action Modal for status changes (Picked Up, Forward, Scanned, Abandoned) */}
+      {actionMailItem && (
+        <ActionModal
+          isOpen={isActionModalOpen}
+          onClose={() => {
+            setIsActionModalOpen(false);
+            setActionMailItem(null);
+          }}
+          mailItemId={actionMailItem.mail_item_id}
+          mailItemDetails={{
+            customerName: actionMailItem.contacts?.contact_person || actionMailItem.contacts?.company_name || 'Customer',
+            itemType: actionMailItem.item_type,
+            currentStatus: actionMailItem.status
+          }}
+          actionType={actionModalType}
+          onSuccess={handleActionSuccess}
         />
       )}
     </div>

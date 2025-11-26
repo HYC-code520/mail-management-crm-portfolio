@@ -38,12 +38,22 @@ export default function QuickNotifyModal({
     setLoading(true);
 
     try {
+      // Create notification record
       await api.notifications.quickNotify({
         mail_item_id: mailItemId,
         contact_id: contactId,
         notified_by: notifiedBy,
         notification_method: notificationMethod,
         ...(notes && { notes })
+      });
+
+      // Also log to action history
+      await api.actionHistory.create({
+        mail_item_id: mailItemId,
+        action_type: 'notified',
+        action_description: `Customer notified via ${notificationMethod}`,
+        performed_by: notifiedBy,
+        notes: notes.trim() || null
       });
 
       toast.success(`✓ ${customerName} notified via ${notificationMethod}`);

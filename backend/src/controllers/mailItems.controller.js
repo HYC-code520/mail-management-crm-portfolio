@@ -55,7 +55,7 @@ exports.createMailItem = async (req, res, next) => {
     }
 
     // Validate status if provided
-    const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned Document', 'Forward', 'Abandoned Package'];
+    const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned', 'Scanned Document', 'Forward', 'Abandoned', 'Abandoned Package'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
@@ -110,7 +110,7 @@ exports.updateMailItemStatus = async (req, res, next) => {
     
     if (status !== undefined) {
       // Validate status
-      const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned Document', 'Forward', 'Abandoned Package'];
+      const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned', 'Scanned Document', 'Forward', 'Abandoned', 'Abandoned Package'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
       }

@@ -5,6 +5,8 @@ import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
 import QuickNotifyModal from '../components/QuickNotifyModal.tsx';
+import ActionModal from '../components/ActionModal.tsx';
+import { getTodayNY, toNYDateString } from '../utils/timezone.ts';
 
 interface MailItem {
   mail_item_id: string;
@@ -32,12 +34,25 @@ interface Contact {
   mailbox_number?: string;
 }
 
-interface NotificationHistory {
-  notification_id: string;
-  notified_by: string;
-  notification_method: string;
-  notified_at: string;
+interface ActionHistory {
+  action_id: string;
+  action_type: string;
+  action_description: string;
+  previous_value?: string;
+  new_value?: string;
+  performed_by: string;
   notes?: string;
+  action_timestamp: string;
+}
+
+interface CustomerGroup {
+  contact_id: string;
+  customerName: string;
+  mailboxNumber?: string;
+  mailItems: MailItem[];
+  totalQuantity: number;
+  oldestDate: string;
+  statusCounts: Record<string, number>;
 }
 
 interface LogPageProps {
@@ -51,7 +66,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [notificationHistory, setNotificationHistory] = useState<Record<string, NotificationHistory[]>>({});
+  const [actionHistory, setActionHistory] = useState<Record<string, ActionHistory[]>>({});
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   
   // Filter states
@@ -74,6 +89,11 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   const [isQuickNotifyModalOpen, setIsQuickNotifyModalOpen] = useState(false);
   const [notifyingMailItem, setNotifyingMailItem] = useState<MailItem | null>(null);
   
+  // Action Modal states
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [actionModalType, setActionModalType] = useState<'picked_up' | 'forward' | 'scanned' | 'abandoned'>('picked_up');
+  const [actionMailItem, setActionMailItem] = useState<MailItem | null>(null);
+  
   // Form data
   const [formData, setFormData] = useState({
     contact_id: '',
@@ -81,20 +101,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     description: '',
     status: 'Received',
     received_date: '',
-    quantity: 1
+    quantity: 1,
+    performed_by: '',
+    edit_notes: ''
   });
   
   // Add form states (for showAddForm)
   // Get today's date in local timezone (not UTC)
-  const getTodayLocal = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-  
-  const [date, setDate] = useState(getTodayLocal());
+  const [date, setDate] = useState(getTodayNY());
   const [itemType, setItemType] = useState('Letter');
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
@@ -103,6 +117,10 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   const [searchResults, setSearchResults] = useState<Contact[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [addingMail, setAddingMail] = useState(false);
+  
+  // Duplicate detection states
+  const [existingTodayMail, setExistingTodayMail] = useState<MailItem | null>(null);
+  const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);
 
   useEffect(() => {
     loadMailItems();
@@ -178,33 +196,129 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       return;
     }
 
+    // Check if customer already has mail logged today (NY timezone)
+    const todayStr = date; // Using the selected date from form (YYYY-MM-DD format)
+    
+    console.log('=== Duplicate Detection Debug ===');
+    console.log('Selected customer:', selectedContact.contact_person || selectedContact.company_name);
+    console.log('Form date:', todayStr);
+    console.log('Mail items to check:', mailItems.length);
+    
+    const existingMail = mailItems.find(item => {
+      // Must be same customer
+      if (item.contact_id !== selectedContact.contact_id) return false;
+      if (!item.received_date) return false;
+      
+      // Extract date part (YYYY-MM-DD) from received_date
+      // Handle both "2025-11-25" and "2025-11-25T00:00:00..." formats
+      const itemDate = item.received_date.split('T')[0];
+      
+      console.log('Checking item:', {
+        customer: item.contacts?.contact_person || item.contacts?.company_name,
+        itemDate,
+        todayStr,
+        match: itemDate === todayStr,
+        status: item.status
+      });
+      
+      // Must be same date
+      if (itemDate !== todayStr) return false;
+      
+      // Ignore completed mail
+      const isNotCompleted = item.status !== 'Picked Up' && 
+                             item.status !== 'Forward' &&
+                             item.status !== 'Scanned';
+      
+      return isNotCompleted;
+    });
+
+    console.log('Found existing mail:', existingMail ? 'YES' : 'NO');
+    if (existingMail) {
+      console.log('Existing mail details:', {
+        id: existingMail.mail_item_id,
+        type: existingMail.item_type,
+        quantity: existingMail.quantity,
+        status: existingMail.status
+      });
+    }
+
+    if (existingMail) {
+      // Always show prompt when duplicate is found
+      console.log('Showing duplicate prompt modal');
+      setExistingTodayMail(existingMail);
+      setShowDuplicatePrompt(true);
+      return;
+    }
+
+    console.log('No duplicate found, creating new mail');
+    // No duplicate found, proceed with creating new mail
+    await submitNewMail(false);
+  };
+
+  const submitNewMail = async (addToExisting: boolean) => {
     setAddingMail(true);
 
     try {
-      await api.mailItems.create({
-        contact_id: selectedContact.contact_id,
-        item_type: itemType,
-        description: note,
-        status: 'Received',
-        quantity: quantity,
-        received_date: date // Use the selected date from the form
-      });
+      if (addToExisting && existingTodayMail) {
+        // Update existing mail item quantity
+        const newQuantity = (existingTodayMail.quantity || 1) + quantity;
+        
+        console.log('Updating existing mail item:', {
+          mail_item_id: existingTodayMail.mail_item_id,
+          old_quantity: existingTodayMail.quantity || 1,
+          new_quantity: newQuantity
+        });
+        
+        await api.mailItems.update(existingTodayMail.mail_item_id, {
+          quantity: newQuantity
+        });
 
-      toast.success(`${quantity} mail item(s) added successfully!`);
+        console.log('Creating action history...');
+        
+        // Log action in history
+        await api.actionHistory.create({
+          mail_item_id: existingTodayMail.mail_item_id,
+          action_type: 'updated',
+          action_description: `Added ${quantity} more ${itemType}${quantity > 1 ? 's' : ''} (total now: ${newQuantity})`,
+          performed_by: 'Staff',
+          notes: note || null
+        });
+
+        console.log('Successfully added to existing mail!');
+        toast.success(`Added ${quantity} more items to existing log (total: ${newQuantity})`);
+      } else {
+        console.log('Creating new mail item...');
+        
+        // Create new mail item
+        await api.mailItems.create({
+          contact_id: selectedContact!.contact_id,
+          item_type: itemType,
+          description: note,
+          status: 'Received',
+          quantity: quantity,
+          received_date: date // Use the selected date from the form
+        });
+
+        console.log('Successfully created new mail!');
+        toast.success(`${quantity} mail item(s) added successfully!`);
+      }
       
-      // Reset form
+      // Reset form and states
       setItemType('Letter');
       setQuantity(1);
       setNote('');
       setSearchQuery('');
       setSelectedContact(null);
-      setDate(getTodayLocal()); // Use local date helper
+      setDate(getTodayNY()); // Use NY timezone
+      setShowDuplicatePrompt(false);
+      setExistingTodayMail(null);
       
       // Reload mail items
       loadMailItems();
     } catch (err) {
-      console.error('Error creating mail item:', err);
-      toast.error('Failed to add mail item');
+      console.error('Error in submitNewMail:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to add mail item: ${errorMessage}`);
     } finally {
       setAddingMail(false);
     }
@@ -212,13 +326,21 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
   const openEditModal = (mailItem: MailItem) => {
     setEditingMailItem(mailItem);
+    
+    // Migrate old status names to new short names
+    let status = mailItem.status || 'Received';
+    if (status === 'Scanned Document') status = 'Scanned';
+    if (status === 'Abandoned Package') status = 'Abandoned';
+    
     setFormData({
       contact_id: mailItem.contact_id || '',
       item_type: mailItem.item_type || 'Package',
       description: mailItem.description || '',
-      status: mailItem.status || 'Received',
-      received_date: mailItem.received_date?.split('T')[0] || new Date().toISOString().split('T')[0],
-      quantity: (mailItem as any).quantity || 1
+      status: status,
+      received_date: mailItem.received_date?.split('T')[0] || getTodayNY(),
+      quantity: (mailItem as any).quantity || 1,
+      performed_by: '',
+      edit_notes: ''
     });
     setIsEditModalOpen(true);
   };
@@ -232,7 +354,9 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       description: '',
       status: 'Received',
       received_date: '',
-      quantity: 1
+      quantity: 1,
+      performed_by: '',
+      edit_notes: ''
     });
   };
 
@@ -256,7 +380,53 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
     try {
       if (editingMailItem) {
-        await api.mailItems.update(editingMailItem.mail_item_id, formData);
+        // Normalize both old and new status for comparison (to handle legacy names)
+        const normalizeStatus = (status: string) => {
+          if (status === 'Scanned Document') return 'Scanned';
+          if (status === 'Abandoned Package') return 'Abandoned';
+          return status;
+        };
+        
+        const normalizedOldStatus = normalizeStatus(editingMailItem.status);
+        const normalizedNewStatus = normalizeStatus(formData.status);
+        
+        // Only consider it a "real" status change if normalized values differ
+        const statusActuallyChanged = normalizedOldStatus !== normalizedNewStatus;
+        
+        // If status changed, require staff name
+        if (statusActuallyChanged && !formData.performed_by.trim()) {
+          toast.error('Please select who made this status change');
+          setSaving(false);
+          return;
+        }
+        
+        // Update the mail item (exclude performed_by and edit_notes from the update payload)
+        const { performed_by, edit_notes, ...updateData } = formData;
+        await api.mailItems.update(editingMailItem.mail_item_id, updateData);
+        
+        // Only log to action history if status ACTUALLY changed (not just name migration)
+        if (statusActuallyChanged) {
+          const statusDescriptions: { [key: string]: string } = {
+            'Received': 'Status changed to Received',
+            'Pending': 'Status changed to Pending',
+            'Notified': 'Status changed to Notified',
+            'Picked Up': 'Marked as Picked Up',
+            'Scanned': 'Marked as Scanned',
+            'Forward': 'Forwarded',
+            'Abandoned': 'Marked as Abandoned'
+          };
+          
+          await api.actionHistory.create({
+            mail_item_id: editingMailItem.mail_item_id,
+            action_type: 'status_change',
+            action_description: statusDescriptions[normalizedNewStatus] || `Status changed to ${normalizedNewStatus}`,
+            previous_value: normalizedOldStatus,
+            new_value: normalizedNewStatus,
+            performed_by: formData.performed_by,
+            notes: formData.edit_notes.trim() || null
+          });
+        }
+        
         toast.success('Mail item updated successfully!');
         closeModal();
         await loadMailItems(); // Ensure we wait for reload
@@ -338,17 +508,29 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
   const handleQuickNotifySuccess = () => {
     loadMailItems();
+    // Reload action history if the row is expanded
+    if (notifyingMailItem && expandedRows.has(notifyingMailItem.mail_item_id)) {
+      loadActionHistory(notifyingMailItem.mail_item_id);
+    }
   };
 
-  const loadNotificationHistory = async (mailItemId: string) => {
+  const handleActionSuccess = () => {
+    loadMailItems();
+    // Reload action history if the row is expanded
+    if (actionMailItem && expandedRows.has(actionMailItem.mail_item_id)) {
+      loadActionHistory(actionMailItem.mail_item_id);
+    }
+  };
+
+  const loadActionHistory = async (mailItemId: string) => {
     try {
-      const history = await api.notifications.getByMailItem(mailItemId);
-      setNotificationHistory(prev => ({
+      const history = await api.actionHistory.getByMailItem(mailItemId);
+      setActionHistory(prev => ({
         ...prev,
         [mailItemId]: history
       }));
     } catch (err) {
-      console.error('Failed to load notification history:', err);
+      console.error('Failed to load action history:', err);
     }
   };
 
@@ -358,9 +540,9 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       newExpanded.delete(id);
     } else {
       newExpanded.add(id);
-      // Load notification history when row is expanded
-      if (!notificationHistory[id]) {
-        loadNotificationHistory(id);
+      // Load action history when row is expanded
+      if (!actionHistory[id]) {
+        loadActionHistory(id);
       }
     }
     setExpandedRows(newExpanded);
@@ -509,7 +691,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                max={getTodayLocal()}
+                max={getTodayNY()}
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
               <p className="mt-1 text-xs text-gray-500">Cannot select future dates</p>
@@ -743,8 +925,10 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   <option>Pending</option>
                   <option>Notified</option>
                   <option>Picked Up</option>
+                  <option>Scanned</option>
                   <option>Scanned Document</option>
                   <option>Forward</option>
+                  <option>Abandoned</option>
                   <option>Abandoned Package</option>
                 </select>
               </div>
@@ -986,12 +1170,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
             <tbody>
               {sortedItems.map((item) => (
                   <React.Fragment key={item.mail_item_id}>
-                    {/* Main Row */}
-                    <tr className="group border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    {/* Main Row - Clickable to expand */}
+                    <tr 
+                      className="group border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => toggleRow(item.mail_item_id)}
+                    >
                     <td className="py-3 px-4">
                       <button
-                        onClick={() => toggleRow(item.mail_item_id)}
-                        className="text-gray-500 hover:text-gray-700 transition-transform"
+                        className="text-gray-500 hover:text-gray-700 transition-transform pointer-events-none"
                         style={{
                           transform: expandedRows.has(item.mail_item_id) ? 'rotate(90deg)' : 'rotate(0deg)',
                           display: 'inline-block',
@@ -1023,7 +1209,10 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                         </span>
                         {item.contact_id && (
                           <button
-                            onClick={() => navigate(`/dashboard/contacts/${item.contact_id}`)}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row expansion when clicking view button
+                              navigate(`/dashboard/contacts/${item.contact_id}`);
+                            }}
                             className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="View Customer Profile"
                           >
@@ -1039,11 +1228,15 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                         item.status === 'Notified' ? 'bg-purple-100 text-purple-700' :
                         item.status === 'Picked Up' ? 'bg-green-100 text-green-700' :
                         item.status === 'Scanned Document' ? 'bg-cyan-100 text-cyan-700' :
+                        item.status === 'Scanned' ? 'bg-cyan-100 text-cyan-700' :
                         item.status === 'Forward' ? 'bg-orange-100 text-orange-700' :
                         item.status === 'Abandoned Package' ? 'bg-red-100 text-red-700' :
+                        item.status === 'Abandoned' ? 'bg-red-100 text-red-700' :
                         'bg-gray-200 text-gray-700'
                       }`}>
-                        {item.status}
+                        {item.status === 'Scanned Document' ? 'Scanned' : 
+                         item.status === 'Abandoned Package' ? 'Abandoned' : 
+                         item.status}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-700">
@@ -1061,7 +1254,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                       {item.description || '—'}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-2 text-sm">
+                      <div className="flex items-center justify-end gap-2 text-sm" onClick={(e) => e.stopPropagation()}>
                         {/* Edit and Delete buttons first */}
                         <div className="flex items-center gap-2">
                           <button
@@ -1114,80 +1307,76 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   right: `${window.innerWidth - (document.getElementById(`more-btn-${item.mail_item_id}`)?.getBoundingClientRect().right ?? 0)}px`,
                                 }}
                               >
-                                {/* Mark as Notified - Only for Received */}
-                                {item.status === 'Received' && (
-                                  <button
-                                    onClick={() => {
-                                      openQuickNotifyModal(item);
-                                      setOpenDropdownId(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-purple-50 flex items-center gap-3"
-                                  >
-                                    <Bell className="w-4 h-4 text-purple-600" />
-                                    Mark as Notified
-                                  </button>
-                                )}
+                                {/* Mark as Notified - Always visible */}
+                                <button
+                                  onClick={() => {
+                                    openQuickNotifyModal(item);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-purple-50 flex items-center gap-3"
+                                >
+                                  <Bell className="w-4 h-4 text-purple-600" />
+                                  Mark as Notified
+                                </button>
                                 
-                                {/* Mark as Scanned - Only for Received */}
-                                {item.status === 'Received' && (
-                                  <button
-                                    onClick={() => {
-                                      quickStatusUpdate(item.mail_item_id, 'Scanned Document', item.status);
-                                      setOpenDropdownId(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cyan-50 flex items-center gap-3"
-                                  >
-                                    <FileText className="w-4 h-4 text-cyan-600" />
-                                    Mark as Scanned
-                                  </button>
-                                )}
+                                {/* Mark as Scanned - Always visible */}
+                                <button
+                                  onClick={() => {
+                                    setActionMailItem(item);
+                                    setActionModalType('scanned');
+                                    setIsActionModalOpen(true);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cyan-50 flex items-center gap-3"
+                                >
+                                  <FileText className="w-4 h-4 text-cyan-600" />
+                                  Mark as Scanned
+                                </button>
                                 
-                                {/* Mark as Picked Up - For Received/Notified/Pending */}
-                                {(item.status === 'Received' || item.status === 'Notified' || item.status === 'Pending') && (
-                                  <button
-                                    onClick={() => {
-                                      quickStatusUpdate(item.mail_item_id, 'Picked Up', item.status);
-                                      setOpenDropdownId(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-green-50 flex items-center gap-3"
-                                  >
-                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                    Mark as Picked Up
-                                  </button>
-                                )}
+                                {/* Mark as Picked Up - Always visible */}
+                                <button
+                                  onClick={() => {
+                                    setActionMailItem(item);
+                                    setActionModalType('picked_up');
+                                    setIsActionModalOpen(true);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-green-50 flex items-center gap-3"
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                  Mark as Picked Up
+                                </button>
                                 
-                                {/* Mark as Forward - For Notified/Pending */}
-                                {(item.status === 'Notified' || item.status === 'Pending') && (
-                                  <button
-                                    onClick={() => {
-                                      quickStatusUpdate(item.mail_item_id, 'Forward', item.status);
-                                      setOpenDropdownId(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3"
-                                  >
-                                    <Send className="w-4 h-4 text-orange-600" />
-                                    Mark as Forward
-                                  </button>
-                                )}
+                                {/* Mark as Forward - Always visible */}
+                                <button
+                                  onClick={() => {
+                                    setActionMailItem(item);
+                                    setActionModalType('forward');
+                                    setIsActionModalOpen(true);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3"
+                                >
+                                  <Send className="w-4 h-4 text-orange-600" />
+                                  Mark as Forward
+                                </button>
                                 
-                                {/* Mark as Abandoned - For Received/Notified/Pending */}
-                                {(item.status === 'Received' || item.status === 'Notified' || item.status === 'Pending') && (
-                                  <button
-                                    onClick={() => {
-                                      quickStatusUpdate(item.mail_item_id, 'Abandoned Package', item.status);
-                                      setOpenDropdownId(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3"
-                                  >
-                                    <AlertTriangle className="w-4 h-4 text-red-600" />
-                                    Mark as Abandoned
-                                  </button>
-                                )}
+                                {/* Mark as Abandoned - Always visible */}
+                                <button
+                                  onClick={() => {
+                                    setActionMailItem(item);
+                                    setActionModalType('abandoned');
+                                    setIsActionModalOpen(true);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3"
+                                >
+                                  <AlertTriangle className="w-4 h-4 text-red-600" />
+                                  Mark as Abandoned
+                                </button>
                                 
-                                {/* Separator if there were actions above */}
-                                {(item.status === 'Received' || item.status === 'Notified' || item.status === 'Pending') && (
-                                  <div className="border-t border-gray-200 my-1"></div>
-                                )}
+                                {/* Separator */}
+                                <div className="border-t border-gray-200 my-1"></div>
                                 
                                 {/* View Customer Profile - Always available */}
                                 {item.contact_id && (
@@ -1202,47 +1391,6 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                     View Customer Profile
                                   </button>
                                 )}
-                                
-                                {/* Status-specific messages for completed items */}
-                                {item.status === 'Picked Up' && (
-                                  <div className="px-4 py-3 text-sm text-gray-600 border-t border-gray-200">
-                                    <div className="flex items-center gap-2 text-green-700 font-medium mb-1">
-                                      <CheckCircle className="w-4 h-4" />
-                                      Completed
-                                    </div>
-                                    <p className="text-xs">Item has been picked up. No further action required.</p>
-                                  </div>
-                                )}
-                                
-                                {item.status === 'Scanned Document' && (
-                                  <div className="px-4 py-3 text-sm text-gray-600 border-t border-gray-200">
-                                    <div className="flex items-center gap-2 text-cyan-700 font-medium mb-1">
-                                      <FileText className="w-4 h-4" />
-                                      Document Scanned
-                                    </div>
-                                    <p className="text-xs">Document has been scanned and sent to customer.</p>
-                                  </div>
-                                )}
-                                
-                                {item.status === 'Forward' && (
-                                  <div className="px-4 py-3 text-sm text-gray-600 border-t border-gray-200">
-                                    <div className="flex items-center gap-2 text-orange-700 font-medium mb-1">
-                                      <Send className="w-4 h-4" />
-                                      Forwarded
-                                    </div>
-                                    <p className="text-xs">Mail has been forwarded to customer's address.</p>
-                                  </div>
-                                )}
-                                
-                                {item.status === 'Abandoned Package' && (
-                                  <div className="px-4 py-3 text-sm text-gray-600 border-t border-gray-200">
-                                    <div className="flex items-center gap-2 text-red-700 font-medium mb-1">
-                                      <AlertTriangle className="w-4 h-4" />
-                                      Abandoned
-                                    </div>
-                                    <p className="text-xs">Package marked as abandoned. No further action required.</p>
-                                  </div>
-                                )}
                               </div>
                             </>
                           )}
@@ -1256,59 +1404,98 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <td colSpan={9} className="py-6 px-4">
                         <div className="space-y-6">
-                          {/* Notification History - Only show if there are notifications */}
-                          {notificationHistory[item.mail_item_id]?.length > 0 && (
-                            <div>
-                              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                                <Bell className="w-5 h-5 text-purple-600" />
-                                Notification History
-                              </h3>
+                          {/* Action History Timeline - Always show, display message if empty */}
+                          <div>
+                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                              <Bell className="w-5 h-5 text-purple-600" />
+                              Action History
+                            </h3>
+                            {actionHistory[item.mail_item_id]?.length > 0 ? (
                               <div className="space-y-3">
-                                {notificationHistory[item.mail_item_id].map((notif) => (
-                                  <div key={notif.notification_id} className="bg-white p-3 rounded-lg border border-gray-200">
-                                    <div className="flex items-start justify-between">
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <span className="font-semibold text-gray-900">
-                                            {new Date(notif.notified_at).toLocaleString('en-US', {
-                                              month: 'short',
-                                              day: 'numeric',
-                                              year: 'numeric',
-                                              hour: 'numeric',
-                                              minute: '2-digit',
-                                              hour12: true
-                                            })}
-                                          </span>
-                                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
-                                            {notif.notification_method}
-                                          </span>
+                                {actionHistory[item.mail_item_id].map((action) => {
+                                  // Determine icon and color based on action type
+                                  const getActionIcon = () => {
+                                    if (action.action_description.includes('notified') || action.action_description.includes('Notified')) {
+                                      return <Bell className="w-4 h-4 text-purple-600" />;
+                                    } else if (action.action_description.includes('Picked Up')) {
+                                      return <CheckCircle className="w-4 h-4 text-green-600" />;
+                                    } else if (action.action_description.includes('Scanned')) {
+                                      return <FileText className="w-4 h-4 text-cyan-600" />;
+                                    } else if (action.action_description.includes('Forward')) {
+                                      return <Send className="w-4 h-4 text-orange-600" />;
+                                    } else if (action.action_description.includes('Abandoned')) {
+                                      return <AlertTriangle className="w-4 h-4 text-red-600" />;
+                                    }
+                                    return <Mail className="w-4 h-4 text-gray-600" />;
+                                  };
+
+                                  const getBadgeColor = () => {
+                                    if (action.action_description.includes('notified') || action.action_description.includes('Notified')) {
+                                      return 'bg-purple-100 text-purple-700';
+                                    } else if (action.action_description.includes('Picked Up')) {
+                                      return 'bg-green-100 text-green-700';
+                                    } else if (action.action_description.includes('Scanned')) {
+                                      return 'bg-cyan-100 text-cyan-700';
+                                    } else if (action.action_description.includes('Forward')) {
+                                      return 'bg-orange-100 text-orange-700';
+                                    } else if (action.action_description.includes('Abandoned')) {
+                                      return 'bg-red-100 text-red-700';
+                                    }
+                                    return 'bg-gray-100 text-gray-700';
+                                  };
+
+                                  return (
+                                    <div key={action.action_id} className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 mt-0.5">
+                                          {getActionIcon()}
                                         </div>
-                                        <p className="text-sm text-gray-600">
-                                          Notified by: <span className="font-medium text-gray-900">{notif.notified_by}</span>
-                                        </p>
-                                        {notif.notes && (
-                                          <p className="text-sm text-gray-600 mt-1 italic">
-                                            Note: {notif.notes}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                            <span className="font-semibold text-gray-900">
+                                              {new Date(action.action_timestamp).toLocaleString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric',
+                                                hour: 'numeric',
+                                                minute: '2-digit',
+                                                hour12: true
+                                              })}
+                                            </span>
+                                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${getBadgeColor()}`}>
+                                              {action.action_description}
+                                            </span>
+                                          </div>
+                                          <p className="text-sm text-gray-600 mb-1">
+                                            Performed by: <span className="font-medium text-gray-900">{action.performed_by}</span>
                                           </p>
-                                        )}
+                                          {action.previous_value && action.new_value && (
+                                            <p className="text-xs text-gray-500">
+                                              Status changed: <span className="font-medium">{action.previous_value}</span> → <span className="font-medium">{action.new_value}</span>
+                                            </p>
+                                          )}
+                                          {action.notes && (
+                                            <p className="text-sm text-gray-700 mt-2 p-2 bg-gray-50 rounded border border-gray-200 italic">
+                                              Note: {action.notes}
+                                            </p>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
-                            </div>
-                          )}
+                            ) : (
+                              <div className="bg-white p-4 rounded-lg border border-gray-200 text-center text-gray-500 text-sm">
+                                No actions recorded yet. Actions will appear here when staff perform operations on this mail item.
+                              </div>
+                            )}
+                          </div>
 
                           {/* Mail Item Details */}
                           <div>
                             <h3 className="font-bold text-gray-900 mb-3">Mail Item Details</h3>
                             <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-600">Received:</span>
-                                <span className="ml-2 text-gray-900 font-medium">
-                                  {new Date(item.received_date).toLocaleDateString()}
-                                </span>
-                              </div>
                               {item.pickup_date && (
                                 <div>
                                   <span className="text-gray-600">Picked Up:</span>
@@ -1399,7 +1586,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 name="received_date"
                 value={formData.received_date}
                 onChange={handleChange}
-                max={getTodayLocal()}
+                max={getTodayNY()}
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
@@ -1456,11 +1643,55 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               <option value="Pending">Pending</option>
               <option value="Notified">Notified</option>
               <option value="Picked Up">Picked Up</option>
-              <option value="Scanned Document">Scanned Document</option>
+              <option value="Scanned">Scanned</option>
               <option value="Forward">Forward</option>
-              <option value="Abandoned Package">Abandoned Package</option>
+              <option value="Abandoned">Abandoned</option>
             </select>
           </div>
+
+          {/* Show staff and notes fields if status changed */}
+          {editingMailItem && formData.status !== editingMailItem.status && (
+            <>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800 font-medium mb-3">
+                  Status is being changed from "{editingMailItem.status}" to "{formData.status}"
+                </p>
+                
+                {/* Who performed this action */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Who is making this change? *
+                  </label>
+                  <select
+                    name="performed_by"
+                    value={formData.performed_by}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select staff member...</option>
+                    <option value="Merlin">Merlin</option>
+                    <option value="Madison">Madison</option>
+                  </select>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    name="edit_notes"
+                    value={formData.edit_notes}
+                    onChange={handleChange}
+                    placeholder="Add any notes about this status change..."
+                    rows={2}
+                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Description */}
           <div>
@@ -1508,6 +1739,86 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           customerName={notifyingMailItem.contacts?.contact_person || notifyingMailItem.contacts?.company_name || 'Customer'}
           onSuccess={handleQuickNotifySuccess}
         />
+      )}
+
+      {/* Action Modal */}
+      {actionMailItem && (
+        <ActionModal
+          isOpen={isActionModalOpen}
+          onClose={() => {
+            setIsActionModalOpen(false);
+            setActionMailItem(null);
+          }}
+          mailItemId={actionMailItem.mail_item_id}
+          mailItemDetails={{
+            customerName: actionMailItem.contacts?.contact_person || actionMailItem.contacts?.company_name || 'Customer',
+            itemType: actionMailItem.item_type,
+            currentStatus: actionMailItem.status
+          }}
+          actionType={actionModalType}
+          onSuccess={handleActionSuccess}
+        />
+      )}
+
+      {/* Duplicate Mail Prompt Modal */}
+      {showDuplicatePrompt && existingTodayMail && selectedContact && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="mb-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Mail Already Logged Today</h2>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-gray-700 mb-2">
+                  <span className="font-semibold">
+                    {selectedContact.contact_person || selectedContact.company_name}
+                  </span>
+                  {' '}already has mail logged today:
+                </p>
+                <div className="text-sm text-gray-600 pl-4 border-l-2 border-yellow-400">
+                  <p><strong>{existingTodayMail.quantity || 1}x {existingTodayMail.item_type}</strong></p>
+                  <p>Status: {existingTodayMail.status}</p>
+                  <p>Logged: {new Date(existingTodayMail.received_date).toLocaleDateString()}</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Would you like to <strong>add {quantity} more {itemType}{quantity > 1 ? 's' : ''}</strong> to the existing log, 
+                or create a separate entry?
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  await submitNewMail(true);
+                }}
+                disabled={addingMail}
+                className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {addingMail ? 'Adding...' : `Add to Existing (Total: ${(existingTodayMail.quantity || 1) + quantity})`}
+              </button>
+              
+              <button
+                onClick={async () => {
+                  await submitNewMail(false);
+                }}
+                disabled={addingMail}
+                className="w-full px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {addingMail ? 'Creating...' : 'Create Separate Entry'}
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowDuplicatePrompt(false);
+                  setExistingTodayMail(null);
+                }}
+                disabled={addingMail}
+                className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

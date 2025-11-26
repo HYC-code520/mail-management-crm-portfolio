@@ -122,5 +122,10 @@ export const api = {
     create: (data: Record<string, unknown>) => apiClient.post('/notifications', data),
     quickNotify: (data: Record<string, unknown>) => apiClient.post('/notifications/quick-notify', data),
   },
+  actionHistory: {
+    getByMailItem: (mailItemId: string) => apiClient.get(`/action-history/${mailItemId}`),
+    create: (data: Record<string, unknown>) => apiClient.post('/action-history', data),
+    createBulk: (actions: Record<string, unknown>[]) => apiClient.post('/action-history/bulk', { actions }),
+  },
 };
 
