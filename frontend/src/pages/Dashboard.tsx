@@ -262,15 +262,15 @@ export default function DashboardPage() {
         return new Date(dateA).getTime() - new Date(dateB).getTime();
       }); // Don't limit here - let the UI handle display count
 
-      // Calculate mail volume based on selected time range
+      // Calculate mail volume based on selected time range (NY timezone)
       const mailVolumeData = getChartDateRange(chartTimeRange).map(({ dateStr, displayDate }) => {
-        // Filter items for this specific date (extract date part from timestamp)
+        // Filter items for this specific date using NY timezone
         const count = mailItems
           .filter((item: MailItem) => {
             if (!item.received_date) return false;
-            // Extract just the date part (YYYY-MM-DD) from the timestamp
-            const itemDateOnly = item.received_date.split('T')[0];
-            return itemDateOnly === dateStr;
+            // Convert to NY date string for consistent comparison
+            const itemDateNY = toNYDateString(item.received_date);
+            return itemDateNY === dateStr;
           })
           .reduce((sum: number, item: MailItem) => sum + (item.quantity || 1), 0);
         

@@ -143,6 +143,16 @@ export default function DashboardLayout() {
             >
               Email Templates
             </Link>
+            <Link
+              to="/dashboard/settings"
+              className={`px-6 py-2 rounded-full font-medium transition-all ${
+                location.pathname === '/dashboard/settings'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Settings
+            </Link>
             {/* Design tab temporarily hidden - route still exists at /dashboard/design-system */}
           </div>
         </div>

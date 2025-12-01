@@ -678,3 +678,130 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 - The issue only affects local development - production uses Render's environment variable UI
 
 ---
+
+## 12. Backend Environment Variables Not Loading - Dotenv Path Resolution Issue
+
+**Timestamp:** `2025-11-30 16:10:00 - 16:30:00`  
+**Category:** `DEPLOYMENT`  
+**Status:** `SOLVED`  
+**Error Message:** `[dotenv@17.2.3] injecting env (0) from .env` and `Error: Missing Supabase environment variables`  
+**Context:** Backend server failed to start after updating Supabase environment variables to use local Docker instance. The `.env` file existed in `backend/.env` with all correct values (verified via `cat` command showing 14 variables), but dotenv consistently reported loading 0 variables.
+
+**Root Cause Analysis:**  
+1. **Path Resolution Issue**: The `server.js` file is located at `backend/src/server.js` and was calling `require('dotenv').config()` without specifying a path
+2. **Working Directory Mismatch**: While `npm run dev` was executed from the `backend/` directory, dotenv's default path resolution wasn't finding the `.env` file
+3. **Relative Path Attempts Failed**: Tried using `path.join(__dirname, '../.env')` and `path.resolve(__dirname, '../.env')` but these still failed to load variables
+4. **Solution Required process.cwd()**: The `.env` file needed to be referenced relative to the current working directory, not the script file location
+
+**Solution Implemented:**  
+1. **Updated dotenv Configuration** (`backend/src/server.js`):
+   ```javascript
+   // Before:
+   require('dotenv').config();
+
+   // After:
+   const path = require('path');
+   const envPath = path.resolve(process.cwd(), '.env');
+   require('dotenv').config({ path: envPath });
+   ```
+
+2. **Fixed OAuth Routes Middleware Import** (`backend/src/routes/oauth.routes.js`):
+   ```javascript
+   // Before:
+   const { authenticateUser } = require('../middleware/auth.middleware');
+
+   // After:
+   const authenticateUser = require('../middleware/auth.middleware');
+   ```
+   - Reason: The middleware exports a function directly, not as an object property
+
+**Result:**
+- ✅ Dotenv now successfully loads 14 environment variables: `[dotenv@17.2.3] injecting env (14) from .env`
+- ✅ Backend server starts successfully on port 5000
+- ✅ Supabase connection established with local Docker instance
+- ✅ All OAuth2 and email routes registered correctly
+
+**Prevention Strategy:**  
+1. **Explicit Path Configuration**: Always explicitly specify the `.env` path in `dotenv.config()`, especially when script location differs from project root
+2. **Use process.cwd()**: For Node.js apps run from a consistent working directory, use `process.cwd()` as the base for `.env` paths
+3. **Startup Logging**: Add console logging to show how many variables were loaded
+4. **Validate on Startup**: Check for (0) in dotenv output and fail fast with a helpful error message
+
+**Tests Added:**  
+- Manual verification: Backend health endpoint responds successfully
+- Confirmed all 14 environment variables loaded
+- OAuth2 routes accessible without TypeError
+
+**Additional Notes:**  
+- This differs from Error #8 and #11 which were caused by variable ordering issues
+- This issue was specifically about path resolution, not `.env` file format
+- Testing with direct Node.js command confirmed the `.env` file was valid
+- The key insight: `__dirname` points to the script's directory (`backend/src/`), but `process.cwd()` points to where the command was run from (`backend/`)
+
+---
+
+## 13. Frontend/Backend Supabase Instance Mismatch - OAuth Migration
+
+**Timestamp:** `2025-11-30 16:50:00 - 17:00:00`  
+**Category:** `DEPLOYMENT`  
+**Status:** `SOLVED`  
+**Error Message:** `401 Unauthorized` on all API requests and `Invalid token: invalid JWT: unable to parse or verify signature, token signature is invalid`  
+**Context:** After implementing OAuth2 functionality and creating the `oauth_tokens` table via local Docker Supabase migration, the backend was switched to use local Supabase (`http://127.0.0.1:54321`). However, the frontend was still configured to use production Supabase (`https://euspsnrxklenzrmzoesf.supabase.co`). Users could sign in via the frontend (using production Supabase), but all API calls to the backend failed with 401 errors.
+
+**Root Cause Analysis:**  
+1. **Mismatched Supabase Instances**: Frontend authenticated users against production Supabase and received JWT tokens signed by production
+2. **Backend Validation Failure**: Backend tried to verify production JWT tokens using local Supabase's secret key, causing signature validation to fail
+3. **Migration Location Gap**: The `oauth_tokens` table was created in local Docker Supabase via migration, but didn't exist in production Supabase
+4. **Development vs Production Confusion**: The local Docker setup was used for migration testing, but production database needed the same schema changes
+
+**Solution Implemented:**  
+1. **Applied OAuth Migration to Production Supabase**:
+   - Opened production Supabase SQL Editor
+   - Executed `20250129000000_add_oauth_tokens.sql` migration manually
+   - Created `oauth_tokens` table with RLS policies in production database
+   
+2. **Updated Backend to Use Production Supabase** (`backend/.env`):
+   ```env
+   SUPABASE_URL=https://euspsnrxklenzrmzoesf.supabase.co
+   SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
+
+3. **Restarted Backend**: Killed node processes and restarted with `npm run dev` to load new environment variables
+
+4. **Verified Configuration**:
+   - Backend now validates tokens against production Supabase
+   - Both frontend and backend use the same Supabase instance
+   - OAuth tokens table exists in production database
+
+**Result:**
+- ✅ Users can sign in successfully
+- ✅ All API requests return 200 instead of 401
+- ✅ JWT token validation works correctly
+- ✅ Dashboard loads with data
+- ✅ OAuth tokens table ready for Gmail OAuth2 implementation
+
+**Prevention Strategy:**  
+1. **Environment Consistency**: Always ensure frontend and backend use the same Supabase instance (both local or both production)
+2. **Migration Deployment Process**: 
+   - Test migrations locally first using Docker Supabase
+   - Apply the same migrations to production via Supabase dashboard SQL Editor
+   - Don't switch backend to local Supabase unless frontend also switches
+3. **Configuration Documentation**: Document which environment (local/production) each service is using in README
+4. **Environment Variable Validation**: Add startup checks to verify Supabase URL matches expected environment
+5. **JWT Token Debugging**: Log the Supabase URL being used when token validation fails to quickly identify mismatches
+
+**Tests Added:**  
+- Manual verification: Dashboard loads without 401 errors
+- Backend logs show successful token validation
+- No "Invalid token" errors in backend console
+- All API endpoints (`/api/contacts`, `/api/mail-items`, etc.) respond with data
+
+**Additional Notes:**  
+- Local Docker Supabase is useful for testing migrations but requires frontend to also use local instance
+- Production Supabase and local Supabase have different JWT secret keys, so tokens are not interchangeable
+- The `oauth_tokens` table is now in production and ready for OAuth2 Gmail integration
+- SMTP error still present (App Password not configured) but doesn't affect OAuth2 functionality
+- For future local development with OAuth2, would need to run both frontend and backend against local Supabase
+
+---
