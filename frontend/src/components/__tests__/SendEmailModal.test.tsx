@@ -13,7 +13,8 @@ vi.mock('../../lib/api-client', () => ({
     },
     emails: {
       send: vi.fn(),
-      sendCustom: vi.fn()
+      sendCustom: vi.fn(),
+      sendWithTemplate: vi.fn()
     },
     contacts: {
       getById: vi.fn()
@@ -222,9 +223,8 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
         expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
-      // Send button should be disabled
-      const sendButton = screen.getByRole('button', { name: /send$/i });
-      expect(sendButton).toBeDisabled();
+      // Send button should not exist when there's no email
+      expect(screen.queryByRole('button', { name: /send$/i })).not.toBeInTheDocument();
     });
 
     it('should refresh email when refresh button is clicked', async () => {
@@ -272,7 +272,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
 
       // Wait for templates to load and subject/message to be populated
       await waitFor(() => {
-        const subjectInput = screen.getByPlaceholder('Subject') as HTMLInputElement;
+        const subjectInput = screen.getByPlaceholderText('Subject') as HTMLInputElement;
         expect(subjectInput.value).toBeTruthy();
       });
 
@@ -343,9 +343,9 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
         expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
-      // Click "Edit Customer Info" button
-      const editButton = screen.getByText(/edit customer info/i);
-      fireEvent.click(editButton);
+      // Click "Add Email Address" button
+      const addEmailButton = screen.getByText(/Add Email Address/i);
+      fireEvent.click(addEmailButton);
 
       // Should navigate to customer profile
       await waitFor(() => {
