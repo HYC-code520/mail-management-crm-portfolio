@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, Languages, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.tsx';
 import toast from 'react-hot-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../lib/api-client.ts';
 
 export default function DashboardLayout() {
@@ -13,7 +13,7 @@ export default function DashboardLayout() {
   const [gmailConnected, setGmailConnected] = useState<boolean | null>(null);
   const [gmailAddress, setGmailAddress] = useState<string | null>(null);
 
-  const checkGmailStatus = async () => {
+  const checkGmailStatus = useCallback(async () => {
     try {
       const response = await api.oauth.getGmailStatus();
       setGmailConnected(response.connected);
@@ -22,12 +22,12 @@ export default function DashboardLayout() {
       console.error('Error checking Gmail status:', error);
       setGmailConnected(false);
     }
-  };
+  }, []);
 
   // Check Gmail connection status on mount and when location changes
   useEffect(() => {
-    checkGmailStatus();
-  }, [location.pathname]); // Re-check when navigating between pages
+    checkGmailStatus(); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [location.pathname, checkGmailStatus]); // Include checkGmailStatus in dependencies
 
   const handleSignOut = async () => {
     try {
