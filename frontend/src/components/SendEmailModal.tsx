@@ -171,13 +171,11 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
 
     setLoading(true);
     try {
-      await api.emails.sendCustom({
-        to: currentEmail,
-        subject: subject,
-        body: message,
-        contact_id: mailItem.contacts?.contact_id,
+      await api.emails.sendWithTemplate({
+        contact_id: mailItem.contacts?.contact_id || '',
+        template_id: selectedTemplateId,
         mail_item_id: mailItem.mail_item_id,
-        template_id: selectedTemplateId || undefined
+        message_type: templates.find((t: Template) => t.template_id === selectedTemplateId)?.template_type || 'Initial'
       });
 
       toast.success(`Email sent to ${currentEmail}`);
