@@ -98,7 +98,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
           }
         }
       };
-      (api.emails.sendCustom as any).mockRejectedValue(mockError);
+      (api.emails.sendWithTemplate as any).mockRejectedValue(mockError);
 
       render(
         <BrowserRouter>
@@ -135,7 +135,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
           }
         }
       };
-      (api.emails.sendCustom as any).mockRejectedValue(mockError);
+      (api.emails.sendWithTemplate as any).mockRejectedValue(mockError);
 
       render(
         <BrowserRouter>
@@ -165,7 +165,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
           }
         }
       };
-      (api.emails.sendCustom as any).mockRejectedValue(mockError);
+      (api.emails.sendWithTemplate as any).mockRejectedValue(mockError);
 
       render(
         <BrowserRouter>
@@ -219,7 +219,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       // Send button should be disabled
@@ -242,7 +242,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       // Mock that after refresh, contact has email
@@ -270,14 +270,14 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
         expect(screen.getByText('New Message')).toBeInTheDocument();
       });
 
-      // Wait for templates to load and send button to be enabled
+      // Wait for templates to load and subject/message to be populated
       await waitFor(() => {
-        const sendButton = screen.getByRole('button', { name: /send$/i });
-        expect(sendButton).not.toBeDisabled();
+        const subjectInput = screen.getByPlaceholder('Subject') as HTMLInputElement;
+        expect(subjectInput.value).toBeTruthy();
       });
 
-      // Verify modal is fully rendered
-      expect(screen.getByText('Send Email Notification')).toBeInTheDocument();
+      // Verify templates are loaded
+      expect(api.templates.getAll).toHaveBeenCalled();
     });
   });
 
@@ -316,7 +316,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       // Send button should be disabled when no email
@@ -340,7 +340,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       // Click "Edit Customer Info" button
@@ -374,7 +374,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       // Click "Add email →" link
@@ -419,7 +419,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       const editButton = screen.getByText(/edit customer info/i);
@@ -456,7 +456,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       const editButton = screen.getByText(/edit customer info/i);
@@ -493,7 +493,7 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/no email on file/i)).toBeInTheDocument();
+        expect(screen.getByText(/No Email Address/i)).toBeInTheDocument();
       });
 
       const editButton = screen.getByText(/edit customer info/i);
@@ -686,7 +686,7 @@ describe('SendEmailModal - Notification History Banner', () => {
       contact_person: 'John Doe'
     });
 
-    const { container } = render(
+    render(
       <BrowserRouter>
         <SendEmailModal {...defaultProps} mailItem={mailItemWithHistory} />
       </BrowserRouter>

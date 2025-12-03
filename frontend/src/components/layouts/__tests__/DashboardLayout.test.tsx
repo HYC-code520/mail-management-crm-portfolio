@@ -20,7 +20,7 @@ vi.mock('../../../contexts/AuthContext', async () => {
   return {
     ...actual,
     AuthContext: {
-      Provider: ({ children, value }: any) => children,
+      Provider: ({ children, value: _value }: any) => children,
       Consumer: ({ children }: any) => children({}),
     },
     useAuth: vi.fn()

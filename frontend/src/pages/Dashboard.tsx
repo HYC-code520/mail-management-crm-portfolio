@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Package, Bell, Search, ArrowUpDown, ArrowUp, ArrowDown, UserPlus, Plus, FileText, Clock, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, MoreVertical, Send } from 'lucide-react';
+import { Mail, Package, ArrowUp, ArrowDown, UserPlus, Plus, FileText, Clock, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, MoreVertical, Send } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';
