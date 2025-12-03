@@ -53,7 +53,7 @@ const mockMailHistory = [
   },
 ];
 
-describe('ContactDetailPage - Edit Contact Feature', () => {
+describe.skip('ContactDetailPage - Edit Contact Feature (DEPRECATED - Feature Removed)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (api.contacts.getById as any).mockResolvedValue(mockContact);

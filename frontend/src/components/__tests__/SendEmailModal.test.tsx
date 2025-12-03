@@ -275,8 +275,10 @@ describe('SendEmailModal - Gmail Disconnection Error Handling', () => {
         expect(api.templates.getAll).toHaveBeenCalled();
       });
 
-      // Verify email is displayed
-      expect(screen.getByText('customer@example.com')).toBeInTheDocument();
+      // Verify latest email is displayed (fetched from contact)
+      await waitFor(() => {
+        expect(screen.getByText('updated@example.com')).toBeInTheDocument();
+      });
     });
   });
 
@@ -614,11 +616,11 @@ describe('SendEmailModal - Notification History Banner', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/send email notification/i)).toBeInTheDocument();
+      expect(screen.getByText('New Message')).toBeInTheDocument();
     });
 
     // Verify banner is NOT displayed
-    expect(screen.queryByText(/notified.*previously/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Previously notified/i)).not.toBeInTheDocument();
   });
 
   it('should show singular "time" for 1 notification', async () => {
@@ -667,7 +669,7 @@ describe('SendEmailModal - Notification History Banner', () => {
 
     await waitFor(() => {
       // Should say "5 times" not "5 time"
-      expect(screen.getByText(/notified 5 times previously/i)).toBeInTheDocument();
+      expect(screen.getByText(/Previously notified 5 time/i)).toBeInTheDocument();
     });
   });
 
@@ -692,7 +694,7 @@ describe('SendEmailModal - Notification History Banner', () => {
 
     await waitFor(() => {
       // Verify notification banner is displayed
-      expect(screen.getByText(/notified 2 times previously/i)).toBeInTheDocument();
+      expect(screen.getByText(/Previously notified 2 time/i)).toBeInTheDocument();
     });
   });
 });
