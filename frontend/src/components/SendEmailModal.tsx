@@ -190,7 +190,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
       
       if (errorResponse?.code === 'GMAIL_DISCONNECTED' || errorResponse?.code === 'EMAIL_NOT_CONFIGURED') {
         toast.error(
-          (t) => (
+          (t: { id: string }) => (
             <div className="flex flex-col gap-2">
               <div className="font-semibold">Gmail Disconnected</div>
               <div className="text-sm">{errorResponse.message}</div>

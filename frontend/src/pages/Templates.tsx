@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Plus, Edit, Trash2 } from 'lucide-react';
+import { Copy, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';

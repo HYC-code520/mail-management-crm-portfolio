@@ -151,6 +151,27 @@ export default function DashboardPage() {
     });
   };
 
+  // Helper function to generate date range for charts
+  const getChartDateRange = (days: number) => {
+    const result = [];
+    const today = new Date();
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      // Format as YYYY-MM-DD for data matching
+      const dateStr = toNYDateString(date.toISOString());
+      
+      // Format for display (e.g., "Nov 20")
+      const displayDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      result.push({ dateStr, displayDate, date: displayDate }); // 'date' is what the chart uses
+    }
+    
+    return result;
+  };
+
   // Helper function to generate tooltip content for notification button
   const getNotificationTooltip = (mailItem: MailItem) => {
     const count = mailItem.notification_count || 0;
@@ -912,33 +933,35 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600">Last {chartTimeRange} days</p>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={stats?.mailVolumeData || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
-                  tickLine={{ stroke: '#E5E7EB' }}
-                  interval={chartTimeRange === 30 ? 4 : chartTimeRange === 14 ? 1 : 0}
-                  angle={chartTimeRange === 30 ? -45 : 0}
-                  textAnchor={chartTimeRange === 30 ? "end" : "middle"}
-                  height={chartTimeRange === 30 ? 60 : 30}
-                />
-                <YAxis 
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
-                  tickLine={{ stroke: '#E5E7EB' }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Bar dataKey="count" fill="#10B981" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="animate-fadeIn">
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={stats?.mailVolumeData || []} key={`mail-volume-${chartTimeRange}`}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fill: '#6B7280', fontSize: 11 }}
+                    tickLine={{ stroke: '#E5E7EB' }}
+                    interval={chartTimeRange === 30 ? 6 : chartTimeRange === 14 ? 2 : 1}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={{ stroke: '#E5E7EB' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Bar dataKey="count" fill="#10B981" radius={[8, 8, 0, 0]} isAnimationActive={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Customer Growth Chart */}
@@ -950,42 +973,45 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600">Added per day (last {chartTimeRange} days)</p>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={stats?.customerGrowthData || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
-                  tickLine={{ stroke: '#E5E7EB' }}
-                  interval={chartTimeRange === 30 ? 4 : chartTimeRange === 14 ? 1 : 0}
-                  angle={chartTimeRange === 30 ? -45 : 0}
-                  textAnchor={chartTimeRange === 30 ? "end" : "middle"}
-                  height={chartTimeRange === 30 ? 60 : 30}
-                />
-                <YAxis 
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
-                  tickLine={{ stroke: '#E5E7EB' }}
-                  allowDecimals={false}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="customers" 
-                  stroke="#10B981" 
-                  strokeWidth={3}
-                  dot={{ fill: '#10B981', r: 4 }}
-                  activeDot={{ r: 6 }}
-                  connectNulls={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="animate-fadeIn">
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={stats?.customerGrowthData || []} key={`customer-growth-${chartTimeRange}`}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fill: '#6B7280', fontSize: 11 }}
+                    tickLine={{ stroke: '#E5E7EB' }}
+                    interval={chartTimeRange === 30 ? 6 : chartTimeRange === 14 ? 2 : 1}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={{ stroke: '#E5E7EB' }}
+                    allowDecimals={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="customers" 
+                    stroke="#10B981" 
+                    strokeWidth={3}
+                    isAnimationActive={false}
+                    dot={{ fill: '#10B981', r: 4 }}
+                    activeDot={{ r: 6 }}
+                    connectNulls={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>
