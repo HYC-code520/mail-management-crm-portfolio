@@ -149,5 +149,35 @@ export const api = {
     getGmailStatus: () => apiClient.get('/oauth/gmail/status'),
     disconnectGmail: () => apiClient.post('/oauth/gmail/disconnect', {}),
   },
+  todos: {
+    getAll: (filters?: { date?: string; completed?: boolean; category?: string }) => {
+      const params = new URLSearchParams();
+      if (filters?.date) params.append('date', filters.date);
+      if (filters?.completed !== undefined) params.append('completed', String(filters.completed));
+      if (filters?.category) params.append('category', filters.category);
+      return apiClient.get(`/todos${params.toString() ? `?${params}` : ''}`);
+    },
+    create: (data: {
+      title: string;
+      notes?: string;
+      date_header?: string;
+      priority?: number;
+      category?: string;
+      staff_member?: string;
+    }) => apiClient.post('/todos', data),
+    update: (id: string, data: {
+      title?: string;
+      notes?: string;
+      is_completed?: boolean;
+      date_header?: string;
+      priority?: number;
+      category?: string;
+      sort_order?: number;
+      staff_member?: string;
+    }) => apiClient.put(`/todos/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/todos/${id}`),
+    bulkUpdate: (todos: Array<{ todo_id: string; sort_order?: number; is_completed?: boolean }>) => 
+      apiClient.patch('/todos/bulk', { todos }),
+  },
 };
 
