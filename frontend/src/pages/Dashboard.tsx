@@ -499,7 +499,6 @@ export default function DashboardPage() {
   //   }
   // };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filteredItems = stats?.recentMailItems.filter((item: any) => {
     const matchesStatus = statusFilter === 'All Status' || item.status === statusFilter;
     const matchesSearch = searchTerm === '' || 

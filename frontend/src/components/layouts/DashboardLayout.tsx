@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, Languages, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.tsx';
@@ -28,6 +27,7 @@ export default function DashboardLayout() {
 
   // Check Gmail connection status on mount and when location changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void checkGmailStatus(); // Explicitly ignore the promise
   }, [location.pathname, checkGmailStatus]); // Re-check when navigating between pages
 
