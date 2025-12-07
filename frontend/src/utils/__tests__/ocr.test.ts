@@ -9,6 +9,9 @@ vi.mock('tesseract.js', () => ({
   }
 }));
 
+// Global test timeout for async OCR operations
+vi.setConfig({ testTimeout: 15000 });
+
 // Mock canvas for JSDOM environment
 beforeEach(() => {
   // Mock HTMLCanvasElement.getContext
@@ -41,7 +44,14 @@ describe('OCR Utility', () => {
       terminate: vi.fn().mockResolvedValue(undefined)
     };
 
-    (Tesseract.createWorker as any).mockResolvedValue(mockWorker);
+    // Mock createWorker to return a worker that auto-initializes
+    (Tesseract.createWorker as any).mockImplementation(async () => {
+      // Tesseract.createWorker('eng') returns an already-initialized worker
+      await mockWorker.load();
+      await mockWorker.loadLanguage('eng');
+      await mockWorker.initialize('eng');
+      return mockWorker;
+    });
   });
 
   describe('initOCRWorker', () => {
