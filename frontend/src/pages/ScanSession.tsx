@@ -528,6 +528,7 @@ export default function ScanSessionPage() {
           capture="environment"
           onChange={handleFileSelect}
           className="hidden"
+          aria-label="capture-photo"
         />
       </div>
 
