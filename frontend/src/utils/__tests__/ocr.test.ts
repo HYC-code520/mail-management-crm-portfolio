@@ -9,6 +9,24 @@ vi.mock('tesseract.js', () => ({
   }
 }));
 
+// Mock canvas for JSDOM environment
+beforeEach(() => {
+  // Mock HTMLCanvasElement.getContext
+  HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
+    drawImage: vi.fn(),
+    canvas: {
+      toBlob: vi.fn((callback) => {
+        const mockBlob = new Blob(['mock'], { type: 'image/jpeg' });
+        callback(mockBlob);
+      })
+    }
+  })) as any;
+
+  // Mock URL.createObjectURL
+  global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+  global.URL.revokeObjectURL = vi.fn();
+});
+
 describe('OCR Utility', () => {
   let mockWorker: any;
 

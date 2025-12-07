@@ -24,7 +24,7 @@ vi.mock('../../utils/smartMatch', () => ({
 }));
 
 vi.mock('../../utils/ocr', () => ({
-  initOCRWorker: vi.fn(),
+  initOCRWorker: vi.fn(() => Promise.resolve()), // Must return a Promise!
   extractRecipientName: vi.fn()
 }));
 
