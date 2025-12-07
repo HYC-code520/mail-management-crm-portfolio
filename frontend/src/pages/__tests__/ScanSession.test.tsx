@@ -25,7 +25,8 @@ vi.mock('../../utils/smartMatch', () => ({
 
 vi.mock('../../utils/ocr', () => ({
   initOCRWorker: vi.fn(() => Promise.resolve()), // Must return a Promise!
-  extractRecipientName: vi.fn()
+  extractRecipientName: vi.fn(),
+  terminateOCRWorker: vi.fn(() => Promise.resolve()) // Add cleanup function!
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -80,7 +81,7 @@ describe('ScanSession', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText(/Start New Scan Session/i)).toBeInTheDocument();
+        expect(screen.getByText(/Start New Session/i)).toBeInTheDocument();
       });
     });
 
@@ -108,10 +109,10 @@ describe('ScanSession', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText(/Start New Scan Session/i)).toBeInTheDocument();
+        expect(screen.getByText(/Start New Session/i)).toBeInTheDocument();
       });
 
-      const startButton = screen.getByText(/Start New Scan Session/i);
+      const startButton = screen.getByText(/Start New Session/i);
       await user.click(startButton);
 
       await waitFor(() => {
@@ -124,10 +125,10 @@ describe('ScanSession', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText(/Start New Scan Session/i)).toBeInTheDocument();
+        expect(screen.getByText(/Start New Session/i)).toBeInTheDocument();
       });
 
-      const startButton = screen.getByText(/Start New Scan Session/i);
+      const startButton = screen.getByText(/Start New Session/i);
       await user.click(startButton);
 
       await waitFor(() => {
@@ -153,9 +154,9 @@ describe('ScanSession', () => {
 
       // Start session
       await waitFor(() => {
-        expect(screen.getByText(/Start New Scan Session/i)).toBeInTheDocument();
+        expect(screen.getByText(/Start New Session/i)).toBeInTheDocument();
       });
-      const startButton = screen.getByText(/Start New Scan Session/i);
+      const startButton = screen.getByText(/Start New Session/i);
       await user.click(startButton);
 
       // Mock file input
@@ -202,9 +203,9 @@ describe('ScanSession', () => {
 
       // Start session and upload photo
       await waitFor(() => {
-        expect(screen.getByText(/Start New Scan Session/i)).toBeInTheDocument();
+        expect(screen.getByText(/Start New Session/i)).toBeInTheDocument();
       });
-      const startButton = screen.getByText(/Start New Scan Session/i);
+      const startButton = screen.getByText(/Start New Session/i);
       await user.click(startButton);
 
       const fileInput = screen.getByLabelText(/capture-photo/i) as HTMLInputElement;
@@ -232,7 +233,7 @@ describe('ScanSession', () => {
       renderComponent();
 
       // Start session and scan item
-      const startButton = await screen.findByText(/Start New Scan Session/i);
+      const startButton = await screen.findByText(/Start New Session/i);
       await user.click(startButton);
 
       const fileInput = screen.getByLabelText(/capture-photo/i) as HTMLInputElement;
@@ -269,7 +270,7 @@ describe('ScanSession', () => {
       renderComponent();
 
       // Start session and scan item
-      const startButton = await screen.findByText(/Start New Scan Session/i);
+      const startButton = await screen.findByText(/Start New Session/i);
       await user.click(startButton);
 
       const fileInput = screen.getByLabelText(/capture-photo/i) as HTMLInputElement;
@@ -304,7 +305,7 @@ describe('ScanSession', () => {
 
       renderComponent();
 
-      const startButton = await screen.findByText(/Start New Scan Session/i);
+      const startButton = await screen.findByText(/Start New Session/i);
       await user.click(startButton);
 
       // Scan two items
@@ -356,7 +357,7 @@ describe('ScanSession', () => {
       renderComponent();
 
       // Start, scan, and submit
-      const startButton = await screen.findByText(/Start New Scan Session/i);
+      const startButton = await screen.findByText(/Start New Session/i);
       await user.click(startButton);
 
       const fileInput = screen.getByLabelText(/capture-photo/i) as HTMLInputElement;
@@ -400,7 +401,7 @@ describe('ScanSession', () => {
 
       renderComponent();
 
-      const startButton = await screen.findByText(/Start New Scan Session/i);
+      const startButton = await screen.findByText(/Start New Session/i);
       await user.click(startButton);
 
       const fileInput = screen.getByLabelText(/capture-photo/i) as HTMLInputElement;
@@ -428,7 +429,7 @@ describe('ScanSession', () => {
 
       renderComponent();
 
-      const startButton = await screen.findByText(/Start New Scan Session/i);
+      const startButton = await screen.findByText(/Start New Session/i);
       await user.click(startButton);
 
       const fileInput = screen.getByLabelText(/capture-photo/i) as HTMLInputElement;

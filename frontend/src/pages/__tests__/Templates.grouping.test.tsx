@@ -223,7 +223,6 @@ describe('Templates Page - Grouped View', () => {
     });
 
     it('should not show delete button for scan templates', async () => {
-      const user = userEvent.setup();
       renderComponent();
 
       await waitFor(() => {
@@ -239,7 +238,6 @@ describe('Templates Page - Grouped View', () => {
     });
 
     it('should not show delete button for standard templates', async () => {
-      const user = userEvent.setup();
       renderComponent();
 
       await waitFor(() => {
