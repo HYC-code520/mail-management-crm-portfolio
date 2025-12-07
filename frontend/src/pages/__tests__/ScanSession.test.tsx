@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
@@ -79,18 +79,30 @@ describe('ScanSession', () => {
 
   // Helper to simulate file upload (userEvent.upload has issues in JSDOM)
   const uploadFile = async (fileInput: HTMLInputElement, file: File) => {
-    // Create a DataTransfer to hold the file
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
+    // Create a mock FileList (DataTransfer not available in all JSDOM environments)
+    const fileList = {
+      0: file,
+      length: 1,
+      item: (index: number) => (index === 0 ? file : null),
+      [Symbol.iterator]: function* () {
+        yield file;
+      }
+    };
     
     // Set the files property
     Object.defineProperty(fileInput, 'files', {
-      value: dataTransfer.files,
-      writable: false
+      value: fileList,
+      writable: false,
+      configurable: true
     });
 
     // Manually trigger the change event
     const changeEvent = new Event('change', { bubbles: true });
+    Object.defineProperty(changeEvent, 'target', {
+      value: fileInput,
+      writable: false
+    });
+    
     fileInput.dispatchEvent(changeEvent);
 
     // Wait for React to process the event

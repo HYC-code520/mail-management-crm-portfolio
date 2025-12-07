@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { initOCRWorker, extractRecipientName } from '../ocr';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { initOCRWorker, extractRecipientName, terminateOCRWorker } from '../ocr';
 import Tesseract from 'tesseract.js';
 
 // Mock Tesseract
@@ -54,6 +54,11 @@ describe('OCR Utility', () => {
     });
   });
 
+  afterEach(async () => {
+    // Clean up worker between tests
+    await terminateOCRWorker();
+  });
+
   describe('initOCRWorker', () => {
     it('should initialize Tesseract worker', async () => {
       await initOCRWorker();
@@ -74,10 +79,6 @@ describe('OCR Utility', () => {
   });
 
   describe('extractRecipientName', () => {
-    beforeEach(async () => {
-      await initOCRWorker();
-    });
-
     it('should extract recipient name from "TO:" label', async () => {
       const mockBlob = new Blob(['test'], { type: 'image/jpeg' });
 
@@ -88,6 +89,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toBe('JOHN DOE');
@@ -105,6 +108,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toBe('JANE SMITH');
@@ -121,6 +126,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toBe('BOB JOHNSON');
@@ -138,6 +145,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toContain('ALICE');
@@ -154,6 +163,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       // Should extract "JOHN SMITH" and filter out street keywords
@@ -171,6 +182,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.confidence).toBeLessThan(0.5);
@@ -186,6 +199,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toBe('');
@@ -202,6 +217,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toBe('MARY JANE WATSON');
@@ -217,6 +234,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toBe('ANNE-MARIE JOHNSON');
@@ -232,6 +251,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toContain("O'BRIEN");
@@ -264,6 +285,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text).toBe('DAVID LEE');
@@ -279,6 +302,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       // Should only look at first 4 lines
@@ -295,6 +320,8 @@ describe('OCR Utility', () => {
         }
       });
 
+      // Initialize worker before extracting
+      await initOCRWorker();
       const result = await extractRecipientName(mockBlob);
 
       expect(result.text.toLowerCase()).toBe('michael brown');
