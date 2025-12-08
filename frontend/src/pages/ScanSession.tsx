@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { api } from '../lib/api-client';
-import { initOCRWorker, extractRecipientName, terminateOCRWorker } from '../utils/ocr';
+import { initOCRWorker, terminateOCRWorker } from '../utils/ocr';
 import { smartMatchWithGemini } from '../utils/smartMatch';
-import { matchContactByName } from '../utils/nameMatching';
 import type { 
   ScannedItem, 
   ScanSession, 
@@ -32,7 +31,6 @@ export default function ScanSessionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quickScanMode, setQuickScanMode] = useState(false); // Quick scan mode for bulk scanning
   const [processingQueue, setProcessingQueue] = useState(0); // Count of items being processed in background
-  const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true); // Prevent infinite loops
   const lastGeminiCallRef = useRef<number>(0); // Track last Gemini API call for rate limiting
   
   // Confirm modal state
@@ -162,6 +160,10 @@ export default function ScanSessionPage() {
     const now = Date.now();
     const timeSinceLastCall = now - lastGeminiCallRef.current;
     
+    // Reserve our spot IMMEDIATELY to prevent race conditions
+    const ourCallTime = lastGeminiCallRef.current + MIN_DELAY_MS;
+    lastGeminiCallRef.current = Math.max(now, ourCallTime);
+    
     if (timeSinceLastCall < MIN_DELAY_MS) {
       const waitTime = MIN_DELAY_MS - timeSinceLastCall;
       console.log(`⏳ [${processingId}] Rate limiting: waiting ${Math.round(waitTime / 1000)}s before API call`);
@@ -170,9 +172,9 @@ export default function ScanSessionPage() {
         icon: '⏱️',
       });
       await new Promise(resolve => setTimeout(resolve, waitTime));
+    } else {
+      console.log(`✅ [${processingId}] No rate limiting needed (${Math.round(timeSinceLastCall / 1000)}s since last call)`);
     }
-    
-    lastGeminiCallRef.current = Date.now();
     
     try {
       // Process photo without blocking UI
@@ -242,58 +244,18 @@ export default function ScanSessionPage() {
     console.log('👁️ Preview image:', previewUrl);
     console.log('💡 TIP: Copy the URL above and paste in browser to see the photo being processed');
 
-    // STRATEGY: Use Smart AI Matching with Gemini first (does BOTH extraction + matching!)
-    // If it fails, fall back to Tesseract + fuzzy matching
-    
-    console.log('🤖 Step 1: Trying smart AI matching with Gemini...');
-    if (!quickScanMode) {
-      toast.loading('AI is analyzing the mail...', { id: 'processing', duration: 3000 });
-    }
+    // Use Gemini smart matching (now with 1,500 requests/day!)
+    console.log('🤖 Using Gemini AI for smart matching...');
     
     const smartResult = await smartMatchWithGemini(photoBlob, contacts);
-    
-    console.log('🔍 Gemini result:', {
-      extractedText: smartResult.extractedText,
-      matchedContact: smartResult.matchedContact?.contact_person || smartResult.matchedContact?.company_name,
-      confidence: (smartResult.confidence * 100).toFixed(0) + '%',
-      error: smartResult.error
-    });
+    console.log('🎯 Gemini smart match result:', smartResult);
 
-    // Check if Gemini API failed completely
-    if (smartResult.error) {
-      console.warn('⚠️ Gemini API error:', smartResult.error);
-      if (!quickScanMode) {
-        toast.loading('API unavailable, using offline OCR...', { id: 'processing', duration: 2000 });
-      }
-    }
-
-    let finalText = smartResult.extractedText;
-    let finalContact = smartResult.matchedContact;
-    let finalConfidence = smartResult.confidence;
-    let matchReason = smartResult.reason;
-
-    // If Gemini smart matching failed or returned low confidence, try fallback
-    if (!smartResult.matchedContact || smartResult.confidence < CONFIDENCE_THRESHOLD || smartResult.error) {
-      console.log(`⚠️ Gemini ${smartResult.error ? 'failed' : `confidence low (${(smartResult.confidence * 100).toFixed(0)}%)`}, trying fallback...`);
-      if (!quickScanMode) {
-        toast.loading('Trying offline OCR...', { id: 'processing', duration: 2000 });
-      }
-
-      // Fallback: Tesseract OCR + Fuzzy Matching
-      const tesseractResult = await extractRecipientName(photoBlob);
-      console.log('📝 Tesseract extracted:', tesseractResult.text);
-      
-      const fuzzyMatch = matchContactByName(tesseractResult.text, contacts);
-      console.log('🎯 Fuzzy match result:', fuzzyMatch ? `${fuzzyMatch.contact.contact_person || fuzzyMatch.contact.company_name} (${(fuzzyMatch.confidence * 100).toFixed(0)}%)` : 'No match');
-
-      if (fuzzyMatch && fuzzyMatch.confidence > finalConfidence) {
-        finalText = tesseractResult.text;
-        finalContact = fuzzyMatch.contact;
-        finalConfidence = fuzzyMatch.confidence;
-        matchReason = `Offline OCR matched on ${fuzzyMatch.matchedField}`;
-        console.log('✅ Fallback found better match!');
-      }
-    }
+    const finalText = smartResult.extractedText || '';
+    const finalContact = smartResult.matchedContact || null;
+    const finalConfidence = smartResult.confidence || 0;
+    const matchReason = smartResult.matchedContact 
+      ? `Gemini AI matched: ${smartResult.matchedContact.contact_person || smartResult.matchedContact.company_name}`
+      : 'No match found';
 
     toast.dismiss('processing');
 
@@ -325,8 +287,19 @@ export default function ScanSessionPage() {
   };
 
   const confirmScan = (item: ScannedItem) => {
+    console.log('➕ confirmScan called:', {
+      itemId: item.id,
+      contact: item.matchedContact?.contact_person || item.matchedContact?.company_name,
+      hasSession: !!session,
+      sessionId: session?.sessionId,
+      currentItemCount: session?.items.length,
+    });
+
     if (!session) {
-      console.error('❌ Cannot confirm scan: No active session!');
+      console.error('❌ Cannot confirm scan: No active session!', {
+        sessionState: session,
+        localStorage: localStorage.getItem('scanSession'),
+      });
       toast.error('No active session. Please start a new session.');
       return;
     }
@@ -337,9 +310,20 @@ export default function ScanSessionPage() {
       currentCount: session.items.length,
     });
 
-    setSession({
-      ...session,
-      items: [...session.items, item],
+    // Use functional update to ensure we have latest session state!
+    setSession(prevSession => {
+      if (!prevSession) {
+        console.error('❌ prevSession is null in setState!');
+        return prevSession;
+      }
+      
+      const newSession = {
+        ...prevSession,
+        items: [...prevSession.items, item],
+      };
+      
+      console.log('✅ Session updated! Old count:', prevSession.items.length, 'New count:', newSession.items.length);
+      return newSession;
     });
 
     setPendingItem(null);
@@ -350,8 +334,6 @@ export default function ScanSessionPage() {
       `✓ ${item.matchedContact?.contact_person || item.matchedContact?.company_name || 'Item'}`,
       { duration: toastDuration }
     );
-    
-    console.log('✅ Item added! New count:', session.items.length + 1);
     
     // Vibration feedback
     if (navigator.vibrate) {
