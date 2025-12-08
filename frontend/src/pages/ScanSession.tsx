@@ -325,8 +325,19 @@ export default function ScanSessionPage() {
   };
 
   const confirmScan = (item: ScannedItem) => {
+    console.log('➕ confirmScan called:', {
+      itemId: item.id,
+      contact: item.matchedContact?.contact_person || item.matchedContact?.company_name,
+      hasSession: !!session,
+      sessionId: session?.sessionId,
+      currentItemCount: session?.items.length,
+    });
+
     if (!session) {
-      console.error('❌ Cannot confirm scan: No active session!');
+      console.error('❌ Cannot confirm scan: No active session!', {
+        sessionState: session,
+        localStorage: localStorage.getItem('scanSession'),
+      });
       toast.error('No active session. Please start a new session.');
       return;
     }
@@ -337,9 +348,20 @@ export default function ScanSessionPage() {
       currentCount: session.items.length,
     });
 
-    setSession({
-      ...session,
-      items: [...session.items, item],
+    // Use functional update to ensure we have latest session state!
+    setSession(prevSession => {
+      if (!prevSession) {
+        console.error('❌ prevSession is null in setState!');
+        return prevSession;
+      }
+      
+      const newSession = {
+        ...prevSession,
+        items: [...prevSession.items, item],
+      };
+      
+      console.log('✅ Session updated! Old count:', prevSession.items.length, 'New count:', newSession.items.length);
+      return newSession;
     });
 
     setPendingItem(null);
@@ -350,8 +372,6 @@ export default function ScanSessionPage() {
       `✓ ${item.matchedContact?.contact_person || item.matchedContact?.company_name || 'Item'}`,
       { duration: toastDuration }
     );
-    
-    console.log('✅ Item added! New count:', session.items.length + 1);
     
     // Vibration feedback
     if (navigator.vibrate) {
