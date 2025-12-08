@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { api } from '../lib/api-client';
-import { initOCRWorker, extractRecipientName, terminateOCRWorker } from '../utils/ocr';
+import { initOCRWorker, terminateOCRWorker } from '../utils/ocr';
 import { smartMatchWithGemini } from '../utils/smartMatch';
-import { matchContactByName } from '../utils/nameMatching';
 import type { 
   ScannedItem, 
   ScanSession, 
@@ -32,7 +31,6 @@ export default function ScanSessionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quickScanMode, setQuickScanMode] = useState(false); // Quick scan mode for bulk scanning
   const [processingQueue, setProcessingQueue] = useState(0); // Count of items being processed in background
-  const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true); // Prevent infinite loops
   const lastGeminiCallRef = useRef<number>(0); // Track last Gemini API call for rate limiting
   
   // Confirm modal state
@@ -252,10 +250,10 @@ export default function ScanSessionPage() {
     const smartResult = await smartMatchWithGemini(photoBlob, contacts);
     console.log('🎯 Gemini smart match result:', smartResult);
 
-    let finalText = smartResult.extractedText || '';
-    let finalContact = smartResult.matchedContact || null;
-    let finalConfidence = smartResult.confidence || 0;
-    let matchReason = smartResult.matchedContact 
+    const finalText = smartResult.extractedText || '';
+    const finalContact = smartResult.matchedContact || null;
+    const finalConfidence = smartResult.confidence || 0;
+    const matchReason = smartResult.matchedContact 
       ? `Gemini AI matched: ${smartResult.matchedContact.contact_person || smartResult.matchedContact.company_name}`
       : 'No match found';
 
