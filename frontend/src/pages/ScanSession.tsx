@@ -16,7 +16,7 @@ import type {
 } from '../types/scan';
 
 const SESSION_TIMEOUT_HOURS = 4;
-const CONFIDENCE_THRESHOLD = 0.7;
+const CONFIDENCE_THRESHOLD = 0.5; // Lowered from 0.7 to 0.5 to accept more matches
 
 export default function ScanSessionPage() {
   const navigate = useNavigate();
@@ -30,6 +30,7 @@ export default function ScanSessionPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quickScanMode, setQuickScanMode] = useState(false); // NEW: Quick scan mode for bulk scanning
   
   // Confirm modal state
   const [pendingItem, setPendingItem] = useState<ScannedItem | null>(null);
@@ -122,6 +123,17 @@ export default function ScanSessionPage() {
     setIsProcessing(true);
 
     try {
+      // DEBUG: Log photo details
+      console.log('📷 Photo received:', {
+        size: (photoBlob.size / 1024).toFixed(2) + ' KB',
+        type: photoBlob.type,
+      });
+      
+      // DEBUG: Create preview URL so we can see what we're processing
+      const previewUrl = URL.createObjectURL(photoBlob);
+      console.log('👁️ Preview image:', previewUrl);
+      console.log('💡 TIP: Copy the URL above and paste in browser to see the photo being processed');
+
       // STRATEGY: Use Smart AI Matching with Gemini first (does BOTH extraction + matching!)
       // If it fails, fall back to Tesseract + fuzzy matching
       
@@ -193,7 +205,26 @@ export default function ScanSessionPage() {
 
       console.log(`✅ Match complete: confidence ${(item.confidence * 100).toFixed(0)}%`, matchReason);
 
-      // Show confirmation modal
+      // Quick Scan Mode: Auto-accept high confidence matches (>= 70%)
+      if (quickScanMode && finalConfidence >= 0.7 && finalContact) {
+        console.log('🚀 Quick scan: Auto-accepting high confidence match');
+        confirmScan(item);
+        
+        // Provide haptic feedback for successful scan
+        if (navigator.vibrate) {
+          navigator.vibrate([50, 30, 50]); // Double vibration for success
+        }
+        
+        // Auto-trigger next photo immediately (no delay!)
+        setTimeout(() => {
+          if (fileInputRef.current) {
+            fileInputRef.current.click();
+          }
+        }, 100); // Reduced from 300ms to 100ms for faster flow
+        return;
+      }
+
+      // Normal mode OR low confidence: Show confirmation modal
       setPendingItem(item);
     } catch (error) {
       console.error('❌ Photo processing failed:', error);
@@ -213,7 +244,13 @@ export default function ScanSessionPage() {
     });
 
     setPendingItem(null);
-    toast.success(`Added ${item.matchedContact?.contact_person || item.matchedContact?.company_name || 'item'}`);
+    
+    // In Quick Scan Mode, use shorter toast duration
+    const toastDuration = quickScanMode ? 1000 : 2000;
+    toast.success(
+      `✓ ${item.matchedContact?.contact_person || item.matchedContact?.company_name || 'Item'}`,
+      { duration: toastDuration }
+    );
     
     // Vibration feedback
     if (navigator.vibrate) {
@@ -515,12 +552,39 @@ export default function ScanSessionPage() {
               End Session
             </button>
           </div>
+          
+          {/* Quick Scan Mode Toggle */}
+          <div className="mt-4 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <input
+              type="checkbox"
+              id="quickScanMode"
+              checked={quickScanMode}
+              onChange={(e) => setQuickScanMode(e.target.checked)}
+              className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <label htmlFor="quickScanMode" className="flex-1 cursor-pointer">
+              <span className="font-semibold text-blue-900">⚡ Quick Scan Mode</span>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Auto-accept high confidence matches (≥70%) for faster bulk scanning. Perfect for 20-30 items!
+              </p>
+            </label>
+          </div>
         </div>
       </div>
 
       {/* Camera Button - Fixed at bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 z-20">
         <div className="max-w-4xl mx-auto">
+          {/* Floating Counter Badge (visible in Quick Scan Mode) */}
+          {quickScanMode && session.items.length > 0 && (
+            <div className="mb-3 flex items-center justify-center">
+              <div className="bg-green-600 text-white px-6 py-2 rounded-full shadow-lg animate-pulse">
+                <span className="text-2xl font-bold">{session.items.length}</span>
+                <span className="text-sm ml-2">items scanned</span>
+              </div>
+            </div>
+          )}
+          
           <button
             onClick={handleCameraClick}
             disabled={isProcessing}
@@ -534,7 +598,7 @@ export default function ScanSessionPage() {
             ) : (
               <>
                 <Camera className="w-6 h-6" />
-                Scan Next Item
+                {quickScanMode ? 'Scan Next (Auto-Continue)' : 'Scan Next Item'}
               </>
             )}
           </button>
