@@ -16,7 +16,7 @@ import type {
 } from '../types/scan';
 
 const SESSION_TIMEOUT_HOURS = 4;
-const CONFIDENCE_THRESHOLD = 0.7;
+const CONFIDENCE_THRESHOLD = 0.5; // Lowered from 0.7 to 0.5 to accept more matches
 
 export default function ScanSessionPage() {
   const navigate = useNavigate();
@@ -30,6 +30,7 @@ export default function ScanSessionPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quickScanMode, setQuickScanMode] = useState(false); // NEW: Quick scan mode for bulk scanning
   
   // Confirm modal state
   const [pendingItem, setPendingItem] = useState<ScannedItem | null>(null);
@@ -204,7 +205,20 @@ export default function ScanSessionPage() {
 
       console.log(`✅ Match complete: confidence ${(item.confidence * 100).toFixed(0)}%`, matchReason);
 
-      // Show confirmation modal
+      // Quick Scan Mode: Auto-accept high confidence matches (>= 70%)
+      if (quickScanMode && finalConfidence >= 0.7 && finalContact) {
+        console.log('🚀 Quick scan: Auto-accepting high confidence match');
+        confirmScan(item);
+        // Auto-trigger next photo after brief delay
+        setTimeout(() => {
+          if (fileInputRef.current) {
+            fileInputRef.current.click();
+          }
+        }, 300);
+        return;
+      }
+
+      // Normal mode: Show confirmation modal
       setPendingItem(item);
     } catch (error) {
       console.error('❌ Photo processing failed:', error);
@@ -525,6 +539,23 @@ export default function ScanSessionPage() {
             >
               End Session
             </button>
+          </div>
+          
+          {/* Quick Scan Mode Toggle */}
+          <div className="mt-4 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <input
+              type="checkbox"
+              id="quickScanMode"
+              checked={quickScanMode}
+              onChange={(e) => setQuickScanMode(e.target.checked)}
+              className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <label htmlFor="quickScanMode" className="flex-1 cursor-pointer">
+              <span className="font-semibold text-blue-900">⚡ Quick Scan Mode</span>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Auto-accept high confidence matches (≥70%) for faster bulk scanning. Perfect for 20-30 items!
+              </p>
+            </label>
           </div>
         </div>
       </div>
