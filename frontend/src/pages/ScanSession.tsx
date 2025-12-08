@@ -209,16 +209,22 @@ export default function ScanSessionPage() {
       if (quickScanMode && finalConfidence >= 0.7 && finalContact) {
         console.log('🚀 Quick scan: Auto-accepting high confidence match');
         confirmScan(item);
-        // Auto-trigger next photo after brief delay
+        
+        // Provide haptic feedback for successful scan
+        if (navigator.vibrate) {
+          navigator.vibrate([50, 30, 50]); // Double vibration for success
+        }
+        
+        // Auto-trigger next photo immediately (no delay!)
         setTimeout(() => {
           if (fileInputRef.current) {
             fileInputRef.current.click();
           }
-        }, 300);
+        }, 100); // Reduced from 300ms to 100ms for faster flow
         return;
       }
 
-      // Normal mode: Show confirmation modal
+      // Normal mode OR low confidence: Show confirmation modal
       setPendingItem(item);
     } catch (error) {
       console.error('❌ Photo processing failed:', error);
@@ -238,7 +244,13 @@ export default function ScanSessionPage() {
     });
 
     setPendingItem(null);
-    toast.success(`Added ${item.matchedContact?.contact_person || item.matchedContact?.company_name || 'item'}`);
+    
+    // In Quick Scan Mode, use shorter toast duration
+    const toastDuration = quickScanMode ? 1000 : 2000;
+    toast.success(
+      `✓ ${item.matchedContact?.contact_person || item.matchedContact?.company_name || 'Item'}`,
+      { duration: toastDuration }
+    );
     
     // Vibration feedback
     if (navigator.vibrate) {
@@ -563,6 +575,16 @@ export default function ScanSessionPage() {
       {/* Camera Button - Fixed at bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 z-20">
         <div className="max-w-4xl mx-auto">
+          {/* Floating Counter Badge (visible in Quick Scan Mode) */}
+          {quickScanMode && session.items.length > 0 && (
+            <div className="mb-3 flex items-center justify-center">
+              <div className="bg-green-600 text-white px-6 py-2 rounded-full shadow-lg animate-pulse">
+                <span className="text-2xl font-bold">{session.items.length}</span>
+                <span className="text-sm ml-2">items scanned</span>
+              </div>
+            </div>
+          )}
+          
           <button
             onClick={handleCameraClick}
             disabled={isProcessing}
@@ -576,7 +598,7 @@ export default function ScanSessionPage() {
             ) : (
               <>
                 <Camera className="w-6 h-6" />
-                Scan Next Item
+                {quickScanMode ? 'Scan Next (Auto-Continue)' : 'Scan Next Item'}
               </>
             )}
           </button>
