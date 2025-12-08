@@ -33,6 +33,7 @@ export default function ScanSessionPage() {
   const [quickScanMode, setQuickScanMode] = useState(false); // Quick scan mode for bulk scanning
   const [processingQueue, setProcessingQueue] = useState(0); // Count of items being processed in background
   const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true); // Prevent infinite loops
+  const lastGeminiCallRef = useRef<number>(0); // Track last Gemini API call for rate limiting
   
   // Confirm modal state
   const [pendingItem, setPendingItem] = useState<ScannedItem | null>(null);
@@ -153,20 +154,40 @@ export default function ScanSessionPage() {
   };
 
   const processPhotoBackground = async (photoBlob: Blob) => {
-    console.log('🔄 Background processing started');
+    const processingId = `photo-${Date.now()}`;
+    console.log(`🔄 [${processingId}] Background processing started`);
+    
+    // RATE LIMITING: Gemini has 15 RPM limit, so wait at least 4 seconds between calls
+    const MIN_DELAY_MS = 4000; // 4 seconds = 15 calls per minute
+    const now = Date.now();
+    const timeSinceLastCall = now - lastGeminiCallRef.current;
+    
+    if (timeSinceLastCall < MIN_DELAY_MS) {
+      const waitTime = MIN_DELAY_MS - timeSinceLastCall;
+      console.log(`⏳ [${processingId}] Rate limiting: waiting ${Math.round(waitTime / 1000)}s before API call`);
+      toast(`⏳ Processing (${Math.round(waitTime / 1000)}s delay to avoid rate limits)...`, {
+        duration: waitTime,
+        icon: '⏱️',
+      });
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    lastGeminiCallRef.current = Date.now();
+    
     try {
       // Process photo without blocking UI
       const result = await processPhotoInternal(photoBlob);
       
-      console.log('✅ Background processing complete:', {
+      console.log(`✅ [${processingId}] Background processing complete:`, {
         hasResult: !!result,
         confidence: result?.confidence,
-        contact: result?.matchedContact?.contact_person || result?.matchedContact?.company_name
+        contact: result?.matchedContact?.contact_person || result?.matchedContact?.company_name,
+        hasSession: !!session,
       });
       
       // If high confidence, auto-add to session
       if (result && result.confidence >= 0.7 && result.matchedContact) {
-        console.log('🚀 Auto-accepting high confidence match');
+        console.log(`🚀 [${processingId}] Auto-accepting high confidence match`);
         confirmScan(result);
         
         // Haptic feedback
@@ -175,19 +196,19 @@ export default function ScanSessionPage() {
         }
       } else if (result) {
         // Low confidence: Show modal
-        console.log('⚠️ Low confidence, showing modal');
+        console.log(`⚠️ [${processingId}] Low confidence (${(result.confidence * 100).toFixed(0)}%), showing modal`);
         setPendingItem(result);
       } else {
-        console.warn('⚠️ No result from processing');
+        console.warn(`⚠️ [${processingId}] No result from processing`);
       }
     } catch (error) {
-      console.error('❌ Background processing failed:', error);
+      console.error(`❌ [${processingId}] Background processing failed:`, error);
       toast.error('Failed to process one photo. Continue scanning!', { duration: 2000 });
     } finally {
       // Decrement queue counter
       setProcessingQueue(prev => {
         const newCount = Math.max(0, prev - 1);
-        console.log(`📊 Queue decremented to: ${newCount}`);
+        console.log(`📊 [${processingId}] Queue decremented to: ${newCount}`);
         return newCount;
       });
     }
@@ -304,7 +325,17 @@ export default function ScanSessionPage() {
   };
 
   const confirmScan = (item: ScannedItem) => {
-    if (!session) return;
+    if (!session) {
+      console.error('❌ Cannot confirm scan: No active session!');
+      toast.error('No active session. Please start a new session.');
+      return;
+    }
+
+    console.log('➕ Adding item to session:', {
+      itemId: item.id,
+      contact: item.matchedContact?.contact_person || item.matchedContact?.company_name,
+      currentCount: session.items.length,
+    });
 
     setSession({
       ...session,
@@ -319,6 +350,8 @@ export default function ScanSessionPage() {
       `✓ ${item.matchedContact?.contact_person || item.matchedContact?.company_name || 'Item'}`,
       { duration: toastDuration }
     );
+    
+    console.log('✅ Item added! New count:', session.items.length + 1);
     
     // Vibration feedback
     if (navigator.vibrate) {
@@ -637,6 +670,16 @@ export default function ScanSessionPage() {
               </p>
             </label>
           </div>
+          
+          {/* Debug Panel - Shows processing status */}
+          {quickScanMode && (
+            <div className="mt-3 bg-gray-100 border border-gray-300 rounded-lg p-3">
+              <p className="text-xs font-mono text-gray-700">
+                🟢 Scanned: {session.items.length} | 🔵 Processing: {processingQueue} | 
+                📊 Total contacts: {contacts.length}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
