@@ -4,8 +4,25 @@ jest.mock('../services/supabase.service', () => ({
     from: jest.fn()
   }
 }));
-jest.mock('../services/oauth2.service');
-jest.mock('nodemailer');
+
+const nodemailer = require('nodemailer');
+
+// Mock nodemailer
+const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-message-id' });
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn(() => ({
+    sendMail: mockSendMail
+  }))
+}));
+
+// Mock OAuth2 service
+jest.mock('../services/oauth2.service', () => ({
+  getValidOAuthClient: jest.fn().mockResolvedValue({
+    credentials: { access_token: 'mock-access-token' }
+  }),
+  getUserGmailAddress: jest.fn().mockResolvedValue('sender@example.com')
+}));
+
 jest.mock('googleapis', () => ({
   google: {
     gmail: jest.fn(() => ({
@@ -20,15 +37,18 @@ jest.mock('googleapis', () => ({
 
 const { sendTemplateEmail } = require('../services/email.service');
 const { getValidOAuthClient, getUserGmailAddress } = require('../services/oauth2.service');
-const nodemailer = require('nodemailer');
 
 describe('Email Service - Pluralization', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSendMail.mockClear();
     
-    // Mock OAuth client
-    getValidOAuthClient.mockResolvedValue({});
+    // Reset mocks to default
+    getValidOAuthClient.mockResolvedValue({
+      credentials: { access_token: 'mock-access-token' }
+    });
     getUserGmailAddress.mockResolvedValue('sender@example.com');
+    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
   });
 
   describe('sendTemplateEmail - Pluralization Variables', () => {
