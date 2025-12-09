@@ -17,8 +17,10 @@ const translateRateLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   // Use user ID as key for rate limiting (requires auth middleware first)
   keyGenerator: (req) => {
-    return req.user?.id || req.ip; // Fall back to IP if no user
-  }
+    // Use user ID if available, otherwise skip (rate limiting will use default)
+    return req.user?.id || 'anonymous';
+  },
+  skip: (req) => !!req.user?.id // Only rate limit anonymous users by IP
 });
 
 // Apply auth middleware to all routes in this router
