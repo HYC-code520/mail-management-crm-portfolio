@@ -27,48 +27,81 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
 }
 
 /**
- * Send email using Gmail API directly (bypasses SMTP blocks)
- * @param {Object} params
- * @param {string} params.to - Recipient email
- * @param {string} params.subject - Email subject
- * @param {string} params.htmlContent - HTML email body
- * @param {string} params.textContent - Plain text fallback
- * @param {string} params.userId - User ID
+ * Send email using Gmail API (NOT SMTP)
+ * This bypasses the OAuth2 SMTP authentication issues
+ * @param {string} userId - User ID
+ * @param {string} to - Recipient email
+ * @param {string} subject - Email subject
+ * @param {string} htmlContent - HTML email body
  * @returns {Promise<Object>} - Send result
  */
-async function sendEmailWithGmailApi({ to, subject, htmlContent, textContent, userId }) {
+async function sendEmailWithGmailApi(userId, to, subject, htmlContent) {
   const oauth2Client = await getValidOAuthClient(userId);
+  const gmailAddress = await getUserGmailAddress(userId);
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-  const fromAddress = await getUserGmailAddress(userId);
 
-  // Create email content
-  const emailContent = [
-    `From: "${process.env.SMTP_FROM_NAME || 'MeiWay Mail Service'}" <${fromAddress}>`,
+  // Encode email in RFC 2822 format
+  const message = [
+    `From: "${process.env.SMTP_FROM_NAME || 'MeiWay Mail Service'}" <${gmailAddress}>`,
     `To: ${to}`,
     `Subject: ${subject}`,
-    `Content-Type: text/html; charset=utf-8`,
-    `MIME-Version: 1.0`,
-    ``,
-    htmlContent,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    '',
+    htmlContent
   ].join('\n');
 
-  // Encode email to base64url format
-  const encodedEmail = Buffer.from(emailContent)
+  const encodedMessage = Buffer.from(message)
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 
-  // Send via Gmail API
   const res = await gmail.users.messages.send({
     userId: 'me',
     requestBody: {
-      raw: encodedEmail,
+      raw: encodedMessage,
     },
   });
 
   console.log('✅ Email sent via Gmail API:', res.data.id, 'to:', to);
-  return { success: true, messageId: res.data.id };
+  return {
+    success: true,
+    messageId: res.data.id
+  };
+}
+
+/**
+ * Create OAuth2 transporter for a specific user
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} - Nodemailer transporter
+ * @deprecated - Use sendEmailWithGmailApi instead
+ */
+async function createOAuth2Transporter(userId) {
+  const oauth2Client = await getValidOAuthClient(userId);
+  const gmailAddress = await getUserGmailAddress(userId);
+  const accessToken = oauth2Client.credentials.access_token;
+  const refreshToken = oauth2Client.credentials.refresh_token;
+
+  console.log('🔑 OAuth2 Debug:', {
+    gmailAddress,
+    hasAccessToken: !!accessToken,
+    hasRefreshToken: !!refreshToken,
+    accessTokenLength: accessToken?.length,
+    refreshTokenLength: refreshToken?.length
+  });
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      type: 'OAuth2',
+      user: gmailAddress,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      refreshToken: refreshToken,
+      accessToken: accessToken
+    }
+  });
 }
 
 /**
@@ -86,36 +119,29 @@ async function sendEmail({ to, subject, htmlContent, textContent, userId }) {
     // Try Gmail API first if userId is provided
     if (userId) {
       try {
-        console.log('📧 Attempting to send via Gmail API with OAuth2...');
-        return await sendEmailWithGmailApi({ to, subject, htmlContent, textContent, userId });
-      } catch (apiError) {
-        console.warn('⚠️  Gmail API sending failed, falling back to SMTP:', apiError.message);
-        // If OAuth error, re-throw so frontend knows to reconnect
-        if (apiError.message.includes('No OAuth tokens found') || 
-            apiError.message.includes('invalid_grant') ||
-            apiError.message.includes('invalid_client')) {
-          throw new Error('Gmail connection expired. Please reconnect Gmail in Settings.');
-        }
+        console.log('📧 Using Gmail API to send email');
+        const result = await sendEmailWithGmailApi(userId, to, subject, htmlContent);
+        return result;
+      } catch (gmailApiError) {
+        console.warn('⚠️  Gmail API not available, falling back to SMTP:', gmailApiError.message);
       }
     }
 
     // Fall back to SMTP if Gmail API not available
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      throw new Error('Email service not configured. Please connect Gmail via OAuth2 or set SMTP credentials.');
+      throw new Error('Email service not configured. Please set SMTP credentials or connect Gmail via OAuth2.');
     }
-
-    console.log('📧 Using SMTP fallback to send email');
-    const fromAddress = process.env.SMTP_USER;
-
+    
+    console.log('📧 Using SMTP to send email');
     const info = await smtpTransporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || 'MeiWay Mail Service'}" <${fromAddress}>`,
+      from: `"${process.env.SMTP_FROM_NAME || 'MeiWay Mail Service'}" <${process.env.SMTP_USER}>`,
       to: to,
       subject: subject,
       text: textContent,
       html: htmlContent
     });
 
-    console.log('✅ Email sent via SMTP:', info.messageId, 'to:', to);
+    console.log('✅ Email sent:', info.messageId, 'to:', to);
     return {
       success: true,
       messageId: info.messageId
@@ -142,15 +168,14 @@ async function sendTemplateEmail({ to, templateSubject, templateBody, variables,
   let body = templateBody;
   
   Object.keys(variables).forEach(key => {
-    // Support both {{VARIABLE}} and {VARIABLE} formats
-    const doubleCurlyPlaceholder = new RegExp(`{{${key}}}`, 'g');
-    const singleCurlyPlaceholder = new RegExp(`{${key}}`, 'g');
+    // Replace both {{VAR}} and {VAR} formats
+    const doubleBracePlaceholder = new RegExp(`{{${key}}}`, 'g');
+    const singleBracePlaceholder = new RegExp(`{${key}}`, 'g');
     
-    const value = variables[key] || '';
-    subject = subject.replace(doubleCurlyPlaceholder, value);
-    subject = subject.replace(singleCurlyPlaceholder, value);
-    body = body.replace(doubleCurlyPlaceholder, value);
-    body = body.replace(singleCurlyPlaceholder, value);
+    subject = subject.replace(doubleBracePlaceholder, variables[key] || '');
+    subject = subject.replace(singleBracePlaceholder, variables[key] || '');
+    body = body.replace(doubleBracePlaceholder, variables[key] || '');
+    body = body.replace(singleBracePlaceholder, variables[key] || '');
   });
 
   // Convert plain text to HTML (preserve line breaks and add basic styling)

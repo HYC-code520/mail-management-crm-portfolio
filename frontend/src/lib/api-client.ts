@@ -210,5 +210,9 @@ export const api = {
     }) =>
       apiClient.post('/scan/smart-match', data),
   },
+
+  stats: {
+    getDashboardStats: (timeRange: 7 | 14 | 30 = 7) => apiClient.get(`/stats/dashboard?timeRange=${timeRange}`),
+  },
 };
 
