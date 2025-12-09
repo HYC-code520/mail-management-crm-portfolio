@@ -163,14 +163,19 @@ async function sendEmail({ to, subject, htmlContent, textContent, userId }) {
  * @returns {Promise<Object>}
  */
 async function sendTemplateEmail({ to, templateSubject, templateBody, variables, userId }) {
-  // Replace all {{VARIABLE}} placeholders
+  // Replace all {{VARIABLE}} and {VARIABLE} placeholders
   let subject = templateSubject;
   let body = templateBody;
   
   Object.keys(variables).forEach(key => {
-    const placeholder = new RegExp(`{{${key}}}`, 'g');
-    subject = subject.replace(placeholder, variables[key] || '');
-    body = body.replace(placeholder, variables[key] || '');
+    // Replace both {{VAR}} and {VAR} formats
+    const doubleBracePlaceholder = new RegExp(`{{${key}}}`, 'g');
+    const singleBracePlaceholder = new RegExp(`{${key}}`, 'g');
+    
+    subject = subject.replace(doubleBracePlaceholder, variables[key] || '');
+    subject = subject.replace(singleBracePlaceholder, variables[key] || '');
+    body = body.replace(doubleBracePlaceholder, variables[key] || '');
+    body = body.replace(singleBracePlaceholder, variables[key] || '');
   });
 
   // Convert plain text to HTML (preserve line breaks and add basic styling)

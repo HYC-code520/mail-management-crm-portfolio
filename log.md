@@ -3554,3 +3554,193 @@ npm run dev
 - Much easier to just use Flash (regular) with 1,500/day!
 
 ---
+
+## Error #31: Gmail OAuth2 SMTP Authentication Blocked (535-5.7.8)
+
+**Date:** December 9, 2025
+
+**Context:**
+After successfully implementing Gmail OAuth2 integration, emails were failing with error `535-5.7.8 Username and Password not accepted` when using nodemailer with OAuth2 SMTP authentication.
+
+**Error Message:**
+```
+❌ Email send error: Error: Invalid login: 535-5.7.8 Username and Password not accepted
+responseCode: 535,
+command: 'AUTH XOAUTH2'
+```
+
+**Root Cause:**
+- Google **blocks** OAuth2 authentication via SMTP for apps that aren't fully verified
+- Even apps "In production" (not verified) face this restriction
+- SMTP OAuth2 requires Google security review (weeks/months)
+- Gmail REST API doesn't have this restriction
+
+**What We Tried (That Didn't Work):**
+1. ✅ Published OAuth app (moved from "Testing" to "In production")
+2. ✅ Disconnected and reconnected Gmail multiple times
+3. ✅ Got fresh OAuth2 tokens with `refresh_token`
+4. ✅ Verified scopes include `gmail.send`
+5. ✅ Added `clientId`, `clientSecret`, `refreshToken` to nodemailer config
+6. ❌ All still resulted in `535-5.7.8` error
+
+**The Confusion:**
+- User thought we **switched to Gmail API** based on documentation in `docs/TECHNICAL_QUESTION_FOR_COACH.md`
+- But the code was **never actually updated** to use Gmail API
+- Documentation showed the solution, but implementation stayed as nodemailer
+- This caused confusion about "why is it using nodemailer?"
+
+**Solution:**
+Switched from nodemailer SMTP OAuth2 to **Gmail REST API**:
+
+```javascript
+// BEFORE (Broken - nodemailer with OAuth2 SMTP):
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    type: 'OAuth2',
+    user: gmailAddress,
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    refreshToken: refreshToken,
+    accessToken: accessToken
+  }
+});
+await transporter.sendMail({ from, to, subject, html });
+
+// AFTER (Working - Gmail REST API):
+const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+const message = [
+  `From: "${fromName}" <${gmailAddress}>`,
+  `To: ${to}`,
+  `Subject: ${subject}`,
+  'MIME-Version: 1.0',
+  'Content-Type: text/html; charset=utf-8',
+  '',
+  htmlContent
+].join('\n');
+
+const encodedMessage = Buffer.from(message)
+  .toString('base64')
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .replace(/=+$/, '');
+
+await gmail.users.messages.send({
+  userId: 'me',
+  requestBody: { raw: encodedMessage }
+});
+```
+
+**Files Changed:**
+- `backend/src/services/email.service.js` - Added `sendEmailWithGmailApi()` function
+- `backend/src/services/email.service.js` - Updated `sendEmail()` to use Gmail API first
+
+**Why This Works:**
+- Gmail REST API uses OAuth2 **without SMTP**
+- No Google verification required for REST API
+- Same OAuth2 credentials, different delivery method
+- More reliable and officially supported by Google
+
+**Testing Added:**
+- Need to add tests for Gmail API email sending
+- Need to verify fallback to SMTP works if Gmail API fails
+- Need to ensure template variables are replaced correctly
+
+**Related Issues:**
+- See Error #32 below (template variable replacement)
+
+**Prevention:**
+- When implementing OAuth2 email, always use Gmail REST API, not SMTP
+- Document the difference between SMTP OAuth2 vs REST API OAuth2
+- Add comprehensive email sending tests
+- Don't rely on documentation alone - verify actual implementation
+
+---
+
+## Error #32: Template Variables Not Replaced ({Name} vs {{Name}})
+
+**Date:** December 9, 2025
+
+**Context:**
+After fixing Gmail API integration (Error #31), emails sent successfully but template variables like `{Name}`, `{BoxNumber}`, `{LetterCount}` were not being replaced with actual values.
+
+**What User Saw:**
+```
+Hello {Name},
+
+You have {LetterCount} {LetterText} ready for pickup.
+
+Mailbox: {BoxNumber}
+Date Received: {Date}
+```
+
+**Root Cause:**
+- Database templates use **single braces**: `{Name}`, `{BoxNumber}`
+- Backend replacement logic expected **double braces**: `{{Name}}`, `{{BoxNumber}}`
+- This mismatch has happened before (pluralization variables issue)
+
+**Code Issue:**
+```javascript
+// BEFORE (Only matched double braces):
+Object.keys(variables).forEach(key => {
+  const placeholder = new RegExp(`{{${key}}}`, 'g');
+  subject = subject.replace(placeholder, variables[key] || '');
+  body = body.replace(placeholder, variables[key] || '');
+});
+```
+
+**Solution:**
+Updated template replacement to handle **BOTH** formats:
+
+```javascript
+// AFTER (Matches both single and double braces):
+Object.keys(variables).forEach(key => {
+  // Replace both {{VAR}} and {VAR} formats
+  const doubleBracePlaceholder = new RegExp(`{{${key}}}`, 'g');
+  const singleBracePlaceholder = new RegExp(`{${key}}`, 'g');
+  
+  subject = subject.replace(doubleBracePlaceholder, variables[key] || '');
+  subject = subject.replace(singleBracePlaceholder, variables[key] || '');
+  body = body.replace(doubleBracePlaceholder, variables[key] || '');
+  body = body.replace(singleBracePlaceholder, variables[key] || '');
+});
+```
+
+**Why This Keeps Happening:**
+- Inconsistency between template format in database and backend expectations
+- No validation or standardization of template format
+- Similar issue occurred with `LetterText`/`PackageText` pluralization
+
+**Testing Needed:**
+1. ✅ Test template replacement with single braces `{VAR}`
+2. ✅ Test template replacement with double braces `{{VAR}}`
+3. ✅ Test mixed format templates (both in same template)
+4. ✅ Test all standard variables: `Name`, `BoxNumber`, `Date`, `LetterCount`, etc.
+5. ✅ Test pluralization variables: `LetterText`, `PackageText`
+6. ✅ Test custom variables from frontend
+7. ✅ Test bilingual templates (EN + CN)
+8. ✅ Test scan feature email sending
+
+**Files Changed:**
+- `backend/src/services/email.service.js` - Updated `sendTemplateEmail()`
+
+**Prevention:**
+- **Standardize template format** - pick one and stick with it
+- Add template validation when creating/updating templates
+- Add comprehensive email template tests
+- Document template variable format in README
+- Consider adding a template preview feature to catch issues early
+
+**User Request:**
+> "This has happened before, we need to get testing on this one, log it in the log.md"
+> "I also need testing on using gmail api instead of being switch back to nodemailer, and need testing for if sending email button work, and log these errors in the log.md also"
+
+**Action Items:**
+- [ ] Add comprehensive email service tests
+- [ ] Test Gmail API vs nodemailer fallback
+- [ ] Test template variable replacement (both formats)
+- [ ] Test scan feature email automation
+- [ ] Add template format validation
+- [ ] Standardize on single `{VAR}` or double `{{VAR}}` format
+
+---
