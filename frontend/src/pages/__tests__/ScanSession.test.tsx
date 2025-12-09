@@ -154,7 +154,8 @@ describe('ScanSession', () => {
       await user.click(startButton);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Scan Next Item/i })).toBeInTheDocument();
+        // Quick Scan Mode is enabled by default, so button shows "Scan (Keep Going!)"
+        expect(screen.getByRole('button', { name: /Scan.*Keep Going/i })).toBeInTheDocument();
       });
     });
 
