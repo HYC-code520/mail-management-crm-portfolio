@@ -801,6 +801,7 @@ export default function ScanSessionPage() {
           contacts={contacts}
           onConfirm={confirmScan}
           onCancel={cancelScan}
+          onPhotoClick={setPreviewPhoto}
         />
       )}
 
@@ -850,9 +851,10 @@ interface ConfirmModalProps {
   contacts: Contact[];
   onConfirm: (item: ScannedItem) => void;
   onCancel: () => void;
+  onPhotoClick: (photoUrl: string) => void;
 }
 
-function ConfirmModal({ item, contacts, onConfirm, onCancel }: ConfirmModalProps) {
+function ConfirmModal({ item, contacts, onConfirm, onCancel, onPhotoClick }: ConfirmModalProps) {
   const [editedItem, setEditedItem] = useState(item);
 
   return (
@@ -867,7 +869,7 @@ function ConfirmModal({ item, contacts, onConfirm, onCancel }: ConfirmModalProps
             src={item.photoPreviewUrl}
             alt="Scanned mail"
             className="w-full h-48 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => setPreviewPhoto(item.photoPreviewUrl!)}
+            onClick={() => onPhotoClick(item.photoPreviewUrl!)}
             title="Click to view full size"
           />
         )}
