@@ -1,10 +1,13 @@
 const request = require('supertest');
 const express = require('express');
 const translationRoutes = require('../routes/translation.routes');
-const { translateEnglishToChinese } = require('../services/translation.service');
+const { translateEnglishToChinese, isTranslationAvailable } = require('../services/translation.service');
 
 // Mock the translation service
-jest.mock('../services/translation.service');
+jest.mock('../services/translation.service', () => ({
+  translateEnglishToChinese: jest.fn(),
+  isTranslationAvailable: jest.fn()
+}));
 
 // Mock auth middleware
 jest.mock('../middleware/auth.middleware', () => (req, res, next) => {
@@ -16,10 +19,11 @@ const app = express();
 app.use(express.json());
 app.use('/api/translate', translationRoutes);
 
-// Skip these tests temporarily due to Jest configuration issues
-describe.skip('Translation API Tests', () => {
+describe('Translation API Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock translation service as available by default
+    isTranslationAvailable.mockReturnValue(true);
   });
 
   describe('POST /api/translate', () => {
@@ -34,10 +38,12 @@ describe.skip('Translation API Tests', () => {
         .send({ text: englishText })
         .expect(200);
 
-      expect(response.body).toEqual({
+      expect(response.body).toMatchObject({
         translatedText: chineseText,
         success: true
       });
+      expect(response.body.originalLength).toBe(englishText.length);
+      expect(response.body.translatedLength).toBe(chineseText.length);
       expect(translateEnglishToChinese).toHaveBeenCalledWith(englishText);
       expect(translateEnglishToChinese).toHaveBeenCalledTimes(1);
     });
@@ -82,7 +88,7 @@ describe.skip('Translation API Tests', () => {
         .send({ text: '' })
         .expect(400);
 
-      expect(response.body.error).toBe('Text to translate is required.');
+      expect(response.body.error).toBe('Text is required');
       expect(translateEnglishToChinese).not.toHaveBeenCalled();
     });
 
@@ -92,7 +98,7 @@ describe.skip('Translation API Tests', () => {
         .send({})
         .expect(400);
 
-      expect(response.body.error).toBe('Text to translate is required.');
+      expect(response.body.error).toBe('Text is required');
       expect(translateEnglishToChinese).not.toHaveBeenCalled();
     });
 
@@ -102,7 +108,7 @@ describe.skip('Translation API Tests', () => {
         .send({ text: '   \n  \t  ' })
         .expect(400);
 
-      expect(response.body.error).toBe('Text to translate is required.');
+      expect(response.body.error).toBe('Text cannot be empty');
       expect(translateEnglishToChinese).not.toHaveBeenCalled();
     });
 
@@ -112,7 +118,7 @@ describe.skip('Translation API Tests', () => {
         .send({ text: 12345 })
         .expect(400);
 
-      expect(response.body.error).toBe('Text to translate is required.');
+      expect(response.body.error).toBe('Text must be a string');
       expect(translateEnglishToChinese).not.toHaveBeenCalled();
     });
 
@@ -124,7 +130,7 @@ describe.skip('Translation API Tests', () => {
         .send({ text: longText })
         .expect(400);
 
-      expect(response.body.error).toBe('Text exceeds maximum length (10,000 characters).');
+      expect(response.body.error).toBe('Text exceeds maximum length of 10,000 characters');
       expect(translateEnglishToChinese).not.toHaveBeenCalled();
     });
 
@@ -152,7 +158,7 @@ describe.skip('Translation API Tests', () => {
         .send({ text: 'Hello' })
         .expect(500);
 
-      expect(response.body.error).toBeDefined();
+      expect(response.body.error).toBe('Translation failed. Please try again.');
     });
 
     it('should handle special characters in text', async () => {
@@ -210,7 +216,7 @@ describe.skip('Translation API Tests', () => {
   });
 });
 
-describe.skip('Translation Service Integration', () => {
+describe('Translation Service Integration', () => {
   describe('translateEnglishToChinese', () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -228,16 +234,14 @@ describe.skip('Translation Service Integration', () => {
     });
 
     it('should handle AWS configuration errors', async () => {
-      translateEnglishToChinese.mockRejectedValue(
-        new Error('Translation service not configured. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in your .env file.')
-      );
+      isTranslationAvailable.mockReturnValue(false);
 
       const response = await request(app)
         .post('/api/translate')
         .send({ text: 'Hello' })
-        .expect(500);
+        .expect(503);
 
-      expect(response.body.error).toBeDefined();
+      expect(response.body.error).toBe('Translation service is not configured. Please contact the administrator.');
     });
   });
 });
