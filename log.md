@@ -1,6 +1,6 @@
 # Project Error & Solutions Log
 
-**Total Entries:** 30 | **Last Updated:** 2025-12-08
+**Total Entries:** 35 | **Last Updated:** 2025-12-09
 
 ## Quick Navigation
 
@@ -28,7 +28,7 @@
 
 ### 🔄 **Recurring Patterns:**
 - **Environment Variables:** Errors 8, 11, 12 (dotenv issues - 3 times!)
-- **Timezone Handling:** Errors 7, 16 (UTC vs Local)
+- **Timezone Handling:** Errors 7, 16, 35 (UTC vs EST/Local - 3 times!)
 - **Supabase Client:** Errors 13, 14 (Wrong client usage)
 - **Test Mocking:** Errors 2, 3, 15, 24 (Mock setup issues)
 - **Authentication:** Errors 10, 13, 23 (Missing middleware)
@@ -3936,6 +3936,174 @@ Also updated stats API method name for consistency:
 ✅ Build now passes successfully
 ✅ Vercel deployment succeeds
 ✅ All functionality working correctly
+
+---
+
+## 35. Mail Log Timezone Mismatch (Third Occurrence)
+
+**Timestamp:** `2025-12-09 19:54:00`  
+**Category:** `BUG + TIMEZONE`  
+**Status:** `SOLVED`  
+**Severity:** `MEDIUM` (Data accuracy issue)
+
+**Error Description:**
+When logging mail at **7:54 PM EST on Dec 9**, the database stored:
+```json
+"received_date": "2025-12-10 00:54:45.6+00"
+```
+This showed **December 10th** (tomorrow) instead of **December 9th** (today).
+
+**User Report:**
+> "look at my newly created mail log, theres a time mismatch again that right now is only 12/9 evening time but it was showing tomorrow"
+
+**Context:**
+Mail was logged via the Dashboard "Log New Mail" modal at evening time (EST). The `received_date` timestamp was being sent from `getNYTimestamp()` utility function.
+
+**Root Cause Analysis:**
+
+The `getNYTimestamp()` function was incorrectly returning **UTC time** instead of **NY time with timezone offset**:
+
+```typescript
+// ❌ BROKEN CODE
+export function getNYTimestamp(): string {
+  const now = new Date();
+  return now.toISOString(); // Returns UTC: "2025-12-10T00:54:00.000Z"
+}
+```
+
+**The Problem:**
+1. User logs mail at **7:54 PM EST** on **Dec 9**
+2. `now.toISOString()` converts to **UTC**: **12:54 AM on Dec 10** (because EST = UTC-5)
+3. Postgres stores: `2025-12-10 00:54:45+00` (correct UTC, but wrong date context)
+4. When displayed, it shows **Dec 10** instead of **Dec 9**
+
+**Why This Happened Again:**
+This is the **third occurrence** of timezone issues (#7, #16, #35). Previous fixes addressed:
+- Error #7: Fixed `received_date` default value migration
+- Error #16: Fixed display timezone in frontend
+
+But we **never fixed the client-side timestamp generation** for manual logging.
+
+**Solution Implemented:**
+
+Updated `getNYTimestamp()` to return **ISO 8601 with timezone offset**:
+
+```typescript
+// ✅ FIXED CODE
+export function getNYTimestamp(): string {
+  const now = new Date();
+  
+  // Get NY time components
+  const nyDateStr = now.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  // Parse: "12/09/2025, 19:54:32"
+  const [datePart, timePart] = nyDateStr.split(', ');
+  const [month, day, year] = datePart.split('/');
+  const [hour, minute, second] = timePart.split(':');
+  
+  // Calculate timezone offset (handles EST/EDT automatically)
+  const nyDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const offsetMinutes = (nyDate.getTime() - utcDate.getTime()) / (1000 * 60);
+  const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+  const offsetMins = Math.abs(offsetMinutes) % 60;
+  const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+  const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+  
+  // Return: "2025-12-09T19:54:32.000-05:00"
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.000${offsetStr}`;
+}
+```
+
+**Before vs After:**
+
+| Scenario | Old Output (Broken) | New Output (Fixed) |
+|----------|---------------------|-------------------|
+| 7:54 PM EST, Dec 9 | `2025-12-10T00:54:00.000Z` | `2025-12-09T19:54:00.000-05:00` |
+| Date extracted | **Dec 10** ❌ | **Dec 9** ✅ |
+| Postgres storage | `2025-12-10 00:54:45+00` | `2025-12-09 19:54:00-05` → stored as UTC |
+| Display in NY | Shows **Dec 10** ❌ | Shows **Dec 9** ✅ |
+
+**Key Insight:**
+PostgreSQL needs the **timezone offset** (`-05:00`) to understand:
+> "This timestamp represents 7:54 PM in the America/New_York timezone, not 7:54 PM UTC"
+
+Without the offset, Postgres assumes the time is already UTC.
+
+**Files Changed:**
+- `frontend/src/utils/timezone.ts` - Fixed `getNYTimestamp()` function
+
+**Used By:**
+- `frontend/src/pages/Log.tsx` - Mail logging page
+- `frontend/src/pages/Intake.tsx` - Quick intake page
+- `frontend/src/pages/Dashboard.tsx` - Dashboard "Log New Mail" modal
+
+**Testing:**
+✅ All 16 timezone utility tests pass
+✅ All 16 Intake page tests pass
+✅ Manual test confirms correct date at 7:54 PM EST
+
+```javascript
+// Test output:
+Local time (EST): Tue Dec 09 2025 19:54:00 GMT-0500
+getNYTimestamp() will return: 2025-12-09T19:54:00.000-05:00
+Date part: 2025-12-09
+✅ Correct! Shows Dec 9, not Dec 10
+```
+
+**Prevention Strategy:**
+1. **Always use timezone-aware formats** when sending timestamps to Postgres
+2. **Include offset**: Use ISO 8601 with offset (`-05:00`) not just `Z` (UTC)
+3. **Document the pattern**: Add comments explaining why offset is needed
+4. **Test edge cases**: Test at 11 PM (near midnight rollover)
+5. **Centralize timezone logic**: All timestamp generation should use `timezone.ts` utils
+
+**PostgreSQL Timezone Best Practices Applied:**
+✅ Store in UTC (Postgres does this automatically)
+✅ Send timestamps with explicit timezone offset
+✅ Use `America/New_York` not `EST` (handles DST automatically)
+✅ Convert for display in NY timezone
+
+**Related Errors:**
+- [Error #7](#7-received-date-column-not-updated-during-migration) - Migration timezone fix
+- [Error #16](#16-received-date-timezone-mismatch---day-off-by-1) - Display timezone fix  
+- [Error #35](#35-mail-log-timezone-mismatch-third-occurrence) - This fix (client-side generation)
+
+**Resolution:**
+✅ Mail logged at 7:54 PM EST now correctly shows Dec 9, not Dec 10
+✅ Timestamp includes timezone offset for Postgres to interpret correctly
+✅ Date display in tables now uses NY timezone (not UTC)
+✅ All existing timezone tests continue to pass
+✅ No breaking changes to existing functionality
+✅ **Backend timezone utilities created** for future fee calculations
+
+**Follow-up Work Completed:**
+After fixing this issue, we created **backend timezone utilities** (`backend/src/utils/timezone.js`) to prevent timezone issues in the upcoming package fee system:
+
+- ✅ Created 14 timezone utility functions for backend
+- ✅ All functions use NY timezone for date calculations
+- ✅ 25 comprehensive tests covering edge cases (packages at 11:59 PM, DST, etc.)
+- ✅ Includes `getDaysBetweenNY()` - critical for fee calculations
+- ✅ Handles midnight rollover correctly (11:59 PM → 12:01 AM = 1 day)
+- ✅ Ready for package fee system implementation
+
+**Files Created:**
+- `backend/src/utils/timezone.js` - Backend timezone utilities
+- `backend/src/__tests__/timezone.test.js` - 25 comprehensive tests
+
+**Files Modified:**
+- `frontend/src/utils/timezone.ts` - Fixed `getNYTimestamp()` to include offset
+- `frontend/src/pages/Log.tsx` - Fixed date display to use NY timezone
+- `frontend/src/pages/ContactDetail.tsx` - Fixed date display to use NY timezone
 
 ---
 

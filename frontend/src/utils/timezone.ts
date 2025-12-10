@@ -86,14 +86,44 @@ export function getChartDateRange(days: number): Array<{ dateStr: string; displa
 
 /**
  * Get current timestamp in ISO format (for logging mail with actual time)
- * This preserves the actual time the action was performed
+ * This preserves the actual time the action was performed in NY timezone
+ * 
+ * Example: If it's 7:54 PM EST on Dec 9, this returns:
+ * "2025-12-09T19:54:00.000-05:00" (which Postgres stores as UTC: 2025-12-10T00:54:00Z)
+ * When displayed in NY timezone, it shows the correct Dec 9, 7:54 PM
  */
 export function getNYTimestamp(): string {
-  // Get the current time
+  // Get current date/time in NY timezone
   const now = new Date();
   
-  // Format it as an ISO string (includes full timestamp)
-  // The server will store this as-is in the database
-  return now.toISOString();
+  // Format the date in NY timezone with full ISO components
+  const nyDateStr = now.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  // Parse the formatted string: "12/09/2025, 19:54:32"
+  const [datePart, timePart] = nyDateStr.split(', ');
+  const [month, day, year] = datePart.split('/');
+  const [hour, minute, second] = timePart.split(':');
+  
+  // Get the timezone offset for NY at this moment (handles EST/EDT automatically)
+  const nyDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const offsetMinutes = (nyDate.getTime() - utcDate.getTime()) / (1000 * 60);
+  const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+  const offsetMins = Math.abs(offsetMinutes) % 60;
+  const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+  const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+  
+  // Construct ISO 8601 timestamp with timezone offset
+  // This tells Postgres: "This is the NY time, please store it correctly"
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.000${offsetStr}`;
 }
 
