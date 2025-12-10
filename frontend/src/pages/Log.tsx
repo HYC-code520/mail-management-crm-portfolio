@@ -1262,7 +1262,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                         })}`}
                         className="cursor-help border-b border-dotted border-gray-400"
                       >
-                        {new Date(item.received_date).toISOString().split('T')[0]}
+                        {new Date(item.received_date).toLocaleDateString('en-US', {
+                          timeZone: 'America/New_York',
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        })}
                       </span>
                     </td>
                     <td className="py-3 px-4">
