@@ -289,7 +289,7 @@ describe('Mail Items API', () => {
       expect(mockSupabaseClient.update).toHaveBeenCalled();
     });
 
-    it('should return 500 for database errors', async () => {
+    it('should return 404 for non-existent mail items', async () => {
       mockSupabaseClient.single.mockResolvedValue({
         data: null,
         error: { code: 'PGRST116', message: 'Not found' }
@@ -298,13 +298,20 @@ describe('Mail Items API', () => {
       const response = await request(app)
         .put('/api/mail-items/non-existent')
         .send({ status: 'Notified' })
-        .expect(500);
+        .expect(404);
 
       expect(response.body).toHaveProperty('error');
     });
 
     it('should handle database errors during update', async () => {
-      mockSupabaseClient.single.mockResolvedValue({
+      // First call: successful fetch of existing item
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { mail_item_id: 'mail-1', item_type: 'Letter', status: 'Received' },
+        error: null
+      });
+      
+      // Second call: database error during update
+      mockSupabaseClient.single.mockResolvedValueOnce({
         data: null,
         error: new Error('Database error')
       });
@@ -318,6 +325,12 @@ describe('Mail Items API', () => {
     });
 
     it('should return 400 when no update fields provided', async () => {
+      // Mock the fetch of existing item first
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { mail_item_id: 'mail-1', item_type: 'Letter', status: 'Received' },
+        error: null
+      });
+
       const response = await request(app)
         .put('/api/mail-items/mail-1')
         .send({})
@@ -351,6 +364,12 @@ describe('Mail Items API', () => {
     });
 
     it('should return 400 when updating with invalid status', async () => {
+      // Mock the fetch of existing item first
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { mail_item_id: 'mail-1', item_type: 'Letter', status: 'Received' },
+        error: null
+      });
+
       const response = await request(app)
         .put('/api/mail-items/mail-1')
         .send({ status: 'Invalid Status' })
@@ -390,6 +409,12 @@ describe('Mail Items API', () => {
     });
 
     it('should return 400 when updating with invalid quantity (negative)', async () => {
+      // Mock the fetch of existing item first
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { mail_item_id: 'mail-1', item_type: 'Letter', status: 'Received', quantity: 1 },
+        error: null
+      });
+
       const response = await request(app)
         .put('/api/mail-items/mail-1')
         .send({ quantity: -1 })
@@ -400,6 +425,12 @@ describe('Mail Items API', () => {
     });
 
     it('should return 400 when updating with invalid quantity (zero)', async () => {
+      // Mock the fetch of existing item first
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { mail_item_id: 'mail-1', item_type: 'Letter', status: 'Received', quantity: 1 },
+        error: null
+      });
+
       const response = await request(app)
         .put('/api/mail-items/mail-1')
         .send({ quantity: 0 })
@@ -410,6 +441,12 @@ describe('Mail Items API', () => {
     });
 
     it('should return 400 when updating with invalid quantity (decimal)', async () => {
+      // Mock the fetch of existing item first
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { mail_item_id: 'mail-1', item_type: 'Letter', status: 'Received', quantity: 1 },
+        error: null
+      });
+
       const response = await request(app)
         .put('/api/mail-items/mail-1')
         .send({ quantity: 3.5 })
