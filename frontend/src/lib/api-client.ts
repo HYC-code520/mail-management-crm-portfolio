@@ -150,6 +150,7 @@ export const api = {
       contact_id: string;
       template_id: string;
       mail_item_ids: string[];
+      sent_by?: string;
     }) => apiClient.post('/emails/send-bulk', data),
     sendCustom: (data: {
       to: string;

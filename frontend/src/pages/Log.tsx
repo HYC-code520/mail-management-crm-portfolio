@@ -149,7 +149,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('All Time');
   const [mailboxFilter, setMailboxFilter] = useState('All Mailboxes');
-  const [sortColumn, setSortColumn] = useState<'date' | 'status' | 'customer' | 'type' | 'quantity'>('date');
+  const [sortColumn, setSortColumn] = useState<'date' | 'status' | 'customer' | 'type' | 'quantity' | 'lastNotified'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isFilterExpanded, setIsFilterExpanded] = useState(true); // New state for filter panel
   
