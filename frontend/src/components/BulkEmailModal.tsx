@@ -110,7 +110,7 @@ export default function BulkEmailModal({ isOpen, onClose, contacts }: BulkEmailM
       // Send emails one by one
       for (const contactId of Array.from(selectedContacts)) {
         try {
-          await api.emails.send({
+          await api.emails.sendWithTemplate({
             contact_id: contactId,
             template_id: selectedTemplate.template_id,
             sent_by: sentBy

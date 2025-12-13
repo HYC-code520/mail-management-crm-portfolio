@@ -791,7 +791,6 @@ export default function ContactDetailPage() {
               item_type: 'Package',
               received_date: fee.mail_items?.received_date || '',
               status: fee.mail_items?.status || 'Pending',
-              quantity: fee.mail_items?.quantity || 1,
               packageFee: {
                 fee_id: fee.fee_id,
                 mail_item_id: fee.mail_item_id,
