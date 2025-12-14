@@ -139,15 +139,13 @@ export default function CollectFeeModal({
     
     setSaving(true);
     try {
-      const totalCollected = finalAmount; // Use the edited/final amount
-
       // Collect fees for all pending packages in this group
       for (const pkg of pendingPackages) {
         if (pkg.packageFee) {
           await api.fees.markPaid(
             pkg.packageFee.fee_id, 
             paymentMethod,
-            totalCollected / pendingPackages.length, // Split edited amount evenly across packages
+            finalAmount / pendingPackages.length, // Split edited amount evenly across packages
             collectedBy
           );
         }
@@ -174,12 +172,12 @@ export default function CollectFeeModal({
           ? 'all items' 
           : 'packages';
         toast.success(
-          `💵 Collected $${totalCollected.toFixed(2)} via ${paymentMethod} & marked ${itemsMarked} as Picked Up`,
+          `💵 Collected $${finalAmount.toFixed(2)} via ${paymentMethod} & marked ${itemsMarked} as Picked Up`,
           { duration: 5000 }
         );
       } else {
         toast.success(
-          `💵 Collected $${totalCollected.toFixed(2)} via ${paymentMethod} from ${customerName}`,
+          `💵 Collected $${finalAmount.toFixed(2)} via ${paymentMethod} from ${customerName}`,
           { duration: 5000 }
         );
       }
