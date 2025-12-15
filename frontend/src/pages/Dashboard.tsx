@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Package, AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Mail, Package, AlertCircle, CheckCircle2, AlertTriangle, Clock, Users } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';
 import QuickNotifyModal from '../components/QuickNotifyModal.tsx';
@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner.tsx';
 import RevenueWidget from '../components/dashboard/RevenueWidget.tsx';
 import QuickActionsSection from '../components/dashboard/QuickActionsSection.tsx';
 import ChartsSection from '../components/dashboard/ChartsSection.tsx';
+import AnalyticsSection from '../components/dashboard/AnalyticsSection.tsx';
 import toast from 'react-hot-toast';
 import { getTodayNY, toNYDateString } from '../utils/timezone.ts';
 
@@ -65,6 +66,27 @@ interface Contact {
   service_tier?: number;
 }
 
+interface AnalyticsData {
+  avgResponseTime: number;
+  responseTimeBreakdown: {
+    emailCustomers: number;
+    walkInCustomers: number;
+    totalPickups: number;
+  };
+  activeCustomers: number;
+  inactiveCustomers: number;
+  serviceTiers: { tier1: number; tier2: number };
+  languageDistribution: { English: number; Chinese: number; Both: number };
+  statusDistribution: { [key: string]: number };
+  paymentDistribution: { Cash: number; Zelle: number; Venmo: number; Check: number; Other: number };
+  ageDistribution: { '0-3': number; '4-7': number; '8-14': number; '15-30': number; '30+': number };
+  staffPerformance: { Merlin: number; Madison: number };
+  comparison: {
+    thisMonth: { mail: number; customers: number };
+    lastMonth: { mail: number; customers: number };
+  };
+}
+
 interface DashboardStats {
   todaysMail: number;
   pendingPickups: number;
@@ -82,6 +104,8 @@ interface DashboardStats {
   totalRevenue: number;
   monthlyRevenue: number;
   waivedFees?: number;
+  // NEW: Analytics data
+  analytics?: AnalyticsData;
 }
 
 export default function DashboardPage() {
@@ -278,7 +302,20 @@ export default function DashboardPage() {
       }
     }
     
-    setLogMailFormData(prev => ({ ...prev, [name]: value }));
+    // Handle quantity field - allow empty for typing, parse as integer
+    if (name === 'quantity') {
+      // Allow empty string while typing, or parse as positive integer
+      const numValue = value === '' ? '' : parseInt(value, 10);
+      // Only set if it's empty or a valid positive number
+      if (value === '' || (!isNaN(numValue as number) && (numValue as number) >= 0)) {
+        setLogMailFormData(prev => ({
+          ...prev,
+          [name]: numValue
+        }));
+      }
+    } else {
+      setLogMailFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleLogMailSubmit = async (e: React.FormEvent) => {
@@ -300,10 +337,15 @@ export default function DashboardPage() {
       const nyDay = String(dateObj.getDate()).padStart(2, '0');
       const receivedDateNY = `${nyYear}-${nyMonth}-${nyDay}T12:00:00-05:00`; // NY timezone offset
       
+      // Ensure quantity is a valid positive integer (default to 1)
+      const quantity = typeof logMailFormData.quantity === 'number' && logMailFormData.quantity > 0
+        ? Math.floor(logMailFormData.quantity)
+        : 1;
+
       await api.mailItems.create({
         ...logMailFormData,
         received_date: receivedDateNY,
-        quantity: logMailFormData.quantity || 1
+        quantity
       });
       toast.success('Mail logged successfully!');
       closeLogMailModal();
@@ -367,7 +409,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-full mx-auto px-16 py-6">
         {/* Loading spinner with message */}
         <div className="flex items-center justify-center min-h-[60vh]">
           <LoadingSpinner 
@@ -394,93 +436,316 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Quick Action Buttons */}
-      <QuickActionsSection
-        onScanMail={() => navigate('/dashboard/scan')}
-        onAddCustomer={() => setIsAddCustomerModalOpen(true)}
-        onLogMail={openLogMailModal}
-        followUpCount={stats?.needsFollowUp?.length || 0}
-        onNavigateToFollowUps={() => navigate('/dashboard/follow-ups')}
-      />
+    <div className="max-w-full mx-auto px-16 py-6">
+      {/* Top Row: Merlin (1/4) | Madison (1/4) | Today's Overview (1/2) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6" style={{ overflow: 'visible' }}>
+        {stats?.analytics && (
+          <>
+            {/* Merlin Performance - 1/4 width */}
+            <div className="lg:col-span-1 overflow-visible">
+              <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 shadow-md border border-gray-100 hover:shadow-lg transition-shadow relative" style={{ minHeight: '160px', overflow: 'visible' }}>
+                <div className="absolute bottom-0 right-0 flex items-end justify-end pointer-events-none" style={{ height: 'calc(100% + 20px)', width: '280px' }}>
+                  <img 
+                    src="/assets/images/Merlin.png" 
+                    alt="Merlin" 
+                    className="w-auto object-contain object-bottom"
+                    style={{ height: 'calc(100% + 20px)' }}
+                  />
+                </div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
+                      <span className="text-white font-bold text-xs">MR</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xs font-bold text-gray-900">Merlin</h3>
+                      <p className="text-xs text-gray-500">Tasks</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-blue-600">{stats.analytics.staffPerformance.Merlin}</p>
+                    <p className="text-xs text-gray-600">completed</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-      {/* Stats Cards - Responsive grid with modern design */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-        {/* Today's Mail */}
-        <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-6 shadow-md border border-blue-100 hover:shadow-lg transition-shadow">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <p className="text-blue-700 text-xs font-semibold uppercase tracking-wide mb-2">Today's Mail</p>
-              <p className="text-4xl font-bold text-gray-900 mb-1">{stats?.todaysMail || 0}</p>
-              <p className="text-gray-600 text-sm">items received</p>
+            {/* Madison Performance - 1/4 width */}
+            <div className="lg:col-span-1 overflow-visible">
+              <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-4 shadow-md border border-gray-100 hover:shadow-lg transition-shadow relative" style={{ minHeight: '160px', overflow: 'visible' }}>
+                <div className="absolute bottom-0 right-0 flex items-end justify-end pointer-events-none" style={{ height: 'calc(100% + 20px)', width: '280px' }}>
+                  <img 
+                    src="/assets/images/Madison.png" 
+                    alt="Madison" 
+                    className="w-auto object-contain object-bottom"
+                    style={{ height: 'calc(100% + 20px)' }}
+                  />
+                </div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-md">
+                      <span className="text-white font-bold text-xs">MP</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xs font-bold text-gray-900">Madison</h3>
+                      <p className="text-xs text-gray-500">Tasks</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-purple-600">{stats.analytics.staffPerformance.Madison}</p>
+                    <p className="text-xs text-gray-600">completed</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
-              <Mail className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* Pending Pickups */}
-        <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-6 shadow-md border border-purple-100 hover:shadow-lg transition-shadow">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <p className="text-purple-700 text-xs font-semibold uppercase tracking-wide mb-2">Pending Pickups</p>
-              <p className="text-4xl font-bold text-gray-900 mb-1">{stats?.pendingPickups || 0}</p>
-              <p className="text-gray-600 text-sm">awaiting collection</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center shadow-md">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        </div>
+        {/* Today's Overview - 1/2 width (single horizontal line) */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 h-full flex flex-col justify-center">
+            <h2 className="text-sm font-bold text-gray-900 mb-3">Today's Overview</h2>
+            
+            <div className="flex items-center justify-between gap-4">
+              {/* Today's Mail */}
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <Mail className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 whitespace-nowrap">Today's Mail</p>
+                  <p className="text-xl font-bold text-gray-900">{stats?.todaysMail || 0}</p>
+                </div>
+              </div>
 
-        {/* Overdue! */}
-        <div className="bg-gradient-to-br from-red-50 to-white rounded-xl p-6 shadow-md border border-red-200 hover:shadow-lg transition-shadow">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <p className="text-red-700 text-xs font-semibold uppercase tracking-wide mb-2">Overdue!</p>
-              <p className="text-4xl font-bold text-red-600 mb-1">{stats?.overdueMail || 0}</p>
-              <p className="text-gray-700 text-sm font-medium">&gt;7 days old</p>
-            </div>
-            <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-md animate-pulse">
-              <AlertCircle className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        </div>
+              {/* Pending Pickups */}
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 whitespace-nowrap">Pending Pickups</p>
+                  <p className="text-xl font-bold text-gray-900">{stats?.pendingPickups || 0}</p>
+                </div>
+              </div>
 
-        {/* Completed Today */}
-        <div className="bg-gradient-to-br from-green-50 to-white rounded-xl p-6 shadow-md border border-green-100 hover:shadow-lg transition-shadow">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <p className="text-green-700 text-xs font-semibold uppercase tracking-wide mb-2">Completed Today</p>
-              <p className="text-4xl font-bold text-green-600 mb-1">{stats?.completedToday || 0}</p>
-              <p className="text-gray-600 text-sm">picked up</p>
-            </div>
-            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-              <CheckCircle2 className="w-6 h-6 text-white" />
+              {/* Overdue */}
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 whitespace-nowrap">Overdue</p>
+                  <p className="text-xl font-bold text-red-600">{stats?.overdueMail || 0}</p>
+                </div>
+              </div>
+
+              {/* Completed Today */}
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 whitespace-nowrap">Completed Today</p>
+                  <p className="text-xl font-bold text-green-600">{stats?.completedToday || 0}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Revenue Widget */}
-      <div className="mb-8">
-        <RevenueWidget
-          monthlyRevenue={stats?.monthlyRevenue || 0}
-          outstandingFees={stats?.outstandingFees || 0}
-          totalRevenue={stats?.totalRevenue || 0}
-          loading={loading}
-        />
+      {/* Second Row: Charts (left 1/2) + Revenue Widget (right 1/2) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Left: Charts Section */}
+        <div className="lg:col-span-1">
+          <ChartsSection
+            mailVolumeData={stats?.mailVolumeData || []}
+            customerGrowthData={stats?.customerGrowthData || []}
+            chartTimeRange={chartTimeRange}
+            onTimeRangeChange={setChartTimeRange}
+            loading={chartsLoading}
+          />
+        </div>
+
+        {/* Right: Revenue Widget */}
+        <div className="lg:col-span-1">
+          <RevenueWidget
+            monthlyRevenue={stats?.monthlyRevenue || 0}
+            outstandingFees={stats?.outstandingFees || 0}
+            totalRevenue={stats?.totalRevenue || 0}
+            loading={loading}
+          />
+        </div>
       </div>
 
-      {/* Charts - Full width */}
-      <ChartsSection
-        mailVolumeData={stats?.mailVolumeData || []}
-        customerGrowthData={stats?.customerGrowthData || []}
-        chartTimeRange={chartTimeRange}
-        onTimeRangeChange={setChartTimeRange}
-        loading={chartsLoading}
-      />
+      {/* Analytics Section */}
+      {stats?.analytics && (
+        <div className="mt-8 mb-6">
+          <AnalyticsSection
+            analytics={stats.analytics}
+            loading={loading}
+          />
+        </div>
+      )}
+
+      {/* Needs Follow-up, Mail Age Distribution, and 2 Metric Cards - Same Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+        {/* Needs Follow-up Section - 2/5 width */}
+        {stats?.needsFollowUp && stats.needsFollowUp.length > 0 && (
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-100 p-6 h-full">
+            <div className="flex items-start justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Needs Follow-up</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">{stats.needsFollowUp.length} {stats.needsFollowUp.length === 1 ? 'customer' : 'customers'} need attention</p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/dashboard/follow-ups')}
+                className="px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs font-semibold whitespace-nowrap ml-2"
+              >
+                View All
+              </button>
+            </div>
+            <div className="space-y-2.5">
+              {stats.needsFollowUp.slice(0, 4).map((group) => (
+                <div key={group.contact.contact_id} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-3.5 border border-orange-200 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-sm truncate">{group.contact.contact_person || group.contact.company_name || 'Unknown'}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">Box #{group.contact.mailbox_number}</p>
+                    </div>
+                    {group.totalFees > 0 && (
+                      <span className="text-orange-700 font-bold text-base ml-3 flex-shrink-0">${group.totalFees}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-3 text-xs text-gray-700">
+                    {group.packages.length > 0 && <span className="flex items-center gap-1">📦 <span className="font-semibold">{group.packages.length}</span></span>}
+                    {group.letters.length > 0 && <span className="flex items-center gap-1">✉️ <span className="font-semibold">{group.letters.length}</span></span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mail Age Distribution - 2/5 width */}
+        {stats?.analytics && (
+          <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-lg border border-gray-100 h-full">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Mail Age Distribution</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Current pending items by age</p>
+              </div>
+            </div>
+            <div className="space-y-3.5">
+              {[
+                { name: '0-3 days', value: stats.analytics.ageDistribution['0-3'], color: '#10B981' },
+                { name: '4-7 days', value: stats.analytics.ageDistribution['4-7'], color: '#FCD34D' },
+                { name: '8-14 days', value: stats.analytics.ageDistribution['8-14'], color: '#F59E0B' },
+                { name: '15-30 days', value: stats.analytics.ageDistribution['15-30'], color: '#EF4444' },
+                { name: '30+ days', value: stats.analytics.ageDistribution['30+'], color: '#A855F7' }
+              ].map((item) => {
+                const total = Object.values(stats.analytics.ageDistribution).reduce((sum, v) => sum + v, 0);
+                const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                
+                return (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <div className="w-20 text-sm font-semibold text-gray-700">{item.name}</div>
+                    <div className="flex-1">
+                      <div className="h-9 bg-gray-100 rounded-lg overflow-hidden relative">
+                        <div
+                          className="h-full flex items-center justify-end px-3 transition-all duration-300"
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: item.color,
+                            minWidth: item.value > 0 ? '60px' : '0'
+                          }}
+                        >
+                          {item.value > 0 && (
+                            <span className="text-sm font-bold text-white">{item.value}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-14 text-right text-sm font-semibold text-gray-600">
+                      {percentage.toFixed(0)}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Two Metric Cards Stacked Vertically - 1/5 width, each takes 1/2 height */}
+        {stats?.analytics && (
+          <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+            {/* This Month Mail - takes 1/2 of container height */}
+            <div className="bg-gradient-to-br from-green-50 to-white rounded-xl p-4 border border-green-100 shadow-md hover:shadow-lg transition-shadow flex-1 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                  <Package className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-green-700 font-semibold uppercase">This Month Mail</p>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.mail}</p>
+                {(() => {
+                  const mailChange = stats.analytics.comparison.lastMonth.mail > 0
+                    ? ((stats.analytics.comparison.thisMonth.mail - stats.analytics.comparison.lastMonth.mail) / stats.analytics.comparison.lastMonth.mail) * 100
+                    : 0;
+                  return mailChange !== 0 && (
+                    <span className={`flex items-center text-xs font-semibold ${mailChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {mailChange > 0 ? '↑' : '↓'}
+                      {Math.abs(mailChange).toFixed(0)}%
+                    </span>
+                  );
+                })()}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">vs {stats.analytics.comparison.lastMonth.mail} last month</p>
+            </div>
+
+            {/* New Customers - takes 1/2 of container height */}
+            <div className="bg-gradient-to-br from-orange-50 to-white rounded-xl p-4 border border-orange-100 shadow-md hover:shadow-lg transition-shadow flex-1 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Users className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-orange-700 font-semibold uppercase">New Customers</p>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.customers}</p>
+                {(() => {
+                  const customerChange = stats.analytics.comparison.lastMonth.customers > 0
+                    ? ((stats.analytics.comparison.thisMonth.customers - stats.analytics.comparison.lastMonth.customers) / stats.analytics.comparison.lastMonth.customers) * 100
+                    : 0;
+                  return customerChange !== 0 && (
+                    <span className={`flex items-center text-xs font-semibold ${customerChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {customerChange > 0 ? '↑' : '↓'}
+                      {Math.abs(customerChange).toFixed(0)}%
+                    </span>
+                  );
+                })()}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">vs {stats.analytics.comparison.lastMonth.customers} last month</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Add Customer Modal */}
       <Modal 
