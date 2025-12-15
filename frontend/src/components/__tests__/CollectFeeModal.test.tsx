@@ -426,8 +426,9 @@ describe('CollectFeeModal', () => {
 
       await waitFor(() => {
         // Should mark only the package as picked up, not the letters
+        // API now only takes 2 arguments (id, status) - staff tracking is handled server-side
         expect(api.mailItems.updateStatus).toHaveBeenCalledTimes(1);
-        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('pkg-1', 'Picked Up', 'Madison');
+        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('pkg-1', 'Picked Up');
       });
 
       await waitFor(() => {
@@ -470,10 +471,11 @@ describe('CollectFeeModal', () => {
 
       await waitFor(() => {
         // Should mark package + 2 letters = 3 items
+        // API now only takes 2 arguments (id, status) - staff tracking is handled server-side
         expect(api.mailItems.updateStatus).toHaveBeenCalledTimes(3);
-        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('pkg-1', 'Picked Up', 'Merlin');
-        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('letter-1', 'Picked Up', 'Merlin');
-        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('letter-2', 'Picked Up', 'Merlin');
+        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('pkg-1', 'Picked Up');
+        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('letter-1', 'Picked Up');
+        expect(api.mailItems.updateStatus).toHaveBeenCalledWith('letter-2', 'Picked Up');
       });
 
       await waitFor(() => {
@@ -555,11 +557,10 @@ describe('CollectFeeModal', () => {
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
-        // Should use email as performed_by
+        // API now only takes 2 arguments (id, status) - staff tracking is handled server-side
         expect(api.mailItems.updateStatus).toHaveBeenCalledWith(
           'pkg-1',
-          'Picked Up',
-          'ariel.chen@pursuit.org'
+          'Picked Up'
         );
       });
     });
@@ -589,10 +590,10 @@ describe('CollectFeeModal', () => {
       fireEvent.click(skipButton);
 
       await waitFor(() => {
+        // API now only takes 2 arguments (id, status) - staff tracking is handled server-side
         expect(api.mailItems.updateStatus).toHaveBeenCalledWith(
           'pkg-1',
-          'Picked Up',
-          'ariel.chen@pursuit.org'
+          'Picked Up'
         );
       });
     });

@@ -150,12 +150,11 @@ describe('WaiveFeeModal - Staff Selection', () => {
     const waiveButton = screen.getByRole('button', { name: /Waive \$10.00/i });
     fireEvent.click(waiveButton);
 
-    // Verify API was called with Madison
+    // Verify API was called - staff tracking is now handled server-side
     await waitFor(() => {
       expect(api.fees.waive).toHaveBeenCalledWith(
         'fee-1',
-        'Customer loyalty discount',
-        'Madison'
+        'Customer loyalty discount'
       );
     });
 
@@ -186,12 +185,11 @@ describe('WaiveFeeModal - Staff Selection', () => {
     const waiveButton = screen.getByRole('button', { name: /Waive \$10.00/i });
     fireEvent.click(waiveButton);
 
-    // Verify API was called with Merlin
+    // Verify API was called - staff tracking is now handled server-side
     await waitFor(() => {
       expect(api.fees.waive).toHaveBeenCalledWith(
         'fee-1',
-        'System error correction',
-        'Merlin'
+        'System error correction'
       );
     });
 
