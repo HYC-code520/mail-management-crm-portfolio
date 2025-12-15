@@ -186,7 +186,7 @@ export default function GroupedFollowUpSection({
               <div
                 key={group.contact.contact_id}
                 onClick={() => togglePersonExpand(group.contact.contact_id)}
-                className="relative overflow-hidden p-5 rounded-xl border-2 transition-all duration-200 bg-gradient-to-br from-white to-gray-50 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-0.5 active:translate-y-0 ${
+                className="relative overflow-visible p-5 rounded-xl border-2 transition-all duration-200 bg-gradient-to-br from-white to-gray-50 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-0.5 active:translate-y-0 ${
                   isAbandoned ? 'border-red-300 hover:border-red-400' :
                   hasFees ? 'border-orange-300 hover:border-orange-400' :
                   'border-gray-200'

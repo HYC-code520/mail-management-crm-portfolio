@@ -301,19 +301,19 @@ export default function DashboardLayout() {
               </li>
 
               <li>
-            <Link
-              to="/dashboard/templates"
+                <Link
+                  to="/dashboard/follow-ups"
                   className={`group flex items-center py-3 text-sm font-medium leading-6 transition-all ${
                     sidebarCollapsed ? 'justify-center px-3' : 'pl-3 pr-3 gap-x-3'
                   } ${
-                location.pathname === '/dashboard/templates'
+                    location.pathname === '/dashboard/follow-ups'
                       ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-r-full shadow-md -ml-3 pl-6'
                       : 'text-gray-700 hover:bg-gray-100 rounded-lg'
               }`}
-                  title={sidebarCollapsed ? 'Email Templates' : ''}
-            >
-                  <FileText className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Email Templates</span>}
+                  title={sidebarCollapsed ? 'Follow-ups' : ''}
+                >
+                  <Bell className="w-5 h-5 shrink-0" />
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">Follow-ups</span>}
             </Link>
               </li>
 
@@ -335,19 +335,19 @@ export default function DashboardLayout() {
               </li>
 
               <li>
-                <Link
-                  to="/dashboard/follow-ups"
+            <Link
+              to="/dashboard/templates"
                   className={`group flex items-center py-3 text-sm font-medium leading-6 transition-all ${
                     sidebarCollapsed ? 'justify-center px-3' : 'pl-3 pr-3 gap-x-3'
                   } ${
-                    location.pathname === '/dashboard/follow-ups'
+                location.pathname === '/dashboard/templates'
                       ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-r-full shadow-md -ml-3 pl-6'
                       : 'text-gray-700 hover:bg-gray-100 rounded-lg'
               }`}
-                  title={sidebarCollapsed ? 'Follow-ups' : ''}
-                >
-                  <Bell className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Follow-ups</span>}
+                  title={sidebarCollapsed ? 'Email Templates' : ''}
+            >
+                  <FileText className="w-5 h-5 shrink-0" />
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">Email Templates</span>}
             </Link>
               </li>
 

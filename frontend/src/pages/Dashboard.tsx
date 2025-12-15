@@ -424,18 +424,19 @@ export default function DashboardPage() {
               <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 shadow-md border border-gray-100 hover:shadow-lg transition-shadow relative" style={{ minHeight: '160px', overflow: 'visible' }}>
                 {/* Avatar positioned on the RIGHT side, extending beyond card bounds */}
                 <div className="absolute bottom-0 right-0 pointer-events-none" style={{ 
-                  height: 'calc(100% + 40px)', 
-                  width: '100px',
-                  right: '-10px',
-                  bottom: '-10px',
+                  height: 'auto', 
+                  width: '120px',
+                  right: '-15px',
+                  bottom: '0',
                   zIndex: 20
                 }}>
                   <img 
                     src="/assets/images/Merlin.png" 
                     alt="Merlin" 
-                    className="w-full h-full object-cover object-bottom"
+                    className="w-full h-auto object-contain object-bottom"
                     style={{ 
-                      filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.1))'
+                      filter: 'drop-shadow(2px 2px 6px rgba(0,0,0,0.15))',
+                      maxHeight: 'calc(100% + 50px)'
                     }}
                   />
                 </div>
@@ -463,18 +464,19 @@ export default function DashboardPage() {
               <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-4 shadow-md border border-gray-100 hover:shadow-lg transition-shadow relative" style={{ minHeight: '160px', overflow: 'visible' }}>
                 {/* Avatar positioned on the RIGHT side, extending beyond card bounds */}
                 <div className="absolute bottom-0 right-0 pointer-events-none" style={{ 
-                  height: 'calc(100% + 40px)', 
-                  width: '100px',
-                  right: '-10px',
-                  bottom: '-10px',
+                  height: 'auto', 
+                  width: '120px',
+                  right: '-15px',
+                  bottom: '0',
                   zIndex: 20
                 }}>
                   <img 
                     src="/assets/images/Madison.png" 
                     alt="Madison" 
-                    className="w-full h-full object-cover object-bottom"
+                    className="w-full h-auto object-contain object-bottom"
                     style={{ 
-                      filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.1))'
+                      filter: 'drop-shadow(2px 2px 6px rgba(0,0,0,0.15))',
+                      maxHeight: 'calc(100% + 50px)'
                     }}
                   />
                 </div>
