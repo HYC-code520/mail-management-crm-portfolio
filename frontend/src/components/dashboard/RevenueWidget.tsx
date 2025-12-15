@@ -64,7 +64,7 @@ export default function RevenueWidget({
               </div>
               <p className="text-sm font-semibold text-green-800">This Month</p>
             </div>
-            <p className="text-3xl font-bold text-green-700 mb-2">
+            <p className="text-4xl font-bold text-green-700 mb-2">
               ${Math.round(monthlyRevenue ?? 0)}
             </p>
             <p className="text-sm text-green-600 font-medium">Collected</p>
@@ -85,7 +85,7 @@ export default function RevenueWidget({
               </div>
               <p className="text-sm font-semibold text-orange-800">Outstanding</p>
             </div>
-            <p className="text-3xl font-bold text-orange-700 mb-2">
+            <p className="text-4xl font-bold text-orange-700 mb-2">
               ${Math.round(outstandingFees ?? 0)}
             </p>
             <p className="text-sm text-orange-600 font-medium group-hover:underline">Owed - Click to view</p>
@@ -102,7 +102,7 @@ export default function RevenueWidget({
               </div>
               <p className="text-sm font-semibold text-blue-800">Total (All Time)</p>
             </div>
-            <p className="text-3xl font-bold text-blue-700 mb-2">
+            <p className="text-4xl font-bold text-blue-700 mb-2">
               ${Math.round(totalRevenue ?? 0)}
             </p>
             <p className="text-sm text-blue-600 font-medium">Lifetime</p>

@@ -576,120 +576,96 @@ export default function DashboardPage() {
           <div className="lg:col-span-1 flex flex-col gap-4 h-full">
             {/* This Month Mail - takes 1/2 of container height */}
             <div className="bg-gradient-to-br from-green-50 to-white rounded-xl p-4 border border-green-100 shadow-md hover:shadow-lg transition-shadow flex-1 flex flex-col justify-center">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Package className="w-4 h-4 text-white" />
-                  </div>
-                  <p className="text-xs text-green-700 font-semibold uppercase">This Month Mail</p>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Package className="w-4 h-4 text-white" />
                 </div>
-                {/* Semicircle Progress */}
+                <p className="text-xs text-green-700 font-semibold uppercase">This Month Mail</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.mail}</p>
+                  {(() => {
+                    const mailChange = stats.analytics.comparison.lastMonth.mail > 0
+                      ? ((stats.analytics.comparison.thisMonth.mail - stats.analytics.comparison.lastMonth.mail) / stats.analytics.comparison.lastMonth.mail) * 100
+                      : 0;
+                    return mailChange !== 0 && (
+                      <span className={`flex items-center text-sm font-bold ${mailChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {mailChange > 0 ? '↑' : '↓'}
+                        {Math.abs(mailChange).toFixed(0)}%
+                      </span>
+                    );
+                  })()}
+                </div>
+                {/* Mini Sparkline Trend */}
                 {(() => {
-                  const mailChange = stats.analytics.comparison.lastMonth.mail > 0
-                    ? ((stats.analytics.comparison.thisMonth.mail - stats.analytics.comparison.lastMonth.mail) / stats.analytics.comparison.lastMonth.mail) * 100
-                    : 0;
-                  const progressPercentage = Math.min(Math.max((100 + mailChange) / 2, 0), 100);
-                  const rotation = (progressPercentage / 100) * 180;
+                  const lastMonth = stats.analytics.comparison.lastMonth.mail;
+                  const thisMonth = stats.analytics.comparison.thisMonth.mail;
+                  const maxValue = Math.max(lastMonth, thisMonth, 1);
+                  const lastMonthHeight = (lastMonth / maxValue) * 100;
+                  const thisMonthHeight = (thisMonth / maxValue) * 100;
                   
                   return (
-                    <div className="relative w-16 h-8 flex-shrink-0">
-                      <svg viewBox="0 0 100 50" className="w-full h-full">
-                        {/* Background semicircle */}
-                        <path
-                          d="M 10 50 A 40 40 0 0 1 90 50"
-                          fill="none"
-                          stroke="#E5E7EB"
-                          strokeWidth="8"
-                          strokeLinecap="round"
-                        />
-                        {/* Progress semicircle */}
-                        <path
-                          d="M 10 50 A 40 40 0 0 1 90 50"
-                          fill="none"
-                          stroke={mailChange >= 0 ? '#10B981' : '#EF4444'}
-                          strokeWidth="8"
-                          strokeLinecap="round"
-                          strokeDasharray="125.6"
-                          strokeDashoffset={125.6 - (125.6 * rotation / 180)}
-                          className="transition-all duration-500"
-                        />
-                        {/* Center text */}
-                        <text
-                          x="50"
-                          y="42"
-                          textAnchor="middle"
-                          className="text-[10px] font-bold"
-                          fill={mailChange >= 0 ? '#10B981' : '#EF4444'}
-                        >
-                          {mailChange > 0 ? '+' : ''}{mailChange.toFixed(0)}%
-                        </text>
-                      </svg>
+                    <div className="flex items-end gap-0.5 h-8">
+                      <div 
+                        className="w-1.5 bg-green-300 rounded-t transition-all duration-300"
+                        style={{ height: `${lastMonthHeight}%` }}
+                      />
+                      <div 
+                        className="w-1.5 bg-green-500 rounded-t transition-all duration-300"
+                        style={{ height: `${thisMonthHeight}%` }}
+                      />
                     </div>
                   );
                 })()}
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.mail}</p>
               </div>
               <p className="text-xs text-gray-500 mt-1">vs {stats.analytics.comparison.lastMonth.mail} last month</p>
             </div>
 
             {/* New Customers - takes 1/2 of container height */}
             <div className="bg-gradient-to-br from-orange-50 to-white rounded-xl p-4 border border-orange-100 shadow-md hover:shadow-lg transition-shadow flex-1 flex flex-col justify-center">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Users className="w-4 h-4 text-white" />
-                  </div>
-                  <p className="text-xs text-orange-700 font-semibold uppercase">New Customers</p>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 text-white" />
                 </div>
-                {/* Semicircle Progress */}
+                <p className="text-xs text-orange-700 font-semibold uppercase">New Customers</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.customers}</p>
+                  {(() => {
+                    const customerChange = stats.analytics.comparison.lastMonth.customers > 0
+                      ? ((stats.analytics.comparison.thisMonth.customers - stats.analytics.comparison.lastMonth.customers) / stats.analytics.comparison.lastMonth.customers) * 100
+                      : 0;
+                    return customerChange !== 0 && (
+                      <span className={`flex items-center text-sm font-bold ${customerChange > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                        {customerChange > 0 ? '↑' : '↓'}
+                        {Math.abs(customerChange).toFixed(0)}%
+                      </span>
+                    );
+                  })()}
+                </div>
+                {/* Mini Sparkline Trend */}
                 {(() => {
-                  const customerChange = stats.analytics.comparison.lastMonth.customers > 0
-                    ? ((stats.analytics.comparison.thisMonth.customers - stats.analytics.comparison.lastMonth.customers) / stats.analytics.comparison.lastMonth.customers) * 100
-                    : 0;
-                  const progressPercentage = Math.min(Math.max((100 + customerChange) / 2, 0), 100);
-                  const rotation = (progressPercentage / 100) * 180;
+                  const lastMonth = stats.analytics.comparison.lastMonth.customers;
+                  const thisMonth = stats.analytics.comparison.thisMonth.customers;
+                  const maxValue = Math.max(lastMonth, thisMonth, 1);
+                  const lastMonthHeight = (lastMonth / maxValue) * 100;
+                  const thisMonthHeight = (thisMonth / maxValue) * 100;
                   
                   return (
-                    <div className="relative w-16 h-8 flex-shrink-0">
-                      <svg viewBox="0 0 100 50" className="w-full h-full">
-                        {/* Background semicircle */}
-                        <path
-                          d="M 10 50 A 40 40 0 0 1 90 50"
-                          fill="none"
-                          stroke="#E5E7EB"
-                          strokeWidth="8"
-                          strokeLinecap="round"
-                        />
-                        {/* Progress semicircle */}
-                        <path
-                          d="M 10 50 A 40 40 0 0 1 90 50"
-                          fill="none"
-                          stroke={customerChange >= 0 ? '#F97316' : '#EF4444'}
-                          strokeWidth="8"
-                          strokeLinecap="round"
-                          strokeDasharray="125.6"
-                          strokeDashoffset={125.6 - (125.6 * rotation / 180)}
-                          className="transition-all duration-500"
-                        />
-                        {/* Center text */}
-                        <text
-                          x="50"
-                          y="42"
-                          textAnchor="middle"
-                          className="text-[10px] font-bold"
-                          fill={customerChange >= 0 ? '#F97316' : '#EF4444'}
-                        >
-                          {customerChange > 0 ? '+' : ''}{customerChange.toFixed(0)}%
-                        </text>
-                      </svg>
+                    <div className="flex items-end gap-0.5 h-8">
+                      <div 
+                        className="w-1.5 bg-orange-300 rounded-t transition-all duration-300"
+                        style={{ height: `${lastMonthHeight}%` }}
+                      />
+                      <div 
+                        className="w-1.5 bg-orange-500 rounded-t transition-all duration-300"
+                        style={{ height: `${thisMonthHeight}%` }}
+                      />
                     </div>
                   );
                 })()}
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.customers}</p>
               </div>
               <p className="text-xs text-gray-500 mt-1">vs {stats.analytics.comparison.lastMonth.customers} last month</p>
             </div>
