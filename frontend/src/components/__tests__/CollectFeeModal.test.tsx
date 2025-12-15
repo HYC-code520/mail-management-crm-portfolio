@@ -161,6 +161,9 @@ describe('CollectFeeModal', () => {
       expect(screen.getByText('Card')).toBeInTheDocument();
       expect(screen.getByText('Venmo')).toBeInTheDocument();
       expect(screen.getByText('Zelle')).toBeInTheDocument();
+      expect(screen.getByText('PayPal')).toBeInTheDocument();
+      expect(screen.getByText('Check')).toBeInTheDocument();
+      expect(screen.getByText('Other')).toBeInTheDocument();
     });
   });
 

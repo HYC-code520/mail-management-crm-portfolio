@@ -78,7 +78,7 @@ interface AnalyticsData {
   serviceTiers: { tier1: number; tier2: number };
   languageDistribution: { English: number; Chinese: number; Both: number };
   statusDistribution: { [key: string]: number };
-  paymentDistribution: { Cash: number; Zelle: number; Venmo: number; Check: number; Other: number };
+  paymentDistribution: { Cash: number; Zelle: number; Venmo: number; PayPal: number; Check: number; Other: number };
   ageDistribution: { '0-3': number; '4-7': number; '8-14': number; '15-30': number; '30+': number };
   staffPerformance: { Merlin: number; Madison: number };
   comparison: {
@@ -591,102 +591,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Needs Follow-up, Mail Age Distribution, and 2 Metric Cards - Same Row */}
+      {/* Metric Cards, Mail Age Distribution, and Needs Follow-up - Same Row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
-        {/* Needs Follow-up Section - 2/5 width */}
-        {stats?.needsFollowUp && stats.needsFollowUp.length > 0 && (
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-100 p-6 h-full">
-            <div className="flex items-start justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Needs Follow-up</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{stats.needsFollowUp.length} {stats.needsFollowUp.length === 1 ? 'customer' : 'customers'} need attention</p>
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/dashboard/follow-ups')}
-                className="px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs font-semibold whitespace-nowrap ml-2"
-              >
-                View All
-              </button>
-            </div>
-            <div className="space-y-2.5">
-              {stats.needsFollowUp.slice(0, 4).map((group) => (
-                <div key={group.contact.contact_id} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-3.5 border border-orange-200 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-sm truncate">{group.contact.contact_person || group.contact.company_name || 'Unknown'}</p>
-                      <p className="text-xs text-gray-600 mt-0.5">Box #{group.contact.mailbox_number}</p>
-                    </div>
-                    {group.totalFees > 0 && (
-                      <span className="text-orange-700 font-bold text-base ml-3 flex-shrink-0">${group.totalFees}</span>
-                    )}
-                  </div>
-                  <div className="flex gap-3 text-xs text-gray-700">
-                    {group.packages.length > 0 && <span className="flex items-center gap-1">📦 <span className="font-semibold">{group.packages.length}</span></span>}
-                    {group.letters.length > 0 && <span className="flex items-center gap-1">✉️ <span className="font-semibold">{group.letters.length}</span></span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Mail Age Distribution - 2/5 width */}
-        {stats?.analytics && (
-          <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-lg border border-gray-100 h-full">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Mail Age Distribution</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Current pending items by age</p>
-              </div>
-            </div>
-            <div className="space-y-3.5">
-              {[
-                { name: '0-3 days', value: stats.analytics.ageDistribution['0-3'], color: '#10B981' },
-                { name: '4-7 days', value: stats.analytics.ageDistribution['4-7'], color: '#FCD34D' },
-                { name: '8-14 days', value: stats.analytics.ageDistribution['8-14'], color: '#F59E0B' },
-                { name: '15-30 days', value: stats.analytics.ageDistribution['15-30'], color: '#EF4444' },
-                { name: '30+ days', value: stats.analytics.ageDistribution['30+'], color: '#A855F7' }
-              ].map((item) => {
-                const total = Object.values(stats.analytics.ageDistribution).reduce((sum, v) => sum + v, 0);
-                const percentage = total > 0 ? (item.value / total) * 100 : 0;
-                
-                return (
-                  <div key={item.name} className="flex items-center gap-3">
-                    <div className="w-20 text-sm font-semibold text-gray-700">{item.name}</div>
-                    <div className="flex-1">
-                      <div className="h-9 bg-gray-100 rounded-lg overflow-hidden relative">
-                        <div
-                          className="h-full flex items-center justify-end px-3 transition-all duration-300"
-                          style={{
-                            width: `${percentage}%`,
-                            backgroundColor: item.color,
-                            minWidth: item.value > 0 ? '60px' : '0'
-                          }}
-                        >
-                          {item.value > 0 && (
-                            <span className="text-sm font-bold text-white">{item.value}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="w-14 text-right text-sm font-semibold text-gray-600">
-                      {percentage.toFixed(0)}%
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Two Metric Cards Stacked Vertically - 1/5 width, each takes 1/2 height */}
         {stats?.analytics && (
           <div className="lg:col-span-1 flex flex-col gap-4 h-full">
@@ -742,6 +648,100 @@ export default function DashboardPage() {
                 })()}
               </div>
               <p className="text-xs text-gray-500 mt-1">vs {stats.analytics.comparison.lastMonth.customers} last month</p>
+            </div>
+          </div>
+        )}
+
+        {/* Mail Age Distribution - 2/5 width */}
+        {stats?.analytics && (
+          <div className="lg:col-span-2 bg-white rounded-xl p-4 shadow-lg border border-gray-100 h-full flex flex-col">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Mail Age Distribution</h3>
+                <p className="text-xs text-gray-500">Current pending items by age</p>
+              </div>
+            </div>
+            <div className="flex-1 flex flex-col justify-center gap-2">
+              {[
+                { name: '0-3 days', value: stats.analytics.ageDistribution['0-3'], color: '#10B981' },
+                { name: '4-7 days', value: stats.analytics.ageDistribution['4-7'], color: '#FCD34D' },
+                { name: '8-14 days', value: stats.analytics.ageDistribution['8-14'], color: '#F59E0B' },
+                { name: '15-30 days', value: stats.analytics.ageDistribution['15-30'], color: '#EF4444' },
+                { name: '30+ days', value: stats.analytics.ageDistribution['30+'], color: '#A855F7' }
+              ].map((item) => {
+                const total = Object.values(stats.analytics.ageDistribution).reduce((sum, v) => sum + v, 0);
+                const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                
+                return (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <div className="w-16 text-xs font-semibold text-gray-700">{item.name}</div>
+                    <div className="flex-1">
+                      <div className="h-10 bg-gray-100 rounded-lg overflow-hidden relative">
+                        <div
+                          className="h-full flex items-center justify-end px-2 transition-all duration-300"
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: item.color,
+                            minWidth: item.value > 0 ? '50px' : '0'
+                          }}
+                        >
+                          {item.value > 0 && (
+                            <span className="text-xs font-bold text-white">{item.value}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-12 text-right text-xs font-semibold text-gray-600">
+                      {percentage.toFixed(0)}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Needs Follow-up Section - 2/5 width */}
+        {stats?.needsFollowUp && stats.needsFollowUp.length > 0 && (
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-100 p-4 h-full">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-gray-900">Needs Follow-up</h2>
+                  <p className="text-xs text-gray-500">{stats.needsFollowUp.length} {stats.needsFollowUp.length === 1 ? 'customer' : 'customers'} need attention</p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/dashboard/follow-ups')}
+                className="px-2 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs font-semibold whitespace-nowrap ml-2"
+              >
+                View All
+              </button>
+            </div>
+            <div className="space-y-2">
+              {stats.needsFollowUp.slice(0, 4).map((group) => (
+                <div key={group.contact.contact_id} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-2.5 border border-orange-200 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-xs truncate">{group.contact.contact_person || group.contact.company_name || 'Unknown'}</p>
+                      <p className="text-xs text-gray-600">Box #{group.contact.mailbox_number}</p>
+                    </div>
+                    {group.totalFees > 0 && (
+                      <span className="text-orange-700 font-bold text-sm ml-2 flex-shrink-0">${group.totalFees}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 text-xs text-gray-700">
+                    {group.packages.length > 0 && <span className="flex items-center gap-1">📦 <span className="font-semibold">{group.packages.length}</span></span>}
+                    {group.letters.length > 0 && <span className="flex items-center gap-1">✉️ <span className="font-semibold">{group.letters.length}</span></span>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -1077,3 +1077,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

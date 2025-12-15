@@ -425,6 +425,7 @@ exports.getDashboardStats = async (req, res, next) => {
       Cash: 0,
       Zelle: 0,
       Venmo: 0,
+      PayPal: 0,
       Check: 0,
       Other: 0
     };

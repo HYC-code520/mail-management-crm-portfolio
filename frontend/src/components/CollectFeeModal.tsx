@@ -42,7 +42,7 @@ interface GroupedFollowUp {
   lastNotified?: string;
 }
 
-type PaymentMethod = 'cash' | 'card' | 'venmo' | 'zelle' | 'check' | 'other';
+type PaymentMethod = 'cash' | 'card' | 'venmo' | 'zelle' | 'paypal' | 'check' | 'other';
 
 interface CollectFeeModalProps {
   isOpen: boolean;
@@ -60,6 +60,7 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ReactN
   { value: 'card', label: 'Card', icon: <CreditCard className="w-4 h-4" /> },
   { value: 'venmo', label: 'Venmo', icon: <Smartphone className="w-4 h-4" /> },
   { value: 'zelle', label: 'Zelle', icon: <Smartphone className="w-4 h-4" /> },
+  { value: 'paypal', label: 'PayPal', icon: <CreditCard className="w-4 h-4" /> },
   { value: 'check', label: 'Check', icon: <CheckCircle className="w-4 h-4" /> },
   { value: 'other', label: 'Other', icon: <ArrowRight className="w-4 h-4" /> },
 ];
@@ -481,7 +482,7 @@ export default function CollectFeeModal({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Payment Method:
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {PAYMENT_METHODS.map((method) => (
                 <button
                   key={method.value}

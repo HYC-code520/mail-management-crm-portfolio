@@ -6,7 +6,7 @@ const COLORS = {
   purple: '#A855F7',
   green: '#10B981',
   red: '#EF4444',
-  yellow: '#F59E0B',
+  yellow: '#FCD34D',  // Bright yellow matching "4-7 days" bar
   orange: '#F97316',
   pink: '#EC4899',
   indigo: '#6366F1',
@@ -25,7 +25,7 @@ interface AnalyticsData {
   serviceTiers: { tier1: number; tier2: number };
   languageDistribution: { English: number; Chinese: number; Both: number };
   statusDistribution: { [key: string]: number };
-  paymentDistribution: { Cash: number; Zelle: number; Venmo: number; Check: number; Other: number };
+  paymentDistribution: { Cash: number; Zelle: number; Venmo: number; PayPal: number; Check: number; Other: number };
   ageDistribution: { '0-3': number; '4-7': number; '8-14': number; '15-30': number; '30+': number };
   staffPerformance: { Merlin: number; Madison: number };
   comparison: {
@@ -69,12 +69,14 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
 
   const statusData = Object.entries(analytics.statusDistribution)
     .map(([name, value]) => {
-      let color = COLORS.blue;
+      let color = COLORS.gray;
       if (name === 'Received') color = COLORS.blue;
       else if (name === 'Notified') color = COLORS.green;
       else if (name === 'Scanned') color = COLORS.orange;
-      else if (name === 'Ready') color = COLORS.yellow;
+      else if (name === 'Ready for Pickup') color = COLORS.purple;
       else if (name === 'Picked Up') color = COLORS.purple;
+      else if (name === 'Abandoned' || name === 'Abandoned Package') color = COLORS.yellow;
+      else if (name === 'Forward') color = COLORS.teal;
       return { name, value, color };
     })
     .filter(item => item.value > 0);
@@ -82,11 +84,13 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
   const paymentData = Object.entries(analytics.paymentDistribution)
     .map(([name, value]) => {
       let color = COLORS.blue;
-      if (name === 'cash') color = COLORS.green;
-      else if (name === 'check') color = COLORS.blue;
-      else if (name === 'zelle') color = COLORS.purple;
-      else if (name === 'venmo') color = COLORS.pink;
-      else if (name === 'other') color = COLORS.orange;
+      const lowerName = name.toLowerCase();
+      if (lowerName === 'cash') color = COLORS.green;
+      else if (lowerName === 'check') color = COLORS.blue;
+      else if (lowerName === 'zelle') color = COLORS.purple;
+      else if (lowerName === 'venmo') color = COLORS.pink;
+      else if (lowerName === 'paypal') color = COLORS.indigo;
+      else if (lowerName === 'other') color = COLORS.orange;
       return { name, value, color };
     })
     .filter(item => item.value > 0);
@@ -189,8 +193,8 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="text-xs text-gray-600 space-y-1.5 flex-1">
-                  {statusData.slice(0, 3).map((item) => (
+                <div className="text-xs text-gray-600 space-y-1 flex-1">
+                  {statusData.slice(0, 4).map((item) => (
                     <div key={item.name} className="flex items-center gap-1.5">
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: item.color}}></div>
                       <span className="font-medium text-xs truncate">{item.name}: {item.value}</span>

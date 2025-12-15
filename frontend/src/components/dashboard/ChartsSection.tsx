@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { TrendingUp, UserPlus, Loader2 } from 'lucide-react';
-import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface ChartData {
   date: string;
@@ -45,10 +45,13 @@ export default function ChartsSection({
     return dateStr;
   };
 
+  // Find max value for highlighting
+  const maxMailCount = Math.max(...mailVolumeData.map(d => d.count || 0));
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 h-full flex flex-col">
       {/* Time Range Toggle */}
-      <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-gray-50 to-gray-100 p-1.5 rounded-xl shadow-sm border border-gray-200 mb-4">
+      <div className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-gray-50 to-gray-100 p-1 rounded-lg shadow-sm border border-gray-200 mb-3">
         {[7, 14, 30].map((range) => (
           <button
             key={range}
@@ -59,9 +62,9 @@ export default function ChartsSection({
               e.stopPropagation();
               handleRangeChange(range as 7 | 14 | 30);
             }}
-            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               chartTimeRange === range
-                ? 'bg-white text-blue-700 shadow-md'
+                ? 'bg-white text-blue-700 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
             } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
@@ -69,7 +72,7 @@ export default function ChartsSection({
           </button>
         ))}
         {loading && (
-          <Loader2 className="w-4 h-4 text-blue-600 animate-spin ml-2" />
+          <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin ml-1" />
         )}
       </div>
 
@@ -77,9 +80,9 @@ export default function ChartsSection({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
         {/* Mail Volume Chart */}
         <div className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
-              <TrendingUp className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+              <TrendingUp className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-gray-900">Mail Volume</h2>
@@ -88,7 +91,7 @@ export default function ChartsSection({
           </div>
           
           {/* Chart container with fixed height */}
-          <div className="relative" style={{ height: '220px' }}>
+          <div className="relative" style={{ height: '180px' }}>
             {/* Loading overlay */}
             {loading && (
               <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10 rounded-lg">
@@ -124,7 +127,14 @@ export default function ChartsSection({
                     fontSize: '12px'
                   }}
                 />
-                <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {mailVolumeData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.count === maxMailCount ? '#3B82F6' : '#93C5FD'} 
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -132,9 +142,9 @@ export default function ChartsSection({
 
         {/* Customer Growth Chart */}
         <div className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-sm">
-              <UserPlus className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-sm">
+              <UserPlus className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-gray-900">New Customers</h2>
@@ -143,7 +153,7 @@ export default function ChartsSection({
           </div>
           
           {/* Chart container with fixed height */}
-          <div className="relative" style={{ height: '220px' }}>
+          <div className="relative" style={{ height: '180px' }}>
             {/* Loading overlay */}
             {loading && (
               <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10 rounded-lg">

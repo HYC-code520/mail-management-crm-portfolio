@@ -108,8 +108,7 @@ export const api = {
     getAll: (contactId?: string) => apiClient.get(`/mail-items${contactId ? `?contact_id=${contactId}` : ''}`),
     create: (data: Record<string, unknown>) => apiClient.post('/mail-items', data),
     update: (id: string, data: Record<string, unknown>) => apiClient.put(`/mail-items/${id}`, data),
-    updateStatus: (id: string, status: string, performed_by?: string) => 
-      apiClient.put(`/mail-items/${id}`, { status, ...(performed_by && { performed_by }) }),
+    updateStatus: (id: string, status: string) => apiClient.put(`/mail-items/${id}`, { status }),
     delete: (id: string) => apiClient.delete(`/mail-items/${id}`),
   },
   outreachMessages: {
@@ -199,24 +198,12 @@ export const api = {
   },
 
   scan: {
-    bulkSubmit: (
-      items: Array<{
-        contact_id: string;
-        item_type: 'Letter' | 'Package';
-        scanned_at: string;
-      }>,
-      scanned_by?: string,
-      template_id?: string,
-      custom_subject?: string,
-      custom_body?: string
-    ) =>
-      apiClient.post('/scan/bulk-submit', {
-        items,
-        scanned_by,
-        template_id,
-        custom_subject,
-        custom_body,
-      }),
+    bulkSubmit: (items: Array<{
+      contact_id: string;
+      item_type: 'Letter' | 'Package';
+      scanned_at: string;
+    }>) => 
+      apiClient.post('/scan/bulk-submit', { items }),
     
     smartMatch: (data: {
       image: string;
@@ -250,8 +237,8 @@ export const api = {
       if (endDate) params.append('endDate', endDate);
       return apiClient.get(`/fees/revenue${params.toString() ? `?${params}` : ''}`);
     },
-    waive: (feeId: string, reason: string, waived_by?: string) => 
-      apiClient.post(`/fees/${feeId}/waive`, { reason, waived_by }),
+    waive: (feeId: string, reason: string) => 
+      apiClient.post(`/fees/${feeId}/waive`, { reason }),
     markPaid: (feeId: string, paymentMethod: string, collected_amount?: number, collected_by?: string) => 
       apiClient.post(`/fees/${feeId}/pay`, { paymentMethod, collected_amount, collected_by }),
     recalculate: () => apiClient.post('/fees/recalculate', {}),
