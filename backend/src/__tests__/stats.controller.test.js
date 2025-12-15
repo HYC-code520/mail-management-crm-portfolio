@@ -101,12 +101,14 @@ function setupSupabaseMocks(mockSupabase, { contacts = [], mailItems = [], notif
         }),
       };
     } else if (table === 'todos') {
-      // Staff performance query: .select().eq()
+      // Staff performance query: .select().eq().gte()
       return {
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: todos,
-            error: null,
+          eq: jest.fn().mockReturnValue({
+            gte: jest.fn().mockResolvedValue({
+              data: todos,
+              error: null,
+            }),
           }),
         }),
       };
