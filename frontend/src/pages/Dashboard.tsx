@@ -710,7 +710,7 @@ export default function DashboardPage() {
                 { name: '15-30 days', value: stats.analytics.ageDistribution['15-30'], color: '#EF4444' },
                 { name: '30+ days', value: stats.analytics.ageDistribution['30+'], color: '#A855F7' }
               ].map((item) => {
-                const total = Object.values(stats.analytics.ageDistribution).reduce((sum, v) => sum + v, 0);
+                const total = Object.values(stats.analytics?.ageDistribution || {}).reduce((sum, v) => sum + v, 0);
                 const percentage = total > 0 ? (item.value / total) * 100 : 0;
                 
                 return (

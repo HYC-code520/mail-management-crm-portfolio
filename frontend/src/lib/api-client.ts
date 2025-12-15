@@ -198,12 +198,19 @@ export const api = {
   },
 
   scan: {
-    bulkSubmit: (items: Array<{
-      contact_id: string;
-      item_type: 'Letter' | 'Package';
-      scanned_at: string;
-    }>) => 
-      apiClient.post('/scan/bulk-submit', { items }),
+    bulkSubmit: (
+      items: Array<{
+        contact_id: string;
+        item_type: 'Letter' | 'Package';
+        scanned_at: string;
+      }>,
+      scannedBy?: string,
+      templateId?: string,
+      customSubject?: string,
+      customBody?: string,
+      skipNotification?: boolean
+    ) => 
+      apiClient.post('/scan/bulk-submit', { items, scannedBy, templateId, customSubject, customBody, skipNotification }),
     
     smartMatch: (data: {
       image: string;

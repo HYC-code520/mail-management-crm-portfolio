@@ -11,6 +11,7 @@ const COLORS = {
   pink: '#EC4899',
   indigo: '#6366F1',
   teal: '#14B8A6',
+  gray: '#6B7280',
 };
 
 interface AnalyticsData {

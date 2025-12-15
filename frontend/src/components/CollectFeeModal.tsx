@@ -158,13 +158,13 @@ export default function CollectFeeModal({
       if (shouldMarkPickedUp) {
         // Mark all packages in this group as picked up
         for (const pkg of group.packages) {
-          await api.mailItems.updateStatus(pkg.mail_item_id, 'Picked Up', collectedBy);
+          await api.mailItems.updateStatus(pkg.mail_item_id, 'Picked Up');
         }
         
         // Mark letters as picked up if checkbox is checked
         if (markLettersAsPickedUp && group.letters.length > 0) {
           for (const letter of group.letters) {
-            await api.mailItems.updateStatus(letter.mail_item_id, 'Picked Up', collectedBy);
+            await api.mailItems.updateStatus(letter.mail_item_id, 'Picked Up');
           }
         }
         
@@ -224,13 +224,13 @@ export default function CollectFeeModal({
         const performedBy = getPerformedBy();
         // Mark all packages in this group as picked up
         for (const pkg of group.packages) {
-          await api.mailItems.updateStatus(pkg.mail_item_id, 'Picked Up', performedBy);
+          await api.mailItems.updateStatus(pkg.mail_item_id, 'Picked Up');
         }
         
         // Mark letters as picked up if checkbox is checked
         if (markLettersAsPickedUp && group.letters.length > 0) {
           for (const letter of group.letters) {
-            await api.mailItems.updateStatus(letter.mail_item_id, 'Picked Up', performedBy);
+            await api.mailItems.updateStatus(letter.mail_item_id, 'Picked Up');
           }
         }
         
@@ -277,13 +277,13 @@ export default function CollectFeeModal({
         const performedBy = getPerformedBy();
         // Mark all packages in this group as picked up
         for (const pkg of group.packages) {
-          await api.mailItems.updateStatus(pkg.mail_item_id, 'Picked Up', performedBy);
+          await api.mailItems.updateStatus(pkg.mail_item_id, 'Picked Up');
         }
         
         // Mark letters as picked up if checkbox is checked
         if (markLettersAsPickedUp && group.letters.length > 0) {
           for (const letter of group.letters) {
-            await api.mailItems.updateStatus(letter.mail_item_id, 'Picked Up', performedBy);
+            await api.mailItems.updateStatus(letter.mail_item_id, 'Picked Up');
           }
         }
         
