@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { api } from '../lib/api-client';
-import { initOCRWorker, terminateOCRWorker } from '../utils/ocr';
+import { initOCRWorker, terminateOCRWorker, extractRecipientName } from '../utils/ocr';
 import { smartMatchWithGemini } from '../utils/smartMatch';
+import { matchContactByName } from '../utils/nameMatching';
 import CameraModal from '../components/scan/CameraModal';
 import BulkScanEmailModal from '../components/scan/BulkScanEmailModal';
 import type {
@@ -344,18 +345,54 @@ export default function ScanSessionPage() {
     console.log('👁️ Preview image:', previewUrl);
     console.log('💡 TIP: Copy the URL above and paste in browser to see the photo being processed');
 
-    // Use Gemini smart matching (now with 1,500 requests/day!)
+    // Use Gemini smart matching with Tesseract fallback
     console.log('🤖 Using Gemini AI for smart matching...');
-    
-    const smartResult = await smartMatchWithGemini(photoBlob, contacts);
-    console.log('🎯 Gemini smart match result:', smartResult);
 
-    const finalText = smartResult.extractedText || '';
-    const finalContact = smartResult.matchedContact || null;
-    const finalConfidence = smartResult.confidence || 0;
-    const matchReason = smartResult.matchedContact 
-      ? `Gemini AI matched: ${smartResult.matchedContact.contact_person || smartResult.matchedContact.company_name}`
-      : 'No match found';
+    let finalText = '';
+    let finalContact: Contact | null = null;
+    let finalConfidence = 0;
+    let matchReason = 'No match found';
+
+    try {
+      const smartResult = await smartMatchWithGemini(photoBlob, contacts);
+      console.log('🎯 Gemini smart match result:', smartResult);
+
+      // Check if Gemini had an error (rate limit, etc.)
+      if (smartResult.error) {
+        throw new Error(smartResult.error);
+      }
+
+      finalText = smartResult.extractedText || '';
+      finalContact = smartResult.matchedContact || null;
+      finalConfidence = smartResult.confidence || 0;
+      matchReason = smartResult.matchedContact
+        ? `Gemini AI matched: ${smartResult.matchedContact.contact_person || smartResult.matchedContact.company_name}`
+        : 'No match found';
+    } catch (geminiError) {
+      // Fallback to Tesseract OCR + fuzzy matching
+      console.log('⚠️ Gemini failed, falling back to Tesseract OCR...', geminiError);
+      toast('Using backup OCR...', { icon: '🔄', duration: 2000 });
+
+      try {
+        const ocrResult = await extractRecipientName(photoBlob);
+        console.log('📝 Tesseract OCR result:', ocrResult);
+
+        finalText = ocrResult.text || '';
+
+        if (finalText) {
+          // Use fuzzy matching to find contact
+          const matchResult = matchContactByName(finalText, contacts);
+          if (matchResult) {
+            finalContact = matchResult.contact;
+            finalConfidence = matchResult.confidence;
+            matchReason = `Tesseract+Fuzzy matched: ${matchResult.contact.contact_person || matchResult.contact.company_name}`;
+          }
+        }
+      } catch (ocrError) {
+        console.error('❌ Tesseract OCR also failed:', ocrError);
+        // Both failed - finalText stays empty
+      }
+    }
 
     toast.dismiss('processing');
 
