@@ -82,6 +82,9 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
     })
     .filter(item => item.value > 0);
 
+  // Define preferred payment method order
+  const paymentOrder = ['cash', 'check', 'zelle', 'paypal', 'venmo', 'other'];
+  
   const paymentData = Object.entries(analytics.paymentDistribution)
     .map(([name, value]) => {
       let color = COLORS.blue;
@@ -92,9 +95,14 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
       else if (lowerName === 'venmo') color = COLORS.pink;
       else if (lowerName === 'paypal') color = COLORS.yellow;
       else if (lowerName === 'other') color = COLORS.orange;
-      return { name, value, color };
+      return { name, value, color, lowerName };
     })
-    .filter(item => item.value > 0);
+    .filter(item => item.value > 0)
+    .sort((a, b) => {
+      const indexA = paymentOrder.indexOf(a.lowerName);
+      const indexB = paymentOrder.indexOf(b.lowerName);
+      return indexA - indexB;
+    });
 
   return (
     <div className="space-y-8">
