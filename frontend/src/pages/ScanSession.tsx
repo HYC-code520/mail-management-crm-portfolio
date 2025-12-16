@@ -282,7 +282,19 @@ export default function ScanSessionPage() {
       }
     } catch (error) {
       console.error(`❌ [${processingId}] Background processing failed:`, error);
-      toast.error('Failed to process one photo. Continue scanning!', { duration: 2000 });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const isRateLimited = errorMessage.includes('429') ||
+                           errorMessage.includes('busy') ||
+                           errorMessage.includes('Too Many');
+
+      if (isRateLimited) {
+        toast.error('AI is busy - slow down scanning or wait a moment', {
+          duration: 3000,
+          icon: '⏳'
+        });
+      } else {
+        toast.error('Failed to process one photo. Continue scanning!', { duration: 2000 });
+      }
     } finally {
       // Decrement queue counter
       setProcessingQueue(prev => {
@@ -303,7 +315,18 @@ export default function ScanSessionPage() {
     } catch (error) {
       console.error('❌ Photo processing failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Failed to process photo: ${errorMessage}. Please try again.`);
+      const isRateLimited = errorMessage.includes('429') ||
+                           errorMessage.includes('busy') ||
+                           errorMessage.includes('Too Many');
+
+      if (isRateLimited) {
+        toast.error('AI is busy - please wait a moment and try again', {
+          duration: 3000,
+          icon: '⏳'
+        });
+      } else {
+        toast.error(`Failed to process photo: ${errorMessage}. Please try again.`);
+      }
     } finally {
       setIsProcessing(false);
     }

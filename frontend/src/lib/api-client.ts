@@ -17,7 +17,7 @@ class ApiClient {
   /**
    * Make an authenticated API request
    */
-  private async request(endpoint: string, options: RequestInit = {}) {
+  private async request(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<any> {
     const token = await this.getAuthToken();
     
     if (!token) {
@@ -33,6 +33,27 @@ class ApiClient {
 
     const url = `${API_BASE_URL}${endpoint}`;
     const response = await fetch(url, { ...options, headers });
+
+    // Handle 401 Unauthorized - token might be expired
+    if (response.status === 401 && retryCount === 0) {
+      console.log('🔄 Token expired, refreshing session...');
+      
+      // Force refresh the session
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('❌ Session refresh failed:', error);
+        // Redirect to sign-in page
+        window.location.href = '/signin';
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      if (session) {
+        console.log('✅ Session refreshed, retrying request...');
+        // Retry the request with the new token (only once)
+        return this.request(endpoint, options, retryCount + 1);
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));

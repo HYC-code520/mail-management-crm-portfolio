@@ -4,6 +4,43 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const feeService = require('../services/fee.service');
 
 /**
+ * Sleep helper for retry delays
+ */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Call Gemini with retry logic for rate limiting (429 errors)
+ * Uses exponential backoff: 1s, 2s, 4s, 8s...
+ */
+async function callGeminiWithRetry(model, content, maxRetries = 3) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await model.generateContent(content);
+      return result;
+    } catch (error) {
+      lastError = error;
+      const isRateLimited = error.message?.includes('429') ||
+                           error.message?.includes('Too Many Requests') ||
+                           error.message?.includes('RESOURCE_EXHAUSTED');
+
+      if (isRateLimited && attempt < maxRetries) {
+        const delayMs = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s...
+        console.log(`⏳ Rate limited, waiting ${delayMs/1000}s before retry ${attempt + 1}/${maxRetries}...`);
+        await sleep(delayMs);
+      } else if (!isRateLimited) {
+        // Non-rate-limit error, don't retry
+        throw error;
+      }
+    }
+  }
+
+  // All retries exhausted
+  throw lastError;
+}
+
+/**
  * Smart AI matching using Gemini Vision
  * Extracts text AND intelligently matches to contact list
  */
@@ -24,9 +61,10 @@ async function smartMatchWithGemini(req, res, next) {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    // Use gemini-2.5-flash (NOT flash-lite!) - gives 1,500 requests/day instead of 20!
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash'
+    // Use gemini-2.0-flash-lite for higher rate limits (30 RPM vs 15 RPM for 2.5-flash)
+    // Or gemini-1.5-flash for even higher limits
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash-lite'
     });
 
     // Build contact list string for Gemini - show BOTH personal name and business name
@@ -108,7 +146,7 @@ Now analyze the image and provide your response:`;
     ];
 
     console.log('🤖 Calling Gemini with smart matching...');
-    const result = await model.generateContent([prompt, ...imageParts]);
+    const result = await callGeminiWithRetry(model, [prompt, ...imageParts], 3);
     const responseText = result.response.text().trim();
 
     console.log('📄 Gemini Response:', responseText.substring(0, 200) + '...');
@@ -152,6 +190,22 @@ Now analyze the image and provide your response:`;
     });
   } catch (error) {
     console.error('❌ Gemini smart matching failed:', error);
+
+    // Check if it's a rate limit error
+    const isRateLimited = error.message?.includes('429') ||
+                         error.message?.includes('Too Many Requests') ||
+                         error.message?.includes('RESOURCE_EXHAUSTED');
+
+    if (isRateLimited) {
+      return res.status(429).json({
+        error: 'AI service is temporarily busy. Please wait a moment and try again.',
+        extractedText: '',
+        matchedContact: null,
+        confidence: 0,
+        reason: 'Rate limit exceeded - please wait a few seconds between scans',
+      });
+    }
+
     next(error);
   }
 }

@@ -93,11 +93,20 @@ export async function smartMatchWithGemini(
       message: error instanceof Error ? error.message : 'Unknown',
       stack: error instanceof Error ? error.stack : undefined,
     });
+
+    // Check if it's a rate limit error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isRateLimited = errorMessage.includes('429') ||
+                         errorMessage.includes('Too Many Requests') ||
+                         errorMessage.includes('busy');
+
     return {
       extractedText: '',
       matchedContact: null,
       confidence: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: isRateLimited
+        ? 'AI is busy - please wait a moment and try again'
+        : errorMessage,
     };
   }
 }
