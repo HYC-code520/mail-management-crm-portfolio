@@ -1379,7 +1379,11 @@ export default function ScanSessionPage() {
       <div className="max-w-full mx-auto px-16 py-6">
         {session.items.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <Camera className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <img 
+              src="/assets/images/Scan-me.png" 
+              alt="Scan me" 
+              className="w-64 h-64 mx-auto mb-4"
+            />
             <p className="text-lg font-medium mb-2">No items scanned yet</p>
             <p className="text-sm">Use "Webcam" or "Upload/Camera" below to start scanning</p>
           </div>
