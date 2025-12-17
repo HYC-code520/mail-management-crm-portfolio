@@ -316,9 +316,12 @@ describe('GroupedFollowUpSection', () => {
 
     await waitFor(() => {
       // Check for the waived fee amount (shows as "$10.00" with line-through styling)
-      const feeElement = screen.getByText('$10.00');
-      expect(feeElement).toBeInTheDocument();
-      expect(feeElement).toHaveClass('line-through');
+      // There are two $10.00 elements - one in the table (waived, with line-through) and one in the footer (total)
+      const feeElements = screen.getAllByText('$10.00');
+      expect(feeElements.length).toBeGreaterThanOrEqual(1);
+      // Find the one with line-through class (the waived fee in the table)
+      const waivedFeeElement = feeElements.find(el => el.classList.contains('line-through'));
+      expect(waivedFeeElement).toBeInTheDocument();
     });
   });
 
