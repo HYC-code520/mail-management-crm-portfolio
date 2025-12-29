@@ -12,6 +12,7 @@ import ChartsSection from '../components/dashboard/ChartsSection.tsx';
 import AnalyticsSection from '../components/dashboard/AnalyticsSection.tsx';
 import toast from 'react-hot-toast';
 import { getTodayNY, toNYDateString } from '../utils/timezone.ts';
+import { getCustomerDisplayName } from '../utils/customerDisplay';
 
 interface PackageFee {
   fee_id: string;
@@ -39,6 +40,7 @@ interface MailItem {
     contact_person?: string;
     company_name?: string;
     mailbox_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both' | 'auto';
   };
 }
 
@@ -48,6 +50,7 @@ interface GroupedFollowUp {
     contact_person?: string;
     company_name?: string;
     mailbox_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both' | 'auto';
   };
   packages: MailItem[];
   letters: MailItem[];
@@ -794,7 +797,7 @@ export default function DashboardPage() {
                 <div key={group.contact.contact_id} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-2.5 border border-orange-200 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-xs truncate">{group.contact.contact_person || group.contact.company_name || 'Unknown'}</p>
+                      <p className="font-bold text-gray-900 text-xs truncate">{getCustomerDisplayName(group.contact)}</p>
                       <p className="text-xs text-gray-600">Box #{group.contact.mailbox_number}</p>
                     </div>
                     {group.totalFees > 0 && (
