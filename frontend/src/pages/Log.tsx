@@ -1912,7 +1912,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                             <MoreVertical className="w-4 h-4" />
                           </button>
                           
-                          {openDropdownId === group.groupKey && (
+                          {openDropdownId === group.groupKey && (() => {
+                            const buttonEl = document.getElementById(`more-btn-${group.groupKey}`);
+                            const buttonRect = buttonEl?.getBoundingClientRect();
+                            const menuHeight = 400; // Approximate max height with max-h-96
+                            const spaceBelow = window.innerHeight - (buttonRect?.bottom ?? 0);
+                            const shouldFlipUp = spaceBelow < menuHeight && (buttonRect?.top ?? 0) > menuHeight;
+                            
+                            return (
                             <>
                               <div 
                                 className="fixed inset-0 z-30" 
@@ -1922,8 +1929,10 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                               <div 
                                 className="fixed w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-40 max-h-96 overflow-y-auto"
                                 style={{
-                                  top: `${(document.getElementById(`more-btn-${group.groupKey}`)?.getBoundingClientRect().bottom ?? 0) + 4}px`,
-                                  right: `${window.innerWidth - (document.getElementById(`more-btn-${group.groupKey}`)?.getBoundingClientRect().right ?? 0)}px`,
+                                  [shouldFlipUp ? 'bottom' : 'top']: shouldFlipUp 
+                                    ? `${window.innerHeight - (buttonRect?.top ?? 0) + 4}px`
+                                    : `${(buttonRect?.bottom ?? 0) + 4}px`,
+                                  right: `${window.innerWidth - (buttonRect?.right ?? 0)}px`,
                                 }}
                               >
                                 <button
@@ -2028,7 +2037,8 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                 </button>
                               </div>
                             </>
-                          )}
+                            );
+                          })()}
                         </div>
                       </div>
                     </td>

@@ -502,83 +502,77 @@ export default function DashboardPage() {
 
         {/* Today's Overview - 1/2 width (single horizontal line) */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 h-full flex flex-col justify-center overflow-hidden">
-            <h2 className="text-sm font-bold text-gray-900 mb-3">Today's Overview</h2>
+          <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 h-full flex flex-col justify-center">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-900">Today's Overview</h2>
+              
+              {/* Info Icon with Tooltip */}
+              <div className="relative group">
+                <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                
+                {/* Tooltip - Positioned outside container */}
+                <div className="absolute right-0 top-full mt-2 px-4 py-3 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-80 z-[100] pointer-events-none">
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-semibold text-blue-300">Today's Mail:</span> Individual mail items logged today (by received date)
+                    </div>
+                    <div>
+                      <span className="font-semibold text-purple-300">Pending Pickups:</span> All items with status "Pending" (not picked up yet)
+                    </div>
+                    <div>
+                      <span className="font-semibold text-red-300">Overdue:</span> Pending items &gt;7 days old (need urgent follow-up)
+                    </div>
+                    <div>
+                      <span className="font-semibold text-green-300">Completed:</span> Items marked "Picked Up" today
+                    </div>
+                  </div>
+                  <div className="absolute bottom-full right-2 border-[6px] border-transparent border-b-gray-900"></div>
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
               {/* Today's Mail */}
-              <div className="flex items-center gap-2 min-w-0 group relative">
+              <div className="flex items-center gap-2 min-w-0">
                 <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <Mail className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
-                    Today's Mail
-                    <Info className="w-3 h-3 text-gray-400" />
-                  </p>
+                  <p className="text-xs text-gray-600 truncate">Today's Mail</p>
                   <p className="text-xl font-bold text-gray-900">{stats?.todaysMail || 0}</p>
-                </div>
-                {/* Tooltip */}
-                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-48 z-50 pointer-events-none">
-                  Total mail and packages logged into the system today (received date = today)
-                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
 
               {/* Pending Pickups */}
-              <div className="flex items-center gap-2 min-w-0 group relative">
+              <div className="flex items-center gap-2 min-w-0">
                 <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <Package className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
-                    Pending Pickups
-                    <Info className="w-3 h-3 text-gray-400" />
-                  </p>
+                  <p className="text-xs text-gray-600 truncate">Pending Pickups</p>
                   <p className="text-xl font-bold text-gray-900">{stats?.pendingPickups || 0}</p>
-                </div>
-                {/* Tooltip */}
-                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-48 z-50 pointer-events-none">
-                  All mail items with status "Pending" (not yet picked up by customers)
-                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
 
               {/* Overdue */}
-              <div className="flex items-center gap-2 min-w-0 group relative">
+              <div className="flex items-center gap-2 min-w-0">
                 <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <AlertCircle className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
-                    Overdue
-                    <Info className="w-3 h-3 text-gray-400" />
-                  </p>
+                  <p className="text-xs text-gray-600 truncate">Overdue</p>
                   <p className="text-xl font-bold text-red-600">{stats?.overdueMail || 0}</p>
-                </div>
-                {/* Tooltip */}
-                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-52 z-50 pointer-events-none">
-                  Mail items still pending that are more than 7 days old (need urgent follow-up)
-                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
 
               {/* Completed Today */}
-              <div className="flex items-center gap-2 min-w-0 group relative">
+              <div className="flex items-center gap-2 min-w-0">
                 <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <CheckCircle2 className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
-                    Completed
-                    <Info className="w-3 h-3 text-gray-400" />
-                  </p>
+                  <p className="text-xs text-gray-600 truncate">Completed</p>
                   <p className="text-xl font-bold text-green-600">{stats?.completedToday || 0}</p>
-                </div>
-                {/* Tooltip */}
-                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-48 z-50 pointer-events-none">
-                  Mail items marked as "Picked Up" today (completed pickups)
-                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
             </div>
