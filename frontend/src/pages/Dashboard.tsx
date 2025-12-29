@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Package, AlertCircle, CheckCircle2, AlertTriangle, Clock, Users } from 'lucide-react';
+import { Mail, Package, AlertCircle, CheckCircle2, AlertTriangle, Clock, Users, Info } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';
 import QuickNotifyModal from '../components/QuickNotifyModal.tsx';
@@ -507,46 +507,78 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
               {/* Today's Mail */}
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 group relative">
                 <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <Mail className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Today's Mail</p>
+                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
+                    Today's Mail
+                    <Info className="w-3 h-3 text-gray-400" />
+                  </p>
                   <p className="text-xl font-bold text-gray-900">{stats?.todaysMail || 0}</p>
+                </div>
+                {/* Tooltip */}
+                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-48 z-50 pointer-events-none">
+                  Total mail and packages logged into the system today (received date = today)
+                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
 
               {/* Pending Pickups */}
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 group relative">
                 <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <Package className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Pending Pickups</p>
+                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
+                    Pending Pickups
+                    <Info className="w-3 h-3 text-gray-400" />
+                  </p>
                   <p className="text-xl font-bold text-gray-900">{stats?.pendingPickups || 0}</p>
+                </div>
+                {/* Tooltip */}
+                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-48 z-50 pointer-events-none">
+                  All mail items with status "Pending" (not yet picked up by customers)
+                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
 
               {/* Overdue */}
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 group relative">
                 <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <AlertCircle className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Overdue</p>
+                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
+                    Overdue
+                    <Info className="w-3 h-3 text-gray-400" />
+                  </p>
                   <p className="text-xl font-bold text-red-600">{stats?.overdueMail || 0}</p>
+                </div>
+                {/* Tooltip */}
+                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-52 z-50 pointer-events-none">
+                  Mail items still pending that are more than 7 days old (need urgent follow-up)
+                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
 
               {/* Completed Today */}
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 group relative">
                 <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                   <CheckCircle2 className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Completed</p>
+                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
+                    Completed
+                    <Info className="w-3 h-3 text-gray-400" />
+                  </p>
                   <p className="text-xl font-bold text-green-600">{stats?.completedToday || 0}</p>
+                </div>
+                {/* Tooltip */}
+                <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-48 z-50 pointer-events-none">
+                  Mail items marked as "Picked Up" today (completed pickups)
+                  <div className="absolute bottom-full left-4 border-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
             </div>
