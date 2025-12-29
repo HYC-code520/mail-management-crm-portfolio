@@ -193,7 +193,8 @@ exports.getDashboardStats = async (req, res, next) => {
             contact_person,
             company_name,
             unit_number,
-            mailbox_number
+            mailbox_number,
+            display_name_preference
           )
         `)
         .order('received_date', { ascending: false }),

@@ -88,6 +88,7 @@ export default function FeesPage() {
               contact_person: fee.contacts?.contact_person,
               company_name: fee.contacts?.company_name,
               mailbox_number: fee.contacts?.mailbox_number,
+              display_name_preference: fee.contacts?.display_name_preference,
             },
             packages: [],
             letters: [],

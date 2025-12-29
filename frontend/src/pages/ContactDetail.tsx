@@ -375,9 +375,6 @@ export default function ContactDetailPage() {
       display_name_preference: 'auto'
     });
   };
-      status: 'Pending'
-    });
-  };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
