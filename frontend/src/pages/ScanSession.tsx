@@ -873,6 +873,23 @@ export default function ScanSessionPage() {
     }, 2500);
   };
 
+  // End session quietly without confetti/sound
+  const endSessionQuietly = () => {
+    // Clean up session
+    if (session) {
+      session.items.forEach(item => {
+        if (item.photoPreviewUrl) {
+          URL.revokeObjectURL(item.photoPreviewUrl);
+        }
+      });
+    }
+    localStorage.removeItem('scanSession');
+    sessionStorage.removeItem('scanSessionResumedToast');
+
+    // Navigate back immediately
+    navigate('/dashboard');
+  };
+
   // Optional: Preview/Edit email before sending
   const handlePreviewEmail = () => {
     if (!session) return;
@@ -1087,13 +1104,21 @@ export default function ScanSessionPage() {
                     </p>
                   </div>
                   
-                  <button
-                    onClick={triggerCelebration}
-                    className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <span>🎉</span>
-                    Celebrate
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={endSessionQuietly}
+                      className="flex-1 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 text-lg font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      End
+                    </button>
+                    <button
+                      onClick={triggerCelebration}
+                      className="flex-1 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <span>🎉</span>
+                      Celebrate
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
