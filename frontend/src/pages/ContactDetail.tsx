@@ -211,7 +211,7 @@ export default function ContactDetailPage() {
   const [isBulkPickupModalOpen, setIsBulkPickupModalOpen] = useState(false);
   const [bulkPickupPerformedBy, setBulkPickupPerformedBy] = useState('');
   const [processingBulkPickup, setProcessingBulkPickup] = useState(false);
-
+  
   // Edit Contact Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -993,18 +993,18 @@ export default function ContactDetailPage() {
                               {openMenuGroupKey === group.groupKey && (
                                 <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1">
                                   {/* Send Email - only for non-terminal statuses and if email exists */}
-                                  {group.latestStatus !== 'Picked Up' && group.latestStatus !== 'Abandoned Package' && contact?.email && (
-                                    <button
+                          {group.latestStatus !== 'Picked Up' && group.latestStatus !== 'Abandoned Package' && contact?.email && (
+                            <button
                                       onClick={() => {
                                         openSendEmailModal(group.items[0], group.items);
                                         setOpenMenuGroupKey(null);
                                       }}
                                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3"
-                                    >
+                            >
                                       <Send className="w-4 h-4 text-blue-600" />
                                       Send Email
-                                    </button>
-                                  )}
+                            </button>
+                          )}
 
                                   {/* Edit */}
                                   <button
