@@ -88,7 +88,7 @@ export default function ContactsPage() {
       setAllContacts(contactsList); // Store all contacts - filtering happens in useEffect
     } catch (err) {
       console.error('Error loading contacts:', err);
-      toast.error('Failed to load contacts');
+      toast.error(t('toast.failedToLoadContacts'));
     } finally {
       setLoading(false);
     }
@@ -201,7 +201,7 @@ export default function ContactsPage() {
     }
 
     if (!formData.mailbox_number) {
-      toast.error('Mailbox number is required');
+      toast.error(t('validation.mailboxRequired'));
       return;
     }
 
@@ -211,11 +211,11 @@ export default function ContactsPage() {
       if (editingContact) {
         // Update existing contact
         await api.contacts.update(editingContact.contact_id, formData);
-        toast.success('Customer updated successfully!');
+        toast.success(t('toast.customerUpdated'));
       } else {
         // Create new contact
         await api.contacts.create(formData);
-        toast.success('Customer added successfully!');
+        toast.success(t('toast.customerAdded'));
       }
       closeModal();
       loadContacts();
@@ -238,7 +238,7 @@ export default function ContactsPage() {
   };
 
   const handleDelete = async (contactId: string) => {
-    if (!confirm('Are you sure you want to archive this customer? You can restore it later from the archived view.')) {
+    if (!confirm(t('warnings.confirmArchiveWithRestore'))) {
       return;
     }
 
@@ -246,18 +246,18 @@ export default function ContactsPage() {
 
     try {
       await api.contacts.delete(contactId);
-      toast.success('Customer archived successfully!');
+      toast.success(t('toast.customerArchived'));
       loadContacts();
     } catch (err) {
       console.error('Failed to delete contact:', err);
-      toast.error('Failed to archive customer');
+      toast.error(t('toast.failedToArchiveCustomer'));
     } finally {
       setDeletingContactId(null);
     }
   };
 
   const handleRestore = async (contactId: string) => {
-    if (!confirm('Are you sure you want to restore this customer?')) {
+    if (!confirm(t('warnings.confirmRestore'))) {
       return;
     }
 
@@ -266,11 +266,11 @@ export default function ContactsPage() {
     try {
       // Restore by setting status back to 'Active'
       await api.contacts.update(contactId, { status: 'Active' });
-      toast.success('Customer restored successfully!');
+      toast.success(t('toast.customerRestored'));
       loadContacts();
     } catch (err) {
       console.error('Failed to restore contact:', err);
-      toast.error('Failed to restore customer');
+      toast.error(t('toast.failedToRestoreCustomer'));
     } finally {
       setDeletingContactId(null);
     }
@@ -326,7 +326,7 @@ export default function ContactsPage() {
       <div className="max-w-full mx-auto px-16 py-6">
         <div className="flex items-center justify-center min-h-[60vh]">
           <LoadingSpinner 
-            message="Loading contacts..." 
+            message={t('toast.loadingContacts')} 
             size="lg"
             variant="mail"
           />
@@ -349,7 +349,7 @@ export default function ContactsPage() {
           <button
             onClick={() => setIsBulkEmailModalOpen(true)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-            title="Send bulk emails to multiple customers"
+            title={t('customers.sendBulkEmailTooltip')}
           >
             <Mail className="w-4 h-4" />
             <span>{t('templates.sendEmail')}</span>

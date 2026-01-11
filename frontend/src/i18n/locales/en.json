@@ -54,7 +54,8 @@
     "or": "or",
     "email": "Email",
     "error": "An error occurred",
-    "comingSoon": "Coming soon..."
+    "comingSoon": "Coming soon...",
+    "pleaseWait": "Please wait while we fetch your data"
   },
 
   "auth": {
@@ -112,7 +113,9 @@
     "backToDirectory": "Back to Directory",
     "customerSince": "Customer Since",
     "showing": "Showing {{count}} of {{total}} customers",
-    "enterInfo": "Enter customer information"
+    "enterInfo": "Enter customer information",
+    "sendBulkEmail": "Send Bulk Email",
+    "sendBulkEmailTooltip": "Send bulk emails to multiple customers"
   },
 
   "customerForm": {
@@ -164,6 +167,7 @@
     "loadingCustomers": "Loading customers...",
     "itemType": "Item Type",
     "quantity": "Quantity",
+    "qty": "Qty",
     "receivedDate": "Received Date",
     "viewInLog": "View in Log",
     "descriptionOptional": "Description (Optional)",
@@ -171,7 +175,14 @@
     "logging": "Logging...",
     "logNewMailDesc": "Log a new package or mail received",
     "allMailReceived": "All packages and mail received",
-    "viewContact": "View Contact"
+    "viewContact": "View Contact",
+    "contactNotFound": "Contact not found",
+    "totalOutstanding": "Total Outstanding",
+    "pickingUpAllMail": "Customer Picking Up All Mail",
+    "pickingUpAllMailTooltip": "Click here when customer is picking up all their pending mail at once",
+    "editMailItem": "Edit Mail Item",
+    "markAllPickedUp": "Mark All as Picked Up",
+    "selectStaff": "Select staff member..."
   },
 
   "mailTypes": {
@@ -228,7 +239,10 @@
     "title": "Follow-ups",
     "noFollowUps": "No follow-ups",
     "needsAttention": "{{count}} customers need attention",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "failedToLoad": "Failed to load follow-ups data",
+    "noItemsOver30Days": "No items are 30+ days old in this group",
+    "failedToMarkAbandoned": "Failed to mark items as abandoned"
   },
 
   "todos": {
@@ -236,7 +250,16 @@
     "todoList": "To-Do List",
     "noTasks": "No tasks",
     "completed": "Completed",
-    "tasksCompleted": "tasks completed"
+    "tasksCompleted": "tasks completed",
+    "failedToLoad": "Failed to load tasks",
+    "enterTask": "Please enter a task",
+    "taskAdded": "Task added!",
+    "failedToAdd": "Failed to add task",
+    "failedToUpdate": "Failed to update task",
+    "taskDeleted": "Task deleted",
+    "failedToDelete": "Failed to delete task",
+    "titleRequired": "Task title is required",
+    "taskUpdated": "Task updated!"
   },
 
   "templates": {
@@ -245,7 +268,20 @@
     "subjectLine": "Subject Line",
     "message": "Message",
     "sentBy": "Sent By",
-    "translateToChinese": "Translate to Chinese"
+    "translateToChinese": "Translate to Chinese",
+    "failedToLoad": "Failed to load templates",
+    "enterEnglishFirst": "Please enter English text first",
+    "translationCompleted": "Translation completed successfully!",
+    "translationFailed": "Translation failed. Please try again.",
+    "nameAndEnglishRequired": "Template name and English text are required",
+    "templateUpdated": "Template updated successfully!",
+    "templateCreated": "Template created successfully!",
+    "cannotDeleteDefault": "Cannot delete default templates",
+    "templateDeleted": "Template deleted successfully!",
+    "failedToDelete": "Failed to delete template",
+    "englishCopied": "English template copied!",
+    "chineseCopied": "Chinese template copied!",
+    "combinedCopied": "Combined template copied!"
   },
 
   "settings": {
@@ -271,7 +307,13 @@
     "thisWeek": "This Week",
     "thisMonth": "This Month",
     "newCustomers": "New Customers",
-    "vsLastMonth": "vs {{count}} last month"
+    "vsLastMonth": "vs {{count}} last month",
+    "loadingData": "Loading dashboard data...",
+    "tooltipTodaysMail": "Individual mail items logged today (by received date)",
+    "tooltipPendingPickups": "All items with status \"Pending\" (not picked up yet)",
+    "tooltipOverdue": "Pending items >7 days old (need urgent follow-up)",
+    "tooltipCompleted": "Items marked \"Picked Up\" today",
+    "box": "Box"
   },
 
   "ageRanges": {
@@ -280,6 +322,26 @@
     "8to14days": "8-14 days",
     "15to30days": "15-30 days",
     "over30days": "30+ days"
+  },
+
+  "scan": {
+    "sessionStarted": "Scan session started!",
+    "failedToLoadContacts": "Failed to load contacts",
+    "resumedSession": "Resumed previous scan session",
+    "noPhotosInQueue": "No photos in batch queue",
+    "noActiveSession": "No active session. Please start a session first.",
+    "aiOverloaded": "Google AI service is temporarily overloaded. Please wait a minute and try again.",
+    "aiBusy": "AI service is busy. Please wait a few seconds and try again.",
+    "batchFailed": "Batch processing failed. Try processing individually.",
+    "aiSlowDown": "AI is busy - slow down scanning or wait a moment",
+    "failedToProcessPhoto": "Failed to process one photo. Continue scanning!",
+    "aiWaitMoment": "AI is busy - please wait a moment and try again",
+    "couldNotReadText": "Could not read any text from photo. Please try again with better lighting.",
+    "itemRemoved": "Item removed",
+    "itemUpdated": "Item updated",
+    "noItemsToReview": "No items to review",
+    "selectScanner": "Please select who is scanning",
+    "failedToSubmit": "Failed to submit items. Please try again."
   },
 
   "quickActions": {
@@ -321,8 +383,24 @@
     "failedToDelete": "Failed to delete {{item}}",
     "failedToLogMail": "Failed to log mail",
     "failedToAddCustomer": "Failed to add customer",
+    "failedToUpdateCustomer": "Failed to update customer",
+    "failedToArchiveCustomer": "Failed to archive customer",
+    "failedToRestoreCustomer": "Failed to restore customer",
     "failedToLoadCustomers": "Failed to load customers",
-    "errorSigningOut": "Error signing out"
+    "failedToLoadContacts": "Failed to load contacts",
+    "failedToLoadContactDetails": "Failed to load contact details",
+    "failedToDeleteMailItem": "Failed to delete mail item(s)",
+    "mailItemUpdated": "Mail item updated successfully",
+    "failedToUpdateMailItem": "Failed to update mail item",
+    "failedToMarkAsPickedUp": "Failed to mark items as picked up",
+    "failedToLoadMailLog": "Failed to load mail log",
+    "couldNotFindItem": "Could not find the updated item. Please refresh the page.",
+    "failedToLoadTemplates": "Failed to load email templates",
+    "noEmailOnFile": "This customer does not have an email address on file",
+    "subjectAndMessageRequired": "Subject and message cannot be empty",
+    "selectSender": "Please select who is sending this email",
+    "errorSigningOut": "Error signing out",
+    "loadingContacts": "Loading contacts..."
   },
 
   "validation": {
@@ -333,13 +411,17 @@
     "passwordMinLength": "Password must be at least 6 characters long",
     "passwordsDoNotMatch": "Passwords do not match",
     "provideReason": "Please provide a reason (at least 5 characters)",
-    "selectPerformer": "Please select who performed this action"
+    "selectPerformer": "Please select who performed this action",
+    "fillAllFields": "Please fill in all fields",
+    "selectRecipient": "Please select at least one recipient",
+    "selectTemplate": "Please select an email template"
   },
 
   "warnings": {
     "tier1NoPackages": "Tier 1 customers typically don't receive packages",
     "tier1PackageWarning": "Warning: This customer is on Service Tier 1, which typically does not include package handling. Are you sure you want to log a package for this customer?",
     "confirmArchive": "Are you sure you want to archive this customer?",
+    "confirmArchiveWithRestore": "Are you sure you want to archive this customer? You can restore it later from the archived view.",
     "confirmRestore": "Are you sure you want to restore this customer?",
     "confirmDisconnectGmail": "Are you sure you want to disconnect your Gmail account?",
     "canRestoreLater": "You can restore it later from the archived view",

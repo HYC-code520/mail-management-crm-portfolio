@@ -91,7 +91,7 @@ export default function ScanSessionPage() {
       setContacts(activeContacts);
     } catch (error) {
       console.error('Failed to load contacts:', error);
-      toast.error('Failed to load contacts');
+      toast.error(t('scan.failedToLoadContacts'));
     }
   };
 
@@ -107,7 +107,7 @@ export default function ScanSessionPage() {
           // Session still valid - only show toast once
           const hasShownToast = sessionStorage.getItem('scanSessionResumedToast');
           if (!hasShownToast) {
-            toast.success('Resumed previous scan session');
+            toast.success(t('scan.resumedSession'));
             sessionStorage.setItem('scanSessionResumedToast', 'true');
           }
           setSession(parsed);
@@ -138,7 +138,7 @@ export default function ScanSessionPage() {
     };
 
     setSession(newSession);
-    toast.success('Scan session started!');
+    toast.success(t('scan.sessionStarted'));
   };
 
   const handleCameraClick = () => {
@@ -211,12 +211,12 @@ export default function ScanSessionPage() {
   // Process all photos in batch queue
   const processBatchQueue = async () => {
     if (batchQueue.length === 0) {
-      toast.error('No photos in batch queue');
+      toast.error(t('scan.noPhotosInQueue'));
       return;
     }
 
     if (!session) {
-      toast.error('No active session. Please start a session first.');
+      toast.error(t('scan.noActiveSession'));
       return;
     }
 
@@ -339,15 +339,15 @@ export default function ScanSessionPage() {
                            errorMessage.includes('busy');
       
       if (isOverloaded) {
-        toast.error('Google AI service is temporarily overloaded. Please wait a minute and try again.', {
+        toast.error(t('scan.aiOverloaded'), {
           duration: 5000,
         });
       } else if (isRateLimited) {
-        toast.error('AI service is busy. Please wait a few seconds and try again.', {
+        toast.error(t('scan.aiBusy'), {
           duration: 4000,
         });
       } else {
-        toast.error('Batch processing failed. Try processing individually.');
+        toast.error(t('scan.batchFailed'));
       }
     } finally {
       setIsProcessingBatch(false);
@@ -508,12 +508,12 @@ export default function ScanSessionPage() {
                            errorMessage.includes('Too Many');
 
       if (isRateLimited) {
-        toast.error('AI is busy - slow down scanning or wait a moment', {
+        toast.error(t('scan.aiSlowDown'), {
           duration: 3000,
           icon: '⏳'
         });
       } else {
-        toast.error('Failed to process one photo. Continue scanning!', { duration: 2000 });
+        toast.error(t('scan.failedToProcessPhoto'), { duration: 2000 });
       }
     } finally {
       // Decrement queue counter
@@ -540,7 +540,7 @@ export default function ScanSessionPage() {
                            errorMessage.includes('Too Many');
 
       if (isRateLimited) {
-        toast.error('AI is busy - please wait a moment and try again', {
+        toast.error(t('scan.aiWaitMoment'), {
           duration: 3000,
           icon: '⏳'
         });
@@ -622,7 +622,7 @@ export default function ScanSessionPage() {
 
     if (!finalText || finalText.length < 2) {
       if (!quickScanMode) {
-        toast.error('Could not read any text from photo. Please try again with better lighting.');
+        toast.error(t('scan.couldNotReadText'));
       }
       return null; // Return null instead of throwing
     }
@@ -661,7 +661,7 @@ export default function ScanSessionPage() {
         sessionState: session,
         localStorage: localStorage.getItem('scanSession'),
       });
-      toast.error('No active session. Please start a new session.');
+      toast.error(t('scan.noActiveSession'));
       return;
     }
 
@@ -746,7 +746,7 @@ export default function ScanSessionPage() {
       items: session.items.filter(i => i.id !== itemId),
     });
 
-    toast.success('Item removed');
+    toast.success(t('scan.itemRemoved'));
   };
 
   const openEditModal = (item: ScannedItem) => {
@@ -764,12 +764,12 @@ export default function ScanSessionPage() {
     });
 
     setEditingItem(null);
-    toast.success('Item updated');
+    toast.success(t('scan.itemUpdated'));
   };
 
   const endSession = () => {
     if (!session || session.items.length === 0) {
-      toast.error('No items to review');
+      toast.error(t('scan.noItemsToReview'));
       return;
     }
 
@@ -815,7 +815,7 @@ export default function ScanSessionPage() {
     if (!session) return;
 
     if (!scannedBy) {
-      toast.error('Please select who is scanning');
+      toast.error(t('scan.selectScanner'));
       return;
     }
 
@@ -851,7 +851,7 @@ export default function ScanSessionPage() {
 
     } catch (error) {
       console.error('Bulk submit failed:', error);
-      toast.error('Failed to submit items. Please try again.');
+      toast.error(t('scan.failedToSubmit'));
     } finally {
       setIsSubmitting(false);
     }
@@ -909,7 +909,7 @@ export default function ScanSessionPage() {
     if (!session) return;
 
     if (!scannedBy) {
-      toast.error('Please select who is scanning');
+      toast.error(t('scan.selectScanner'));
       return;
     }
 
@@ -965,7 +965,7 @@ export default function ScanSessionPage() {
 
     } catch (error) {
       console.error('Bulk submit failed:', error);
-      toast.error('Failed to submit items. Please try again.');
+      toast.error(t('scan.failedToSubmit'));
     } finally {
       setIsSubmitting(false);
     }

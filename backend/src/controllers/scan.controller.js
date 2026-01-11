@@ -706,12 +706,27 @@ IMPORTANT: Analyze each image separately. Handle name variations (order, abbrevi
     console.log(`✅ Batch processed ${images.length} images in ${duration}ms`);
     console.log('📄 Batch Response:', responseText.substring(0, 500) + '...');
 
-    // Parse response for each image
+    // Parse response for each image - use explicit IMAGE_X matching for robustness
     const results = [];
-    const imageBlocks = responseText.split(/---IMAGE_\d+---/).filter(block => block.trim());
+
+    // Build a map of image number -> block content (handles preamble text and formatting variations)
+    const blockMap = new Map();
+    const blockMatches = responseText.matchAll(/---IMAGE_(\d+)---([\s\S]*?)(?=---IMAGE_\d+---|$)/g);
+    for (const match of blockMatches) {
+      const imageNum = parseInt(match[1], 10);
+      const content = match[2];
+      blockMap.set(imageNum, content);
+    }
+
+    // Log if we didn't get expected number of blocks (helps diagnose issues)
+    if (blockMap.size !== images.length) {
+      console.warn(`⚠️ Batch parsing: expected ${images.length} image blocks, found ${blockMap.size}`);
+      console.warn('📄 Raw response preview:', responseText.substring(0, 800));
+    }
 
     for (let i = 0; i < images.length; i++) {
-      const block = imageBlocks[i] || '';
+      // Use IMAGE_(i+1) since Gemini uses 1-based indexing
+      const block = blockMap.get(i + 1) || '';
 
       const extractedMatch = block.match(/EXTRACTED:\s*(.+)/i);
       const matchedMatch = block.match(/MATCHED:\s*(.+)/i);

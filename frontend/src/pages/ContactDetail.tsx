@@ -236,7 +236,7 @@ export default function ContactDetailPage() {
       setContact(data);
     } catch (err) {
       console.error('Error loading contact:', err);
-      toast.error('Failed to load contact details');
+      toast.error(t('toast.failedToLoadContactDetails'));
     } finally {
       setLoading(false);
     }
@@ -403,7 +403,7 @@ export default function ContactDetailPage() {
       loadMailHistory();
     } catch (err) {
       console.error('Failed to delete:', err);
-      toast.error('Failed to delete mail item(s)');
+      toast.error(t('toast.failedToDeleteMailItem'));
     } finally {
       setDeletingGroupKey(null);
       setOpenMenuGroupKey(null);
@@ -454,14 +454,14 @@ export default function ContactDetailPage() {
         }
       }
 
-      toast.success('Mail item updated successfully');
+      toast.success(t('toast.mailItemUpdated'));
       setIsEditMailModalOpen(false);
       setEditingMailItem(null);
       setEditingGroupItems([]);
       loadMailHistory();
     } catch (err) {
       console.error('Failed to update mail item:', err);
-      toast.error('Failed to update mail item');
+      toast.error(t('toast.failedToUpdateMailItem'));
     } finally {
       setSavingMailEdit(false);
     }
@@ -470,7 +470,7 @@ export default function ContactDetailPage() {
   // Handle bulk pickup - mark all pending items as picked up
   const handleBulkPickup = async () => {
     if (!bulkPickupPerformedBy) {
-      toast.error('Please select who performed this action');
+      toast.error(t('validation.selectPerformer'));
       return;
     }
 
@@ -494,7 +494,7 @@ export default function ContactDetailPage() {
       loadMailHistory();
     } catch (err) {
       console.error('Failed to process bulk pickup:', err);
-      toast.error('Failed to mark items as picked up');
+      toast.error(t('toast.failedToMarkAsPickedUp'));
     } finally {
       setProcessingBulkPickup(false);
     }
@@ -590,7 +590,7 @@ export default function ContactDetailPage() {
     }
 
     if (!formData.mailbox_number) {
-      toast.error('Mailbox number is required');
+      toast.error(t('validation.mailboxRequired'));
       return;
     }
 
@@ -598,7 +598,7 @@ export default function ContactDetailPage() {
 
     try {
       await api.contacts.update(id!, formData);
-      toast.success('Customer updated successfully!');
+      toast.success(t('toast.customerUpdated'));
       closeEditModal();
       loadContactDetails(); // Refresh contact data
     } catch (err: any) {
@@ -633,7 +633,7 @@ export default function ContactDetailPage() {
     return (
       <div className="max-w-full mx-auto px-16 py-6">
         <div className="text-center py-12">
-          <p className="text-gray-600">Contact not found</p>
+          <p className="text-gray-600">{t('mail.contactNotFound')}</p>
         </div>
       </div>
     );
@@ -703,21 +703,21 @@ export default function ContactDetailPage() {
           <div className="space-y-4 sm:space-y-6">
             {/* Name */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Name</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.name')}</p>
               <p className="text-sm sm:text-base text-gray-900 font-medium break-words">{contact.contact_person || '—'}</p>
             </div>
 
             {/* Company */}
             {contact.company_name && (
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Company</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.company')}</p>
                 <p className="text-sm sm:text-base text-gray-900 font-medium break-words">{contact.company_name}</p>
               </div>
             )}
 
             {/* Email */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Email</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.email')}</p>
               <div className="flex items-center gap-2">
                 <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
                 <p className="text-sm sm:text-base text-gray-900 break-all">{contact.email || '—'}</p>
@@ -726,7 +726,7 @@ export default function ContactDetailPage() {
 
             {/* Phone */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Phone</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.phone')}</p>
               <div className="flex items-center gap-2">
                 <span className="text-sm sm:text-base">📞</span>
                 <p className="text-sm sm:text-base text-gray-900">{contact.phone_number || '—'}</p>
@@ -735,31 +735,31 @@ export default function ContactDetailPage() {
 
             {/* Mailbox # */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Mailbox #</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.mailboxNumber')}</p>
               <p className="text-sm sm:text-base text-gray-900 font-medium">{contact.mailbox_number || '—'}</p>
             </div>
 
             {/* Unit # */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Unit #</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.unitNumber')}</p>
               <p className="text-sm sm:text-base text-gray-900 font-medium">{contact.unit_number || '—'}</p>
             </div>
 
             {/* Service Tier */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Service Tier</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.serviceTier')}</p>
               <p className="text-sm sm:text-base text-gray-900 font-medium">{contact.service_tier || '1'}</p>
             </div>
 
             {/* Language */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Language</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.languagePreference')}</p>
               <p className="text-sm sm:text-base text-gray-900 font-medium">{contact.language_preference || 'English'}</p>
             </div>
 
             {/* Subscription Status */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Status</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('common.status')}</p>
               <span className={`inline-block px-2 sm:px-3 py-1 rounded text-xs font-medium ${
                 contact.status === 'Active' ? 'bg-green-100 text-green-700' :
                 contact.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
@@ -773,7 +773,7 @@ export default function ContactDetailPage() {
             {/* Customer Since */}
             {contact.created_at && (
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Customer Since</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customers.customerSince')}</p>
                 <p className="text-sm sm:text-base text-gray-900 font-medium">
                   {formatNYDateDisplay(contact.created_at, { 
                     year: 'numeric', 
@@ -839,7 +839,7 @@ export default function ContactDetailPage() {
                 {/* Total */}
                 <div className="pt-2 sm:pt-3 border-t border-gray-200">
                   <div className="flex justify-between items-center">
-                    <p className="text-sm sm:text-base font-semibold text-gray-700">Total Outstanding:</p>
+                    <p className="text-sm sm:text-base font-semibold text-gray-700">{t('mail.totalOutstanding')}:</p>
                     <p className="text-lg sm:text-xl font-bold text-orange-600">
                       ${unpaidFees.reduce((sum, f) => sum + f.fee_amount, 0).toFixed(2)}
                     </p>
@@ -852,7 +852,7 @@ export default function ContactDetailPage() {
                   className="w-full mt-3 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <span>💵</span>
-                  <span>Collect Fees</span>
+                  <span>{t('fees.collectFees')}</span>
                 </button>
               </div>
             </div>
@@ -866,14 +866,14 @@ export default function ContactDetailPage() {
             {pendingItems.length > 0 && (
               <button
                 onClick={() => setIsBulkPickupModalOpen(true)}
-                title="Click here when customer is picking up all their pending mail at once"
+                title={t('mail.pickingUpAllMailTooltip')}
                 className="group px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all duration-200 flex items-center gap-3 active:scale-[0.98] border border-green-200"
               >
                 <div className="flex items-center justify-center w-7 h-7 bg-green-200 rounded-md group-hover:bg-green-300 transition-colors">
                   <Check className="w-4 h-4" strokeWidth={2.5} />
                 </div>
                 <div className="flex flex-col items-start text-left leading-none">
-                  <span className="text-sm font-semibold">Customer Picking Up All Mail</span>
+                  <span className="text-sm font-semibold">{t('mail.pickingUpAllMail')}</span>
                   <div className="text-[10px] text-green-600 font-medium flex items-center gap-1.5 mt-0.5">
                     {pendingLetters > 0 && (
                       <span className="flex items-center gap-0.5">
@@ -898,12 +898,12 @@ export default function ContactDetailPage() {
             {mailHistory.length === 0 ? (
               <div className="text-center py-8 sm:py-12 px-4">
                 <Mail className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
-                <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">No mail history yet</p>
+                <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">{t('mail.noMailHistory')}</p>
                 <button
                   onClick={() => navigate(`/dashboard/intake?contactId=${id}`)}
                   className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors text-sm sm:text-base"
                 >
-                  Add Mail Item
+                  {t('mail.addNewMail')}
                 </button>
               </div>
             ) : (
@@ -911,11 +911,11 @@ export default function ContactDetailPage() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700 w-10"></th>
-                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">Date</th>
-                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">Type</th>
-                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">Qty</th>
-                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-right py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">Actions</th>
+                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">{t('common.date')}</th>
+                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">{t('common.type')}</th>
+                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">{t('mail.qty')}</th>
+                    <th className="text-left py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">{t('common.status')}</th>
+                    <th className="text-right py-2 sm:py-3 px-3 sm:px-6 text-xs sm:text-sm font-semibold text-gray-700">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1156,14 +1156,14 @@ export default function ContactDetailPage() {
       <Modal 
         isOpen={isEditModalOpen} 
         onClose={closeEditModal}
-        title="Edit Contact"
+        title={t('customers.editCustomer')}
       >
         <form onSubmit={handleEditSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {/* Contact Person */}
             <div>
               <label htmlFor="contact_person" className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Person
+                {t('customerForm.name')}
               </label>
               <input
                 type="text"
@@ -1171,7 +1171,7 @@ export default function ContactDetailPage() {
                 name="contact_person"
                 value={formData.contact_person}
                 onChange={handleFormChange}
-                placeholder="John Doe"
+                placeholder={t('customerForm.fullName')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -1179,7 +1179,7 @@ export default function ContactDetailPage() {
             {/* Company Name */}
             <div>
               <label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name
+                {t('customerForm.company')}
               </label>
               <input
                 type="text"
@@ -1187,7 +1187,7 @@ export default function ContactDetailPage() {
                 name="company_name"
                 value={formData.company_name}
                 onChange={handleFormChange}
-                placeholder="Acme Corp"
+                placeholder={t('customerForm.companyName')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -1195,7 +1195,7 @@ export default function ContactDetailPage() {
             {/* Mailbox Number */}
             <div>
               <label htmlFor="mailbox_number" className="block text-sm font-medium text-gray-700 mb-1">
-                Mailbox # <span className="text-red-500">*</span>
+                {t('customerForm.mailboxNumber')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -1212,7 +1212,7 @@ export default function ContactDetailPage() {
             {/* Unit Number */}
             <div>
               <label htmlFor="unit_number" className="block text-sm font-medium text-gray-700 mb-1">
-                Unit #
+                {t('customerForm.unitNumber')}
               </label>
               <input
                 type="text"
@@ -1228,7 +1228,7 @@ export default function ContactDetailPage() {
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+                {t('customerForm.email')}
               </label>
               <input
                 type="email"
@@ -1244,7 +1244,7 @@ export default function ContactDetailPage() {
             {/* Phone Number */}
             <div>
               <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
+                {t('customerForm.phone')}
               </label>
               <input
                 type="tel"
@@ -1260,7 +1260,7 @@ export default function ContactDetailPage() {
             {/* Language Preference */}
             <div>
               <label htmlFor="language_preference" className="block text-sm font-medium text-gray-700 mb-1">
-                Language Preference
+                {t('customerForm.languagePreference')}
               </label>
               <select
                 id="language_preference"
@@ -1269,8 +1269,8 @@ export default function ContactDetailPage() {
                 onChange={handleFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="English">English</option>
-                <option value="Chinese">Chinese</option>
+                <option value="English">{t('languageOptions.english')}</option>
+                <option value="Chinese">{t('languageOptions.chinese')}</option>
                 <option value="Spanish">Spanish</option>
               </select>
             </div>
@@ -1278,7 +1278,7 @@ export default function ContactDetailPage() {
             {/* Service Tier */}
             <div>
               <label htmlFor="service_tier" className="block text-sm font-medium text-gray-700 mb-1">
-                Service Tier
+                {t('customerForm.serviceTier')}
               </label>
               <select
                 id="service_tier"
@@ -1287,8 +1287,8 @@ export default function ContactDetailPage() {
                 onChange={handleFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value={1}>Tier 1</option>
-                <option value={2}>Tier 2</option>
+                <option value={1}>{t('customerForm.tier1')}</option>
+                <option value={2}>{t('customerForm.tier2')}</option>
                 <option value={3}>Tier 3</option>
               </select>
             </div>
@@ -1296,7 +1296,7 @@ export default function ContactDetailPage() {
             {/* Status */}
             <div className="col-span-2">
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                Status
+                {t('common.status')}
               </label>
               <select
                 id="status"
@@ -1305,18 +1305,18 @@ export default function ContactDetailPage() {
                 onChange={handleFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="Active">Active</option>
-                <option value="Pending">Pending</option>
-                <option value="No">Archived</option>
+                <option value="Active">{t('customerStatus.active')}</option>
+                <option value="Pending">{t('customerStatus.pending')}</option>
+                <option value="No">{t('customerStatus.archived')}</option>
               </select>
             </div>
 
             {/* Display Name Preference */}
             <div className="col-span-2">
               <label htmlFor="display_name_preference" className="block text-sm font-medium text-gray-700 mb-1">
-                Display Name Preference
+                {t('customerForm.displayNamePreference')}
                 <span className="text-xs text-gray-500 ml-2 font-normal">
-                  How should this customer appear in lists?
+                  {t('customerForm.displayNameHelp')}
                 </span>
               </label>
               <select
@@ -1326,9 +1326,9 @@ export default function ContactDetailPage() {
                 onChange={handleFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="both">Both (Company - Person)</option>
-                <option value="company">Company Name Only</option>
-                <option value="person">Person Name Only</option>
+                <option value="both">{t('customerForm.displayBoth')}</option>
+                <option value="company">{t('customerForm.displayCompany')}</option>
+                <option value="person">{t('customerForm.displayPerson')}</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {formData.display_name_preference === 'company' && formData.company_name && `Will show: "${formData.company_name}"`}
@@ -1338,7 +1338,7 @@ export default function ContactDetailPage() {
                 {(formData.display_name_preference === 'both' || !formData.display_name_preference) && formData.company_name && formData.contact_person &&
                   `Will show: "${formData.company_name} - ${formData.contact_person}"`}
                 {(formData.display_name_preference === 'both' || !formData.display_name_preference) && (!formData.company_name || !formData.contact_person) &&
-                  'Shows both names, or whichever is available'}
+                  t('customerForm.showsBothNames')}
               </p>
             </div>
           </div>
@@ -1350,14 +1350,14 @@ export default function ContactDetailPage() {
               onClick={closeEditModal}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-6 py-2 bg-black hover:bg-gray-800 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('common.saving') : t('common.saveChanges')}
             </button>
           </div>
         </form>
@@ -1398,22 +1398,22 @@ export default function ContactDetailPage() {
           setEditingMailItem(null);
           setEditingGroupItems([]);
         }}
-        title="Edit Mail Item"
+        title={t('mail.editMailItem')}
       >
         <form onSubmit={handleEditMailSubmit} className="space-y-4">
           {/* Item Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Item Type
+              {t('mail.itemType')}
             </label>
             <select
               value={editMailFormData.item_type}
               onChange={(e) => setEditMailFormData(prev => ({ ...prev, item_type: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="Letter">Letter</option>
-              <option value="Package">Package</option>
-              <option value="Large Package">Large Package</option>
+              <option value="Letter">{t('mailTypes.letter')}</option>
+              <option value="Package">{t('mailTypes.package')}</option>
+              <option value="Large Package">{t('mailTypes.largePackage')}</option>
             </select>
           </div>
 
@@ -1476,33 +1476,33 @@ export default function ContactDetailPage() {
           setIsBulkPickupModalOpen(false);
           setBulkPickupPerformedBy('');
         }}
-        title="Mark All as Picked Up"
+        title={t('mail.markAllPickedUp')}
       >
         <div className="space-y-4">
           {/* Summary */}
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
             <p className="text-sm text-green-800">
-              <strong>Customer:</strong> {contact?.contact_person || contact?.company_name}
+              <strong>{t('mail.customer')}:</strong> {contact?.contact_person || contact?.company_name}
             </p>
             <p className="text-sm text-green-800 mt-1">
-              <strong>Items to pick up:</strong>{' '}
-              {pendingLetters > 0 && `${pendingLetters} letter${pendingLetters > 1 ? 's' : ''}`}
+              <strong>{t('mail.pendingPickups')}:</strong>{' '}
+              {pendingLetters > 0 && `${pendingLetters} ${t('mailTypes.letter').toLowerCase()}${pendingLetters > 1 ? 's' : ''}`}
               {pendingLetters > 0 && pendingPackages > 0 && ', '}
-              {pendingPackages > 0 && `${pendingPackages} package${pendingPackages > 1 ? 's' : ''}`}
+              {pendingPackages > 0 && `${pendingPackages} ${t('mailTypes.package').toLowerCase()}${pendingPackages > 1 ? 's' : ''}`}
             </p>
           </div>
 
           {/* Who performed action */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Who performed this action? <span className="text-red-500">*</span>
+              {t('mailActions.whoPerformed')} <span className="text-red-500">*</span>
             </label>
             <select
               value={bulkPickupPerformedBy}
               onChange={(e) => setBulkPickupPerformedBy(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
-              <option value="">Select staff member...</option>
+              <option value="">{t('mail.selectStaff')}</option>
               <option value="Merlin">Merlin</option>
               <option value="Madison">Madison</option>
             </select>
@@ -1518,7 +1518,7 @@ export default function ContactDetailPage() {
               }}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleBulkPickup}
@@ -1528,12 +1528,12 @@ export default function ContactDetailPage() {
               {processingBulkPickup ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Processing...
+                  {t('common.processing')}
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  Confirm Pickup
+                  {t('mailActions.confirmPickup')}
                 </>
               )}
             </button>

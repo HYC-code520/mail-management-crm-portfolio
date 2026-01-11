@@ -128,7 +128,7 @@ export default function FeesPage() {
       setFeesData(groupsWithFees);
     } catch (err) {
       console.error('Error loading fees:', err);
-      toast.error('Failed to load fees data.');
+      toast.error(t('common.error'));
     } finally {
       setLoading(false);
     }

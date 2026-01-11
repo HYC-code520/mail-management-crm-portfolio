@@ -10,6 +10,7 @@ import Modal from './Modal.tsx';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import { Mail, Send } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface Contact {
   contact_id: string;
@@ -33,6 +34,7 @@ interface BulkEmailModalProps {
 }
 
 export default function BulkEmailModal({ isOpen, onClose, contacts }: BulkEmailModalProps) {
+  const { t } = useLanguage();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
@@ -59,7 +61,7 @@ export default function BulkEmailModal({ isOpen, onClose, contacts }: BulkEmailM
       setTemplates(Array.isArray(templatesList) ? templatesList : []);
     } catch (err) {
       console.error('Error loading templates:', err);
-      toast.error('Failed to load templates');
+      toast.error(t('templates.failedToLoad'));
     }
   };
 
@@ -95,12 +97,12 @@ export default function BulkEmailModal({ isOpen, onClose, contacts }: BulkEmailM
 
   const handleSend = async () => {
     if (selectedContacts.size === 0) {
-      toast.error('Please select at least one recipient');
+      toast.error(t('validation.selectRecipient'));
       return;
     }
 
     if (!selectedTemplate) {
-      toast.error('Please select an email template');
+      toast.error(t('validation.selectTemplate'));
       return;
     }
 
@@ -166,7 +168,7 @@ export default function BulkEmailModal({ isOpen, onClose, contacts }: BulkEmailM
       handleClose();
     } catch (err) {
       console.error('Error sending bulk emails:', err);
-      toast.error('Failed to send bulk emails');
+      toast.error(t('common.error'));
     } finally {
       setSending(false);
     }

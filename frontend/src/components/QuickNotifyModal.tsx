@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface QuickNotifyModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export default function QuickNotifyModal({
   customerName,
   onSuccess
 }: QuickNotifyModalProps) {
+  const { t } = useLanguage();
   const [notifiedBy, setNotifiedBy] = useState('');
   const [notificationMethod, setNotificationMethod] = useState('Email');
   const [notes, setNotes] = useState('');
@@ -31,7 +33,7 @@ export default function QuickNotifyModal({
     e.preventDefault();
 
     if (!notifiedBy.trim()) {
-      toast.error('Please enter who notified the customer');
+      toast.error(t('validation.selectPerformer'));
       return;
     }
 
@@ -61,7 +63,7 @@ export default function QuickNotifyModal({
       handleClose();
     } catch (err) {
       console.error('Failed to log notification:', err);
-      toast.error('Failed to log notification');
+      toast.error(t('common.error'));
     } finally {
       setLoading(false);
     }

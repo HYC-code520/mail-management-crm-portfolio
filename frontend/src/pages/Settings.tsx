@@ -59,7 +59,7 @@ export default function SettingsPage() {
   };
 
   const handleDisconnectGmail = async () => {
-    if (!confirm('Are you sure you want to disconnect your Gmail account? You will need to reconnect to send emails.')) {
+    if (!confirm(t('warnings.confirmDisconnectGmail') + ' ' + t('warnings.needToReconnect'))) {
       return;
     }
 
@@ -67,7 +67,7 @@ export default function SettingsPage() {
       setConnecting(true);
       await api.oauth.disconnectGmail();
       setGmailStatus({ connected: false });
-      toast.success('Gmail disconnected successfully');
+      toast.success(t('toast.gmailDisconnected'));
     } catch (error: any) {
       console.error('Failed to disconnect Gmail:', error);
       toast.error(error.message || 'Failed to disconnect Gmail');
@@ -81,17 +81,17 @@ export default function SettingsPage() {
 
     // Validation
     if (!newPassword || !confirmPassword) {
-      toast.error('Please fill in all fields');
+      toast.error(t('validation.fillAllFields'));
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long');
+      toast.error(t('validation.passwordMinLength'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('validation.passwordsDoNotMatch'));
       return;
     }
 
@@ -105,7 +105,7 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      toast.success('Password changed successfully!');
+      toast.success(t('toast.passwordChanged'));
       
       // Clear form
       setNewPassword('');

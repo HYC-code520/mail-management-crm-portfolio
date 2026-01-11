@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api-client';
 import toast from 'react-hot-toast';
 import { formatNYDateDisplay } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface MailItem {
   mail_item_id: string;
@@ -47,6 +48,7 @@ interface SendEmailModalProps {
 }
 
 export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItems = [], onSuccess, suggestedTemplateType }: SendEmailModalProps) {
+  const { t } = useLanguage();
   // Determine if we're in bulk mode (multiple items)
   const isBulkMode = bulkMailItems.length > 1;
   // Sum up quantities instead of counting entries
@@ -229,7 +231,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItem
       }
     } catch (error) {
       console.error('Error loading templates:', error);
-      toast.error('Failed to load email templates');
+      toast.error(t('toast.failedToLoadTemplates'));
     } finally {
       setLoadingTemplates(false);
     }
@@ -260,7 +262,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItem
 
   const handleSend = async () => {
     if (!currentEmail) {
-      toast.error('This customer does not have an email address on file');
+      toast.error(t('toast.noEmailOnFile'));
       return;
     }
 
@@ -270,7 +272,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItem
     }
 
     if (!sentBy.trim()) {
-      toast.error('Please select who is sending this email');
+      toast.error(t('toast.selectSender'));
       return;
     }
 

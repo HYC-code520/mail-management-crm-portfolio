@@ -2,6 +2,9 @@
 import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement, ReactNode, createContext } from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { I18nextProvider } from 'react-i18next';
+import i18n from '../i18n';
+import { LanguageProvider } from '../contexts/LanguageContext';
 
 // Mock Supabase client
 export const mockSupabaseClient = {
@@ -69,9 +72,13 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <MockAuthProvider value={authValue}>
-          {children}
-        </MockAuthProvider>
+        <I18nextProvider i18n={i18n}>
+          <LanguageProvider>
+            <MockAuthProvider value={authValue}>
+              {children}
+            </MockAuthProvider>
+          </LanguageProvider>
+        </I18nextProvider>
       </BrowserRouter>
     );
   }

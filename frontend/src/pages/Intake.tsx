@@ -125,7 +125,7 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
     e.preventDefault();
 
     if (!selectedContact) {
-      toast.error('Please select a customer');
+      toast.error(t('validation.selectCustomer'));
       return;
     }
 
@@ -154,7 +154,7 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
       loadTodaysEntries();
     } catch (err) {
       console.error('Error creating mail item:', err);
-      toast.error('Failed to add mail item');
+      toast.error(t('toast.failedToLogMail'));
     } finally {
       setLoading(false);
     }
@@ -163,11 +163,11 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
   const markAsNotified = async (mailItemId: string) => {
     try {
       await api.mailItems.updateStatus(mailItemId, 'Notified');
-      toast.success('Marked as notified!');
+      toast.success(t('toast.markedAsNotified'));
       loadTodaysEntries();
     } catch (err) {
       console.error('Error updating status:', err);
-      toast.error('Failed to update status');
+      toast.error(t('toast.failedToUpdateMailItem'));
     }
   };
 

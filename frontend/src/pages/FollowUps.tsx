@@ -70,7 +70,7 @@ export default function FollowUpsPage() {
       setFollowUps(statsData.needsFollowUp || []);
     } catch (err) {
       console.error('Error loading follow-ups:', err);
-      toast.error('Failed to load follow-ups data.');
+      toast.error(t('followUps.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -198,7 +198,7 @@ export default function FollowUpsPage() {
     const abandonedItems = allItems.filter(item => getDaysSince(item.received_date) >= 30);
     
     if (abandonedItems.length === 0) {
-      toast.error('No items are 30+ days old in this group');
+      toast.error(t('followUps.noItemsOver30Days'));
       return;
     }
     
@@ -225,7 +225,7 @@ export default function FollowUpsPage() {
       );
     } catch (err) {
       console.error('Error marking items as abandoned:', err);
-      toast.error('Failed to mark items as abandoned');
+      toast.error(t('followUps.failedToMarkAbandoned'));
     }
   };
 

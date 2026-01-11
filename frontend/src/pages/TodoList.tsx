@@ -71,7 +71,7 @@ export default function TodoList() {
       setTodos(data);
     } catch (error: any) {
       console.error('Failed to load todos:', error);
-      toast.error('Failed to load tasks');
+      toast.error(t('todos.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ export default function TodoList() {
     e.preventDefault();
     
     if (!newTodoTitle.trim()) {
-      toast.error('Please enter a task');
+      toast.error(t('todos.enterTask'));
       return;
     }
 
@@ -107,10 +107,10 @@ export default function TodoList() {
       setIsAddModalOpen(false); // Close modal after adding
       
       await loadTodos();
-      toast.success('Task added!');
+      toast.success(t('todos.taskAdded'));
     } catch (error: any) {
       console.error('Failed to add todo:', error);
-      toast.error('Failed to add task');
+      toast.error(t('todos.failedToAdd'));
     }
   };
 
@@ -150,7 +150,7 @@ export default function TodoList() {
       }
     } catch (error: any) {
       console.error('Failed to update todo:', error);
-      toast.error('Failed to update task');
+      toast.error(t('todos.failedToUpdate'));
       // Revert on error
       await loadTodos();
     }
@@ -181,7 +181,7 @@ export default function TodoList() {
       });
     } catch (error: any) {
       console.error('Failed to update todo:', error);
-      toast.error('Failed to update task');
+      toast.error(t('todos.failedToUpdate'));
       // Revert on error
       await loadTodos();
       setIsCompletionModalOpen(false);
@@ -195,10 +195,10 @@ export default function TodoList() {
     try {
       await api.todos.delete(todoId);
       await loadTodos();
-      toast.success('Task deleted');
+      toast.success(t('todos.taskDeleted'));
     } catch (error: any) {
       console.error('Failed to delete todo:', error);
-      toast.error('Failed to delete task');
+      toast.error(t('todos.failedToDelete'));
     }
   };
 
@@ -252,7 +252,7 @@ export default function TodoList() {
     e.preventDefault();
     
     if (!editingTodo || !editFormData.title.trim()) {
-      toast.error('Task title is required');
+      toast.error(t('todos.titleRequired'));
       return;
     }
 
@@ -268,10 +268,10 @@ export default function TodoList() {
       
       closeEditModal();
       await loadTodos();
-      toast.success('Task updated!');
+      toast.success(t('todos.taskUpdated'));
     } catch (error: any) {
       console.error('Failed to update todo:', error);
-      toast.error('Failed to update task');
+      toast.error(t('todos.failedToUpdate'));
     }
   };
 

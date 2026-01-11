@@ -237,7 +237,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       setMailItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading mail items:', err);
-      toast.error('Failed to load mail log');
+      toast.error(t('toast.failedToLoadMailLog'));
     } finally {
       setLoading(false);
     }
@@ -301,7 +301,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     e.preventDefault();
 
     if (!selectedContact) {
-      toast.error('Please select a customer');
+      toast.error(t('validation.selectCustomer'));
       return;
     }
 
@@ -533,7 +533,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     e.preventDefault();
     
     if (!formData.contact_id) {
-      toast.error('Please select a customer');
+      toast.error(t('validation.selectCustomer'));
       return;
     }
 
@@ -561,14 +561,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
         // If status changed, require staff name
         if (statusActuallyChanged && !formData.performed_by.trim()) {
-          toast.error('Please select who made this status change');
+          toast.error(t('validation.selectPerformer'));
           setSaving(false);
           return;
         }
 
         // If quantity changed, require staff name
         if (quantityChanged && !formData.performed_by.trim()) {
-          toast.error('Please select who made this quantity change');
+          toast.error(t('validation.selectPerformer'));
           setSaving(false);
           return;
         }
@@ -649,7 +649,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       }
     } catch (err) {
       console.error('Failed to update mail item:', err);
-      toast.error('Failed to update mail item');
+      toast.error(t('toast.failedToUpdateMailItem'));
     } finally {
       setSaving(false);
     }
@@ -682,7 +682,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       loadMailItems();
     } catch (err) {
       console.error('Failed to delete mail item:', err);
-      toast.error('Failed to delete mail item');
+      toast.error(t('toast.failedToDeleteMailItem'));
     } finally {
       setDeletingItemId(null);
     }
@@ -1032,7 +1032,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     if (!group) {
       console.warn(`❌ Could not find group with key: ${groupKey} after retries`);
       console.log(`Available groups:`, groupedItemsRef.current.map(g => g.groupKey));
-      toast.error('Could not find the updated item. Please refresh the page.');
+      toast.error(t('toast.couldNotFindItem'));
       return;
     }
     
@@ -1219,8 +1219,8 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               className="w-full h-full object-contain"
             />
           </div>
-          <p className="mt-4 text-lg font-medium text-gray-700">Loading mail log...</p>
-          <p className="text-sm text-gray-500 mt-1">Please wait while we fetch your data</p>
+          <p className="mt-4 text-lg font-medium text-gray-700">{t('common.loading')}</p>
+          <p className="text-sm text-gray-500 mt-1">{t('common.pleaseWait')}</p>
         </div>
       </div>
     );
@@ -1248,7 +1248,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       {/* Add New Mail Form - show if enabled */}
       {showAddForm && (
         <form onSubmit={handleAddMailSubmit} className="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Add New Mail</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">{t('mail.addNewMail')}</h2>
 
           <div className="grid grid-cols-3 gap-4 mb-6">
             {/* Date */}

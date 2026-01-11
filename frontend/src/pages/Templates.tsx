@@ -82,7 +82,7 @@ export default function TemplatesPage() {
       }
     } catch (err) {
       console.error('Error loading templates:', err);
-      toast.error('Failed to load templates');
+      toast.error(t('templates.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -143,7 +143,7 @@ export default function TemplatesPage() {
   const handleTranslate = async () => {
     // Validate English text exists
     if (!formData.english_text.trim()) {
-      toast.error('Please enter English text first');
+      toast.error(t('templates.enterEnglishFirst'));
       return;
     }
 
@@ -155,9 +155,9 @@ export default function TemplatesPage() {
       if (response.success && response.translatedText) {
         // Update Chinese text field with translation
         setFormData(prev => ({ ...prev, chinese_text: response.translatedText }));
-        toast.success('Translation completed successfully!');
+        toast.success(t('templates.translationCompleted'));
       } else {
-        toast.error('Translation failed. Please try again.');
+        toast.error(t('templates.translationFailed'));
       }
     } catch (err) {
       console.error('Translation error:', err);
@@ -172,7 +172,7 @@ export default function TemplatesPage() {
     e.preventDefault();
     
     if (!formData.template_name || !formData.english_text) {
-      toast.error('Template name and English text are required');
+      toast.error(t('templates.nameAndEnglishRequired'));
       return;
     }
 
@@ -195,10 +195,10 @@ export default function TemplatesPage() {
 
       if (editingTemplate) {
         await api.templates.update(editingTemplate.template_id, payload);
-        toast.success('Template updated successfully!');
+        toast.success(t('templates.templateUpdated'));
       } else {
         await api.templates.create(payload);
-        toast.success('Template created successfully!');
+        toast.success(t('templates.templateCreated'));
       }
       closeModal();
       loadTemplates();
@@ -212,7 +212,7 @@ export default function TemplatesPage() {
 
   const handleDelete = async (template: Template) => {
     if (template.is_default) {
-      toast.error('Cannot delete default templates');
+      toast.error(t('templates.cannotDeleteDefault'));
       return;
     }
 
@@ -224,7 +224,7 @@ export default function TemplatesPage() {
 
     try {
       await api.templates.delete(template.template_id);
-      toast.success('Template deleted successfully!');
+      toast.success(t('templates.templateDeleted'));
       if (selectedTemplate?.template_id === template.template_id) {
         setSelectedTemplate(templates[0] || null);
       }
@@ -240,11 +240,11 @@ export default function TemplatesPage() {
   const handleCopy = (text: string, lang: string) => {
     navigator.clipboard.writeText(text);
     if (lang === 'en') {
-      toast.success('English template copied!');
+      toast.success(t('templates.englishCopied'));
     } else if (lang === 'cn') {
-      toast.success('Chinese template copied!');
+      toast.success(t('templates.chineseCopied'));
     } else {
-      toast.success('Combined template copied!');
+      toast.success(t('templates.combinedCopied'));
     }
   };
 

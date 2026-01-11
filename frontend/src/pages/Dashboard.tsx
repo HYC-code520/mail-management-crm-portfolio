@@ -418,7 +418,7 @@ export default function DashboardPage() {
         {/* Loading animation with message */}
         <div className="flex items-center justify-center min-h-[60vh]">
           <LoadingSpinner 
-            message="Loading dashboard data..." 
+            message={t('dashboard.loadingData')} 
             size="lg"
             variant="mail"
           />
@@ -541,16 +541,16 @@ export default function DashboardPage() {
                 <div className="absolute right-0 top-full mt-2 px-4 py-3 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-80 z-[100] pointer-events-none">
                   <div className="space-y-2">
                     <div>
-                      <span className="font-semibold text-blue-300">Today's Mail:</span> Individual mail items logged today (by received date)
+                      <span className="font-semibold text-blue-300">{t('mail.todaysMail')}:</span> {t('dashboard.tooltipTodaysMail')}
                     </div>
                     <div>
-                      <span className="font-semibold text-purple-300">Pending Pickups:</span> All items with status "Pending" (not picked up yet)
+                      <span className="font-semibold text-purple-300">{t('mail.pendingPickups')}:</span> {t('dashboard.tooltipPendingPickups')}
                     </div>
                     <div>
-                      <span className="font-semibold text-red-300">Overdue:</span> Pending items &gt;7 days old (need urgent follow-up)
+                      <span className="font-semibold text-red-300">{t('followUps.overdue')}:</span> {t('dashboard.tooltipOverdue')}
                     </div>
                     <div>
-                      <span className="font-semibold text-green-300">Completed:</span> Items marked "Picked Up" today
+                      <span className="font-semibold text-green-300">{t('todos.completed')}:</span> {t('dashboard.tooltipCompleted')}
                     </div>
                   </div>
                   <div className="absolute bottom-full right-2 border-[6px] border-transparent border-b-gray-900"></div>
@@ -822,7 +822,7 @@ export default function DashboardPage() {
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-gray-900 text-xs truncate">{getCustomerDisplayName(group.contact)}</p>
-                      <p className="text-xs text-gray-600">Box #{group.contact.mailbox_number}</p>
+                      <p className="text-xs text-gray-600">{t('dashboard.box')} #{group.contact.mailbox_number}</p>
                     </div>
                     {group.totalFees > 0 && (
                       <span className="text-orange-700 font-bold text-sm ml-2 flex-shrink-0">${group.totalFees}</span>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface ActionModalProps {
   isOpen: boolean;
@@ -58,6 +59,7 @@ export default function ActionModal({
   actionType,
   onSuccess
 }: ActionModalProps) {
+  const { t } = useLanguage();
   const [performedBy, setPerformedBy] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,7 @@ export default function ActionModal({
     e.preventDefault();
 
     if (!performedBy.trim()) {
-      toast.error('Please select who performed this action');
+      toast.error(t('validation.selectPerformer'));
       return;
     }
 
@@ -103,7 +105,7 @@ export default function ActionModal({
       handleClose();
     } catch (err) {
       console.error('Failed to perform action:', err);
-      toast.error('Failed to update mail item');
+      toast.error(t('toast.failedToUpdateMailItem'));
     } finally {
       setLoading(false);
     }

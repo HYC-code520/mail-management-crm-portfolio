@@ -11,6 +11,7 @@ import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import { CreditCard, Banknote, Smartphone, CheckCircle, XCircle, ArrowRight, PackageCheck, Mail, AlertTriangle } from 'lucide-react';
 import CelebrationOverlay from './CelebrationOverlay.tsx';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface PackageFee {
   fee_id: string;
@@ -73,6 +74,7 @@ export default function CollectFeeModal({
   isPickupFlow = false,
   onMarkPickedUp
 }: CollectFeeModalProps) {
+  const { t } = useLanguage();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [waiveReason, setWaiveReason] = useState('');
   const [showWaiveInput, setShowWaiveInput] = useState(false);
@@ -194,7 +196,7 @@ export default function CollectFeeModal({
 
   const handleWaive = async () => {
     if (!waiveReason || waiveReason.trim().length < 5) {
-      toast.error('Please provide a reason (at least 5 characters)');
+      toast.error(t('validation.provideReason'));
       return;
     }
 
@@ -302,7 +304,7 @@ export default function CollectFeeModal({
       onClose();
     } catch (error) {
       console.error('Error skipping fees:', error);
-      toast.error('Failed to process');
+      toast.error(t('common.error'));
     } finally {
       setSaving(false);
     }

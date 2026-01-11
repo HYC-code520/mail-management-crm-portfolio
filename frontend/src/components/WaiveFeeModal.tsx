@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import Modal from './Modal.tsx';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface PackageFee {
   fee_id: string;
@@ -48,6 +49,7 @@ interface WaiveFeeModalProps {
 }
 
 export default function WaiveFeeModal({ isOpen, onClose, group, onSuccess }: WaiveFeeModalProps) {
+  const { t } = useLanguage();
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [waivedBy, setWaivedBy] = useState<string | null>(null); // NEW: Staff selection
@@ -61,12 +63,12 @@ export default function WaiveFeeModal({ isOpen, onClose, group, onSuccess }: Wai
 
   const handleWaive = async () => {
     if (!reason || reason.trim().length < 5) {
-      toast.error('Please provide a reason (at least 5 characters)');
+      toast.error(t('validation.provideReason'));
       return;
     }
     
     if (!waivedBy) {
-      toast.error('Please select who is waiving this fee');
+      toast.error(t('validation.selectPerformer'));
       return;
     }
 
