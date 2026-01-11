@@ -56,14 +56,14 @@ interface CollectFeeModalProps {
   onMarkPickedUp?: () => Promise<void>;
 }
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ReactNode }[] = [
-  { value: 'cash', label: 'Cash', icon: <Banknote className="w-4 h-4" /> },
-  { value: 'card', label: 'Card', icon: <CreditCard className="w-4 h-4" /> },
-  { value: 'venmo', label: 'Venmo', icon: <Smartphone className="w-4 h-4" /> },
-  { value: 'zelle', label: 'Zelle', icon: <Smartphone className="w-4 h-4" /> },
-  { value: 'paypal', label: 'PayPal', icon: <CreditCard className="w-4 h-4" /> },
-  { value: 'check', label: 'Check', icon: <CheckCircle className="w-4 h-4" /> },
-  { value: 'other', label: 'Other', icon: <ArrowRight className="w-4 h-4" /> },
+const PAYMENT_METHODS: { value: PaymentMethod; labelKey: string; icon: React.ReactNode }[] = [
+  { value: 'cash', labelKey: 'fees.cash', icon: <Banknote className="w-4 h-4" /> },
+  { value: 'card', labelKey: 'fees.card', icon: <CreditCard className="w-4 h-4" /> },
+  { value: 'venmo', labelKey: 'fees.venmo', icon: <Smartphone className="w-4 h-4" /> },
+  { value: 'zelle', labelKey: 'fees.zelle', icon: <Smartphone className="w-4 h-4" /> },
+  { value: 'paypal', labelKey: 'fees.paypal', icon: <CreditCard className="w-4 h-4" /> },
+  { value: 'check', labelKey: 'fees.check', icon: <CheckCircle className="w-4 h-4" /> },
+  { value: 'other', labelKey: 'fees.other', icon: <ArrowRight className="w-4 h-4" /> },
 ];
 
 export default function CollectFeeModal({ 
@@ -118,7 +118,7 @@ export default function CollectFeeModal({
 
   if (!group) return null;
 
-  const customerName = group.contact.contact_person || group.contact.company_name || 'Customer';
+  const customerName = group.contact.contact_person || group.contact.company_name || t('labels.customer');
   const pendingPackages = group.packages.filter(
     pkg => pkg.packageFee && pkg.packageFee.fee_status === 'pending' && pkg.packageFee.fee_amount > 0
   );
@@ -129,7 +129,7 @@ export default function CollectFeeModal({
 
   const handleCollect = async () => {
     if (!collectedBy) {
-      toast('Please select who collected the fee', {
+      toast(t('staff.selectWhoCollected'), {
         icon: 'ℹ️',
         style: {
           background: '#EFF6FF',
@@ -229,15 +229,15 @@ export default function CollectFeeModal({
 
         // Show appropriate toast message
         const itemsMarked = markLettersAsPickedUp && group.letters.length > 0
-          ? 'all items'
-          : 'packages';
+          ? t('collectFeeModal.allItems')
+          : t('plurals.packages');
         toast.success(
-          `✅ Waived $${totalWaived.toFixed(2)} & marked ${itemsMarked} as Picked Up`,
+          `✅ ${t('collectFeeModal.waivedAndMarked', { amount: `$${totalWaived.toFixed(2)}`, items: itemsMarked })}`,
           { duration: 5000 }
         );
       } else {
         toast.success(
-          `✅ Waived $${totalWaived.toFixed(2)} for ${customerName}`,
+          `✅ ${t('collectFeeModal.waivedFor', { amount: `$${totalWaived.toFixed(2)}`, customer: customerName })}`,
           { duration: 5000 }
         );
       }
@@ -280,16 +280,16 @@ export default function CollectFeeModal({
         }
         
         // Show appropriate toast message
-        const itemsMarked = markLettersAsPickedUp && group.letters.length > 0 
-          ? 'all items' 
-          : 'packages';
+        const itemsMarked = markLettersAsPickedUp && group.letters.length > 0
+          ? t('collectFeeModal.allItems')
+          : t('plurals.packages');
         toast.success(
-          `⏭️ Skipped fee - marked ${itemsMarked} as Picked Up. $${group.totalFees.toFixed(2)} tracked as unpaid debt.`,
+          `⏭️ ${t('collectFeeModal.skippedMarked', { items: itemsMarked, amount: `$${group.totalFees.toFixed(2)}` })}`,
           { duration: 5000 }
         );
       } else {
         toast.success(
-          `⏭️ Skipped fee collection for ${customerName}. $${group.totalFees.toFixed(2)} marked as unpaid debt.`,
+          `⏭️ ${t('collectFeeModal.skippedFor', { customer: customerName, amount: `$${group.totalFees.toFixed(2)}` })}`,
           { duration: 5000 }
         );
       }
@@ -344,15 +344,15 @@ export default function CollectFeeModal({
       onComplete={handleCelebrationComplete}
     />
     
-    <Modal isOpen={isOpen} onClose={handleClose} title="💵 Package Fee Collection">
+    <Modal isOpen={isOpen} onClose={handleClose} title={`💵 ${t('collectFeeModal.title')}`}>
       <div className="space-y-4">
         {/* Customer Info */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-1">
-            {isPickupFlow ? 'Picking up packages for:' : 'Collecting fees from:'}
+            {isPickupFlow ? t('collectFeeModal.pickingUpFor') : t('collectFeeModal.collectingFrom')}
           </p>
           <p className="text-lg font-bold text-gray-900">{customerName}</p>
-          <p className="text-sm text-gray-600">📮 Mailbox: {group.contact.mailbox_number || 'N/A'}</p>
+          <p className="text-sm text-gray-600">📮 {t('collectFeeModal.mailbox')}: {group.contact.mailbox_number || t('labels.na')}</p>
         </div>
 
         {/* Warning: Additional unpaid fees exist */}
@@ -361,20 +361,20 @@ export default function CollectFeeModal({
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="font-bold text-amber-900 mb-1">⚠️ Additional Fees Not Shown</p>
+                <p className="font-bold text-amber-900 mb-1">⚠️ {t('collectFeeModal.additionalFeesWarning')}</p>
                 <p className="text-sm text-amber-800 mb-2">
-                  This customer owes <strong>${fullUnpaidAmount.toFixed(2)} total</strong>, but only <strong>${group.totalFees.toFixed(2)}</strong> is shown here (from items needing follow-up).
+                  {t('collectFeeModal.additionalFeesDesc', { total: `$${fullUnpaidAmount.toFixed(2)}`, shown: `$${group.totalFees.toFixed(2)}` })}
                 </p>
                 <p className="text-sm text-amber-800">
-                  <strong>Additional ${(fullUnpaidAmount - group.totalFees).toFixed(2)}</strong> is from items that were:
+                  {t('collectFeeModal.additionalAmount', { amount: `$${(fullUnpaidAmount - group.totalFees).toFixed(2)}` })}
                 </p>
                 <ul className="text-xs text-amber-700 ml-4 mt-1 space-y-0.5">
-                  <li>• Already picked up (fee not collected)</li>
-                  <li>• Recently notified (within 3 days)</li>
-                  <li>• Abandoned (still owe storage fees)</li>
+                  <li>• {t('collectFeeModal.alreadyPickedUp')}</li>
+                  <li>• {t('collectFeeModal.recentlyNotified')}</li>
+                  <li>• {t('collectFeeModal.abandonedOweFees')}</li>
                 </ul>
                 <p className="text-sm font-bold text-amber-900 mt-2 bg-amber-100 p-2 rounded border border-amber-300">
-                  💡 Consider collecting the full ${fullUnpaidAmount.toFixed(2)} if customer is present!
+                  💡 {t('collectFeeModal.considerCollecting', { amount: `$${fullUnpaidAmount.toFixed(2)}` })}
                 </p>
               </div>
             </div>
@@ -384,7 +384,7 @@ export default function CollectFeeModal({
         {/* Fee Summary */}
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Total Outstanding:</span>
+            <span className="text-sm font-medium text-gray-700">{t('collectFeeModal.totalOutstanding')}</span>
             {!isEditingAmount ? (
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-bold text-green-600">
@@ -400,7 +400,7 @@ export default function CollectFeeModal({
                   className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
                   title="Edit amount (for discounts/adjustments)"
                 >
-                  Edit
+                  {t('collectFeeModal.edit')}
                 </button>
               </div>
             ) : (
@@ -424,26 +424,26 @@ export default function CollectFeeModal({
                   disabled={saving}
                   className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             )}
           </div>
-          
+
           {isEditingAmount && parseFloat(editedAmount) < group.totalFees && (
             <p className="text-xs text-blue-600 mb-2">
-              💡 Discount: ${(group.totalFees - parseFloat(editedAmount || '0')).toFixed(2)} off
+              💡 {t('collectFeeModal.discount', { amount: `$${(group.totalFees - parseFloat(editedAmount || '0')).toFixed(2)}` })}
             </p>
           )}
-          
+
           {/* Package Details */}
           <div className="mt-3 space-y-1">
             <p className="text-xs font-semibold text-gray-700 uppercase">
-              Packages with fees ({pendingPackages.length}):
+              {t('collectFeeModal.packagesWithFees')} ({pendingPackages.length}):
             </p>
             {pendingPackages.map(pkg => (
               <div key={pkg.mail_item_id} className="text-xs text-gray-600 ml-2">
-                • Day {pkg.packageFee?.days_charged || 0} - ${(pkg.packageFee?.fee_amount || 0).toFixed(2)}
+                • {t('collectFeeModal.day')} {pkg.packageFee?.days_charged || 0} - ${(pkg.packageFee?.fee_amount || 0).toFixed(2)}
                 {pkg.quantity && pkg.quantity > 1 && ` (×${pkg.quantity})`}
               </div>
             ))}
@@ -454,7 +454,7 @@ export default function CollectFeeModal({
         {!showWaiveInput && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Collected By: <span className="text-red-500">*</span>
+              {t('collectFeeModal.collectedBy')} <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-3">
               <button
@@ -467,7 +467,7 @@ export default function CollectFeeModal({
                     : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400 hover:bg-purple-50'
                 } disabled:opacity-50`}
               >
-                Madison
+                {t('staff.madison')}
               </button>
               <button
                 type="button"
@@ -479,7 +479,7 @@ export default function CollectFeeModal({
                     : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50'
                 } disabled:opacity-50`}
               >
-                Merlin
+                {t('staff.merlin')}
               </button>
             </div>
           </div>
@@ -489,7 +489,7 @@ export default function CollectFeeModal({
         {!showWaiveInput && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Payment Method:
+              {t('collectFeeModal.paymentMethod')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {PAYMENT_METHODS.map((method) => (
@@ -505,7 +505,7 @@ export default function CollectFeeModal({
                   } disabled:opacity-50`}
                 >
                   {method.icon}
-                  {method.label}
+                  {t(method.labelKey)}
                 </button>
               ))}
             </div>
@@ -526,11 +526,11 @@ export default function CollectFeeModal({
               <div className="flex items-center gap-2">
                 <PackageCheck className="w-5 h-5 text-blue-600" />
                 <span className="text-sm font-medium text-gray-700">
-                  Also mark as Picked Up
+                  {t('collectFeeModal.alsoMarkPickedUp')}
                 </span>
               </div>
             </label>
-            
+
             {/* Letter Pickup Sub-checkbox - Only show if customer has letters AND main checkbox is checked */}
             {markAsPickedUp && group.letters.length > 0 && (
               <label className="flex items-center gap-3 p-3 ml-6 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors">
@@ -544,7 +544,7 @@ export default function CollectFeeModal({
                 <div className="flex items-center gap-2">
                   <Mail className="w-5 h-5 text-green-600" />
                   <span className="text-sm font-medium text-gray-700">
-                    Also mark {group.letters.length} letter{group.letters.length !== 1 ? 's' : ''} as picked up
+                    {t('collectFeeModal.alsoMarkLetters', { count: group.letters.length })}
                   </span>
                 </div>
               </label>
@@ -556,19 +556,19 @@ export default function CollectFeeModal({
         {showWaiveInput && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Reason for waiving: <span className="text-red-500">*</span>
+              {t('collectFeeModal.reasonForWaiving')} <span className="text-red-500">*</span>
             </label>
             <textarea
               value={waiveReason}
               onChange={(e) => setWaiveReason(e.target.value)}
-              placeholder="e.g., Goodwill gesture, Customer complaint, First-time courtesy..."
+              placeholder={t('collectFeeModal.waivePlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
               rows={2}
               maxLength={500}
               disabled={saving}
             />
             <p className="text-xs text-gray-500 mt-1">
-              {waiveReason.length}/500 characters (minimum 5)
+              {waiveReason.length}/500 {t('collectFeeModal.characters')}
             </p>
           </div>
         )}
@@ -584,7 +584,7 @@ export default function CollectFeeModal({
                 className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Banknote className="w-5 h-5" />
-                {saving ? 'Processing...' : `Collect $${finalAmount.toFixed(2)} (${paymentMethod})`}
+                {saving ? t('common.processing') : `${t('collectFeeModal.collect')} $${finalAmount.toFixed(2)} (${t(`fees.${paymentMethod}`)})`}
               </button>
 
               {/* Secondary Options */}
@@ -595,7 +595,7 @@ export default function CollectFeeModal({
                   className="flex-1 px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <XCircle className="w-4 h-4" />
-                  Waive Fee
+                  {t('collectFeeModal.waiveFee')}
                 </button>
                 <button
                   onClick={handleSkip}
@@ -603,7 +603,7 @@ export default function CollectFeeModal({
                   className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <ArrowRight className="w-4 h-4" />
-                  Skip (Owes)
+                  {t('collectFeeModal.skipOwes')}
                 </button>
               </div>
             </>
@@ -616,14 +616,14 @@ export default function CollectFeeModal({
                   disabled={saving}
                   className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium disabled:opacity-50"
                 >
-                  Back
+                  {t('common.back')}
                 </button>
                 <button
                   onClick={handleWaive}
                   disabled={!waiveReason.trim() || waiveReason.trim().length < 5 || saving}
                   className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? 'Waiving...' : `Waive $${group.totalFees.toFixed(2)}`}
+                  {saving ? t('collectFeeModal.waiving') : `${t('collectFeeModal.waive')} $${group.totalFees.toFixed(2)}`}
                 </button>
               </div>
             </>
@@ -635,7 +635,7 @@ export default function CollectFeeModal({
             disabled={saving}
             className="w-full px-4 py-2 text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
 
@@ -643,8 +643,7 @@ export default function CollectFeeModal({
         {!showWaiveInput && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
             <p className="text-xs text-gray-600">
-              💡 <strong>Skip (Owes)</strong>: Package will be released but fee remains unpaid.
-              This will be tracked as outstanding debt on the customer's account.
+              💡 <strong>{t('collectFeeModal.skipOwes')}</strong>: {t('collectFeeModal.skipInfo')}
             </p>
           </div>
         )}

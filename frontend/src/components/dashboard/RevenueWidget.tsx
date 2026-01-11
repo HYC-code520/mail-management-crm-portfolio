@@ -10,6 +10,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext.tsx';
 
 interface RevenueWidgetProps {
   monthlyRevenue: number;
@@ -25,6 +26,7 @@ export default function RevenueWidget({
   loading
 }: RevenueWidgetProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   if (loading) {
     return (
@@ -48,8 +50,8 @@ export default function RevenueWidget({
           <DollarSign className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h2 className="text-sm font-bold text-gray-900">Package Storage Revenue</h2>
-          <p className="text-xs text-gray-500">Track your storage fee earnings</p>
+          <h2 className="text-sm font-bold text-gray-900">{t('dashboard.packageStorageRevenue')}</h2>
+          <p className="text-xs text-gray-500">{t('dashboard.trackStorageFeeEarnings')}</p>
         </div>
       </div>
       
@@ -62,12 +64,12 @@ export default function RevenueWidget({
               <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 text-white" />
               </div>
-              <p className="text-sm font-semibold text-green-800">This Month</p>
+              <p className="text-sm font-semibold text-green-800">{t('dashboard.thisMonth')}</p>
             </div>
             <p className="text-4xl font-bold text-green-700 mb-2">
               ${Math.round(monthlyRevenue ?? 0)}
             </p>
-            <p className="text-sm text-green-600 font-medium">Collected</p>
+            <p className="text-sm text-green-600 font-medium">{t('dashboard.collected')}</p>
           </div>
         </div>
         
@@ -83,12 +85,12 @@ export default function RevenueWidget({
               <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
                 <AlertCircle className="w-4 h-4 text-white" />
               </div>
-              <p className="text-sm font-semibold text-orange-800">Outstanding</p>
+              <p className="text-sm font-semibold text-orange-800">{t('dashboard.outstanding')}</p>
             </div>
             <p className="text-4xl font-bold text-orange-700 mb-2">
               ${Math.round(outstandingFees ?? 0)}
             </p>
-            <p className="text-sm text-orange-600 font-medium group-hover:underline">Owed - Click to collect</p>
+            <p className="text-sm text-orange-600 font-medium group-hover:underline">{t('dashboard.owedClickToCollect')}</p>
           </div>
         </div>
         
@@ -100,12 +102,12 @@ export default function RevenueWidget({
               <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
                 <DollarSign className="w-4 h-4 text-white" />
               </div>
-              <p className="text-sm font-semibold text-blue-800">Total (All Time)</p>
+              <p className="text-sm font-semibold text-blue-800">{t('dashboard.totalAllTime')}</p>
             </div>
             <p className="text-4xl font-bold text-blue-700 mb-2">
               ${Math.round(totalRevenue ?? 0)}
             </p>
-            <p className="text-sm text-blue-600 font-medium">Lifetime</p>
+            <p className="text-sm text-blue-600 font-medium">{t('dashboard.lifetime')}</p>
           </div>
         </div>
       </div>
@@ -115,7 +117,7 @@ export default function RevenueWidget({
         <div className="flex items-center justify-center gap-2 text-gray-600">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           <p className="text-xs font-medium">
-            Tier 2 customers: $2/day per package after 1-day free storage
+            {t('dashboard.tier2Info')}
           </p>
         </div>
       </div>

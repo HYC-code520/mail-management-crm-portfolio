@@ -1253,26 +1253,26 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           <div className="grid grid-cols-3 gap-4 mb-6">
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.date')}</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
-              <p className="mt-1 text-xs text-gray-500">Select the date the mail was received</p>
+              <p className="mt-1 text-xs text-gray-500">{t('mail.dateReceivedHelp')}</p>
             </div>
 
             {/* Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.type')}</label>
               <select
                 value={itemType}
                 onChange={(e) => {
                   const newType = e.target.value;
                   // Check if selecting Package for Tier 1 customer
                   if (newType === 'Package' && selectedContact && (selectedContact as any).service_tier === 1) {
-                    if (!window.confirm('⚠️ Warning: This customer is on Service Tier 1, which typically does not include package handling. Are you sure you want to log a package for this customer?')) {
+                    if (!window.confirm(t('warnings.tier1PackageWarning'))) {
                       return; // Don't change if user cancels
                     }
                   }
@@ -1280,20 +1280,20 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 }}
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Letter">Letter</option>
-                <option value="Package">Package</option>
+                <option value="Letter">{t('mailTypes.letter')}</option>
+                <option value="Package">{t('mailTypes.package')}</option>
               </select>
               {itemType === 'Package' && selectedContact && (selectedContact as any).service_tier === 1 && (
                 <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
                   <AlertTriangle className="w-4 h-4" />
-                  Tier 1 customers typically don't receive packages
+                  {t('warnings.tier1NoPackages')}
                 </p>
               )}
             </div>
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.quantity')}</label>
               <input
                 type="number"
                 min="1"
@@ -1306,12 +1306,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
           {/* Note */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Note (Optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.noteOptional')}</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              placeholder="Add any relevant notes..."
+              placeholder={t('mail.addRelevantNotes')}
               className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
           </div>
@@ -1319,7 +1319,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           {/* Staff Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Who is logging this mail? *
+              {t('staff.whoLogging')} *
             </label>
             <div className="flex gap-3">
               <button
@@ -1346,20 +1346,20 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               </button>
             </div>
             {!loggedBy && (
-              <p className="mt-1 text-xs text-red-600">Please select who is logging this mail</p>
+              <p className="mt-1 text-xs text-red-600">{t('mail.selectWhoLogging')}</p>
             )}
           </div>
 
           {/* Link to Customer */}
           <div className="mb-6 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Link to Customer</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.linkToCustomer')}</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by Name / Company / Mailbox #..."
+                placeholder={t('mail.searchByNameCompanyMailbox')}
                 className="w-full px-4 py-2 pl-10 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -1485,7 +1485,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           className="w-full flex items-center gap-2 p-4 hover:bg-gray-50 transition-colors"
         >
           <Filter className="w-5 h-5 text-gray-600" />
-          <h3 className="font-semibold text-gray-900">Filters</h3>
+          <h3 className="font-semibold text-gray-900">{t('filters.filters')}</h3>
           {activeFiltersCount > 0 && (
             <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
               {activeFiltersCount} active
@@ -1500,7 +1500,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               className="ml-auto text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
             >
               <X className="w-4 h-4" />
-              Clear all
+              {t('filters.clearAll')}
             </button>
           )}
           <div className={`ml-${activeFiltersCount > 0 ? '0' : 'auto'} text-gray-400`}>
@@ -1514,63 +1514,63 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
             {/* Filter Row 1 */}
             <div className="grid grid-cols-4 gap-4 mb-4 mt-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.status')}</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option>All Status</option>
-                  <option>Received</option>
-                  <option>Pending</option>
-                  <option>Notified</option>
-                  <option>Picked Up</option>
-                  <option>Scanned</option>
-                  <option>Scanned Document</option>
-                  <option>Forward</option>
-                  <option>Abandoned</option>
-                  <option>Abandoned Package</option>
+                  <option value="All Status">{t('filters.allStatus')}</option>
+                  <option value="Received">{t('mailStatus.received')}</option>
+                  <option value="Pending">{t('mailStatus.pending')}</option>
+                  <option value="Notified">{t('mailStatus.notified')}</option>
+                  <option value="Picked Up">{t('mailStatus.pickedUp')}</option>
+                  <option value="Scanned">{t('mailStatus.scanned')}</option>
+                  <option value="Scanned Document">{t('mailStatus.scannedDocument')}</option>
+                  <option value="Forward">{t('mailStatus.forward')}</option>
+                  <option value="Abandoned">{t('mailStatus.abandoned')}</option>
+                  <option value="Abandoned Package">{t('mailStatus.abandonedPackage')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.type')}</label>
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option>All Types</option>
-                  <option>Letter</option>
-                  <option>Package</option>
+                  <option value="All Types">{t('filters.allTypes')}</option>
+                  <option value="Letter">{t('mailTypes.letter')}</option>
+                  <option value="Package">{t('mailTypes.package')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4 inline mr-1" />
-                  Date Range
+                  {t('filters.dateRange')}
                 </label>
                 <select
                   value={dateRangeFilter}
                   onChange={(e) => setDateRangeFilter(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option>All Time</option>
-                  <option>Today</option>
-                  <option>Last 7 Days</option>
-                  <option>Last 30 Days</option>
+                  <option value="All Time">{t('filters.allTime')}</option>
+                  <option value="Today">{t('filters.today')}</option>
+                  <option value="Last 7 Days">{t('filters.last7Days')}</option>
+                  <option value="Last 30 Days">{t('filters.last30Days')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mailbox</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('filters.mailbox')}</label>
                 <select
                   value={mailboxFilter}
                   onChange={(e) => setMailboxFilter(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option>All Mailboxes</option>
+                  <option value="All Mailboxes">{t('filters.allMailboxes')}</option>
                   {uniqueMailboxes.map(mailbox => (
                     <option key={mailbox} value={mailbox}>{mailbox}</option>
                   ))}
@@ -1580,12 +1580,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
             {/* Filter Row 2 - Just Search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.search')}</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search customer, mailbox, unit..."
+                  placeholder={t('filters.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -1599,7 +1599,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 <div className="flex flex-wrap gap-2">
                   {statusFilter !== 'All Status' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
-                      Status: {statusFilter}
+                      {t('common.status')}: {statusFilter}
                       <button onClick={() => setStatusFilter('All Status')} className="hover:bg-blue-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1607,7 +1607,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   )}
                   {typeFilter !== 'All Types' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
-                      Type: {typeFilter}
+                      {t('common.type')}: {typeFilter}
                       <button onClick={() => setTypeFilter('All Types')} className="hover:bg-purple-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1615,7 +1615,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   )}
                   {dateRangeFilter !== 'All Time' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">
-                      Date: {dateRangeFilter}
+                      {t('common.date')}: {dateRangeFilter}
                       <button onClick={() => setDateRangeFilter('All Time')} className="hover:bg-green-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1623,7 +1623,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   )}
                   {mailboxFilter !== 'All Mailboxes' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 text-sm rounded-full">
-                      Mailbox: {mailboxFilter}
+                      {t('filters.mailbox')}: {mailboxFilter}
                       <button onClick={() => setMailboxFilter('All Mailboxes')} className="hover:bg-orange-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1647,16 +1647,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       {/* Results Counter and Rows Per Page */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-600">
-          Showing <span className="font-semibold text-gray-900">{sortedGroups.length}</span> groups{' '}
-          (<span className="font-semibold text-gray-900">{filteredItems.length}</span> items) of{' '}
-          <span className="font-semibold text-gray-900">{mailItems.length}</span> total
+          {t('mail.showingGroups', { groups: sortedGroups.length, items: filteredItems.length, total: mailItems.length })}
         </p>
         <div className="flex items-center gap-4">
           <p className="text-sm text-gray-500 italic">
-            💡 Items grouped by customer, date, and type. Click to expand.
+            💡 {t('mail.groupedByTip')}
           </p>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Rows per page:</label>
+            <label className="text-sm text-gray-600">{t('mail.rowsPerPage')}</label>
             <select
               value={rowsPerPage}
               onChange={(e) => {
@@ -1681,21 +1679,21 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           <div className="text-center py-12">
             <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">
-              {activeFiltersCount > 0 ? 'No mail items match your filters' : 'No mail items found'}
+              {activeFiltersCount > 0 ? t('mail.noMailItemsMatch') : t('mail.noMailItemsFound')}
             </p>
             {activeFiltersCount > 0 ? (
               <button
                 onClick={clearAllFilters}
                 className="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
               >
-                Clear Filters
+                {t('mail.clearFilters')}
               </button>
             ) : (
               <button
                 onClick={() => navigate('/dashboard/intake')}
                 className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors"
               >
-                Add Mail Item
+                {t('mail.addMailItem')}
               </button>
             )}
           </div>
@@ -1711,7 +1709,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center gap-2">
-                    Date
+                    {t('common.date')}
                     {sortColumn === 'date' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1726,7 +1724,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('type')}
                 >
                   <div className="flex items-center gap-2">
-                    Type
+                    {t('common.type')}
                     {sortColumn === 'type' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1741,7 +1739,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('quantity')}
                 >
                   <div className="flex items-center gap-2">
-                    Qty
+                    {t('mail.qty')}
                     {sortColumn === 'quantity' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1756,7 +1754,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('customer')}
                 >
                   <div className="flex items-center gap-2">
-                    Customer
+                    {t('mail.customer')}
                     {sortColumn === 'customer' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1771,7 +1769,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center gap-2">
-                    Status
+                    {t('common.status')}
                     {sortColumn === 'status' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1786,7 +1784,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('lastNotified')}
                 >
                   <div className="flex items-center gap-2">
-                    Last Notified
+                    {t('mail.lastNotified')}
                     {sortColumn === 'lastNotified' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1796,8 +1794,8 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 </th>
                 
                 {/* Non-sortable columns */}
-                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">Notes</th>
-                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">Actions</th>
+                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">{t('common.notes')}</th>
+                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -2263,12 +2261,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
-              <p className="mt-1 text-xs text-gray-500">Select the date the mail was received</p>
+              <p className="mt-1 text-xs text-gray-500">{t('mail.dateReceivedHelp')}</p>
             </div>
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">Quantity *</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">{t('mail.quantity')} *</label>
               {editingGroupItems.length > 0 && (
                 <p className="text-xs text-gray-500 mb-2">
                   Current: {editingGroupItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} item(s)
@@ -2289,7 +2287,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
           {/* Mail Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Mail Type *</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('mail.mailType')} *</label>
             <select
               name="item_type"
               value={formData.item_type}
@@ -2297,15 +2295,15 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               required
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="Letter">Letter</option>
-              <option value="Package">Package</option>
-              <option value="Certified Mail">Certified Mail</option>
+              <option value="Letter">{t('mailTypes.letter')}</option>
+              <option value="Package">{t('mailTypes.package')}</option>
+              <option value="Certified Mail">{t('mailTypes.certifiedMail')}</option>
             </select>
           </div>
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Status *</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('common.status')} *</label>
             <select
               name="status"
               value={formData.status}
@@ -2313,13 +2311,13 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               required
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="Received">Received</option>
-              <option value="Pending">Pending</option>
-              <option value="Notified">Notified</option>
-              <option value="Picked Up">Picked Up</option>
-              <option value="Scanned">Scanned</option>
-              <option value="Forward">Forward</option>
-              <option value="Abandoned">Abandoned</option>
+              <option value="Received">{t('mailStatus.received')}</option>
+              <option value="Pending">{t('mailStatus.pending')}</option>
+              <option value="Notified">{t('mailStatus.notified')}</option>
+              <option value="Picked Up">{t('mailStatus.pickedUp')}</option>
+              <option value="Scanned">{t('mailStatus.scanned')}</option>
+              <option value="Forward">{t('mailStatus.forward')}</option>
+              <option value="Abandoned">{t('mailStatus.abandoned')}</option>
             </select>
           </div>
 
@@ -2333,19 +2331,19 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 {statusChanged && (
                 <p className="text-sm text-blue-800 font-medium mb-3">
-                  Status is being changed from "{editingMailItem.status}" to "{formData.status}"
+                  {t('mail.statusChangingFrom', { from: editingMailItem.status, to: formData.status })}
                 </p>
                 )}
                 {quantityChanged && (
                   <p className="text-sm text-blue-800 font-medium mb-3">
-                    Quantity is being changed from {groupTotalQty} to {formData.quantity}
+                    {t('mail.quantityChangingFrom', { from: groupTotalQty, to: formData.quantity })}
                   </p>
                 )}
                 
                 {/* Who performed this action */}
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Who is making this change? *
+                    {t('staff.whoMakingChange')} *
                   </label>
                   <div className="flex gap-3">
                     <button
@@ -2357,7 +2355,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                           : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                       }`}
                     >
-                      👤 Madison
+                      👤 {t('staff.madison')}
                     </button>
                     <button
                       type="button"
@@ -2368,24 +2366,24 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                           : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                       }`}
                     >
-                      👤 Merlin
+                      👤 {t('staff.merlin')}
                     </button>
                   </div>
                   {!formData.performed_by && (
-                    <p className="mt-1 text-xs text-red-600">Please select who is making this change</p>
+                    <p className="mt-1 text-xs text-red-600">{t('validation.selectPerformer')}</p>
                   )}
                 </div>
 
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Notes (Optional)
+                    {t('actionModal.notesOptional')}
                   </label>
                   <textarea
                     name="edit_notes"
                     value={formData.edit_notes}
                     onChange={handleChange}
-                    placeholder="Add any notes about this change..."
+                    placeholder={t('mail.addNotesAboutChange')}
                     rows={2}
                     className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -2397,12 +2395,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Description</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('common.description')}</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Add any notes about this mail item..."
+              placeholder={t('mail.addNotesPlaceholder')}
               rows={3}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
@@ -2415,14 +2413,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               onClick={closeModal}
               className="flex-1 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Updating...' : 'Update Mail Item'}
+              {saving ? t('mail.updating') : t('mail.updateMailItem')}
             </button>
           </div>
         </form>

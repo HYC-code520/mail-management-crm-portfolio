@@ -251,14 +251,14 @@ describe('CollectFeeModal', () => {
       );
 
       // Initially, letter checkbox should not be visible
-      expect(screen.queryByText(/Also mark 2 letters as picked up/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Also mark 2 letter/i)).not.toBeInTheDocument();
 
       // Check the main "Mark as Picked Up" checkbox
       const mainCheckbox = screen.getByRole('checkbox', { name: /Also mark as Picked Up/i });
       fireEvent.click(mainCheckbox);
 
       // Now letter checkbox should appear
-      expect(screen.getByText(/Also mark 2 letters as picked up/i)).toBeInTheDocument();
+      expect(screen.getByText(/Also mark 2 letter/i)).toBeInTheDocument();
     });
 
     it('should show correct letter count with proper pluralization', () => {
@@ -283,7 +283,7 @@ describe('CollectFeeModal', () => {
       fireEvent.click(mainCheckbox);
 
       // Should say "letter" (singular)
-      expect(screen.getByText(/Also mark 1 letter as picked up/i)).toBeInTheDocument();
+      expect(screen.getByText(/Also mark 1 letter/i)).toBeInTheDocument();
     });
 
     it('should hide letter checkbox when main checkbox is unchecked', () => {
@@ -301,11 +301,11 @@ describe('CollectFeeModal', () => {
       // Check main checkbox
       const mainCheckbox = screen.getByRole('checkbox', { name: /Also mark as Picked Up/i });
       fireEvent.click(mainCheckbox);
-      expect(screen.getByText(/Also mark 2 letters as picked up/i)).toBeInTheDocument();
+      expect(screen.getByText(/Also mark 2 letter/i)).toBeInTheDocument();
 
       // Uncheck main checkbox
       fireEvent.click(mainCheckbox);
-      expect(screen.queryByText(/Also mark 2 letters as picked up/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Also mark 2 letter/i)).not.toBeInTheDocument();
     });
   });
 
@@ -420,7 +420,7 @@ describe('CollectFeeModal', () => {
       fireEvent.click(mainCheckbox);
 
       // Uncheck letter checkbox
-      const letterCheckbox = screen.getByRole('checkbox', { name: /Also mark 2 letters/i });
+      const letterCheckbox = screen.getByRole('checkbox', { name: /Also mark 2 letter/i });
       fireEvent.click(letterCheckbox);
 
       // Collect
@@ -460,7 +460,7 @@ describe('CollectFeeModal', () => {
       fireEvent.click(mainCheckbox);
 
       // Letter checkbox should be checked by default
-      const letterCheckbox = screen.getByRole('checkbox', { name: /Also mark 2 letters/i });
+      const letterCheckbox = screen.getByRole('checkbox', { name: /Also mark 2 letter/i });
       expect(letterCheckbox).toBeChecked();
 
       // Collect

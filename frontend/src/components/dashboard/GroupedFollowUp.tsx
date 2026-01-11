@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AlertCircle, Package, Mail, ChevronDown, Send, DollarSign, Clock, MapPin } from 'lucide-react';
 import { getCustomerDisplayName } from '../../utils/customerDisplay';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface PackageFee {
   fee_id: string;
@@ -113,6 +114,7 @@ export default function GroupedFollowUpSection({
   getDaysSince, 
   loading 
 }: GroupedFollowUpProps) {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [displayCount, setDisplayCount] = useState(12);
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
@@ -140,7 +142,7 @@ export default function GroupedFollowUpSection({
           />
         </div>
         <p className="mt-4 text-base font-medium text-gray-600 animate-pulse">
-          Loading follow-ups...
+          {t('followUps.loadingFollowUps')}
         </p>
       </div>
     );
@@ -154,9 +156,9 @@ export default function GroupedFollowUpSection({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">All Caught Up!</h3>
-        <p className="text-gray-600">No customers need follow-up at this time.</p>
-        <p className="text-sm text-gray-500 mt-1">Great job staying on top of things! 🎉</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">{t('followUps.allCaughtUp')}</h3>
+        <p className="text-gray-600">{t('followUps.noCustomersNeedFollowUp')}</p>
+        <p className="text-sm text-gray-500 mt-1">{t('followUps.greatJob')}</p>
       </div>
     );
   }
@@ -209,7 +211,7 @@ export default function GroupedFollowUpSection({
             {/* Customer info */}
             <div className="mb-4">
               <p className="text-sm text-gray-500 mb-1">
-                📮 Mailbox {group.contact.mailbox_number || 'N/A'}
+                📮 {t('followUps.mailbox')} {group.contact.mailbox_number || 'N/A'}
               </p>
               <h3 className="text-xl font-bold text-gray-900 leading-tight">
                 {customerName}
@@ -220,7 +222,7 @@ export default function GroupedFollowUpSection({
             <div className="flex flex-wrap gap-2 mb-4">
               {/* Item count tag */}
               <span className="px-3 py-1 bg-white/70 border border-gray-200 rounded-full text-xs font-medium text-gray-700">
-                {totalItems} item{totalItems !== 1 ? 's' : ''}
+                {totalItems === 1 ? t('followUps.nItem', { count: totalItems }) : t('followUps.nItems', { count: totalItems })}
               </span>
               
               {/* Age tag */}
@@ -230,7 +232,7 @@ export default function GroupedFollowUpSection({
                 oldestDays >= 7 ? 'border-amber-300 text-amber-700' :
                 'border-gray-200 text-gray-700'
               }`}>
-                {oldestDays} days
+                {t('followUps.nDays', { count: oldestDays })}
               </span>
               
               {/* Package/Letter breakdown */}
@@ -248,7 +250,7 @@ export default function GroupedFollowUpSection({
               {/* Status tags */}
               {isAbandoned && (
                 <span className="px-3 py-1 bg-red-100 border border-red-300 rounded-full text-xs font-medium text-red-700">
-                  ⚠️ 30+ Days
+                  ⚠️ {t('followUps.daysPlus', { count: 30 })}
                 </span>
               )}
             </div>
@@ -258,10 +260,10 @@ export default function GroupedFollowUpSection({
               <div className="mb-4 animate-fadeIn">
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-2 px-2 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                  <div className="col-span-4">Item</div>
-                  <div className="col-span-3 text-center">Qty</div>
-                  <div className="col-span-2 text-center">Age</div>
-                  <div className="col-span-3 text-right">Fee</div>
+                  <div className="col-span-4">{t('followUps.item')}</div>
+                  <div className="col-span-3 text-center">{t('followUps.qty')}</div>
+                  <div className="col-span-2 text-center">{t('followUps.age')}</div>
+                  <div className="col-span-3 text-right">{t('followUps.fee')}</div>
                 </div>
 
                 {/* Aggregate packages by date */}
@@ -364,20 +366,20 @@ export default function GroupedFollowUpSection({
                     {group.packages.length > 0 && (
                       <span className="flex items-center gap-1">
                         <Package className="w-3 h-3" />
-                        {group.packages.reduce((sum, pkg) => sum + (pkg.quantity || 1), 0)} pkg
+                        {group.packages.reduce((sum, pkg) => sum + (pkg.quantity || 1), 0)} {t('followUps.pkg')}
                       </span>
                     )}
                     {group.letters.length > 0 && (
                       <span className="flex items-center gap-1">
                         <Mail className="w-3 h-3" />
-                        {group.letters.reduce((sum, letter) => sum + (letter.quantity || 1), 0)} letters
+                        {group.letters.reduce((sum, letter) => sum + (letter.quantity || 1), 0)} {t('followUps.letters')}
                       </span>
                     )}
                   </div>
                   {group.lastNotified && (
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      Notified {getDaysSince(group.lastNotified)}d ago
+                      {t('followUps.notifiedAgo', { days: getDaysSince(group.lastNotified) })}
                     </span>
                   )}
                 </div>
@@ -392,7 +394,7 @@ export default function GroupedFollowUpSection({
                     <p className={`text-2xl font-bold ${colors.accent}`}>
                       ${group.totalFees.toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-500">storage fees</p>
+                    <p className="text-xs text-gray-500">{t('followUps.storageFees')}</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 text-gray-500">
@@ -407,7 +409,7 @@ export default function GroupedFollowUpSection({
                   ? 'bg-gray-200 text-gray-700' 
                   : 'bg-gray-900 text-white'
               }`}>
-                {isPersonExpanded ? 'Click to collapse' : 'Click for details'}
+                {isPersonExpanded ? t('followUps.clickToCollapse') : t('followUps.clickForDetails')}
               </div>
             </div>
 
@@ -424,7 +426,7 @@ export default function GroupedFollowUpSection({
                     className="px-3 py-2 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors bg-green-100 hover:bg-green-200 text-green-700 border border-green-200"
                   >
                     <DollarSign className="w-3.5 h-3.5" />
-                    Collect
+                    {t('followUps.collect')}
                   </button>
                 )}
                 
@@ -443,7 +445,7 @@ export default function GroupedFollowUpSection({
                   }`}
                 >
                   <Send className="w-3.5 h-3.5" />
-                  {isAbandoned ? 'Final Notice' : 'Remind'}
+                  {isAbandoned ? t('followUps.finalNotice') : t('followUps.remind')}
                 </button>
                 
                 {/* Mark Abandoned button - if 30+ days */}
@@ -454,9 +456,9 @@ export default function GroupedFollowUpSection({
                       onMarkAbandoned(group);
                     }}
                     className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors border border-gray-200"
-                    title="Mark items 30+ days old as abandoned"
+                    title={t('followUps.markAbandoned')}
                   >
-                    Abandon
+                    {t('followUps.abandon')}
                   </button>
                 )}
                 
@@ -468,7 +470,7 @@ export default function GroupedFollowUpSection({
                   }}
                   className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors border border-gray-200"
                 >
-                  Profile
+                  {t('followUps.profile')}
                 </button>
               </div>
             )}
@@ -478,7 +480,7 @@ export default function GroupedFollowUpSection({
               <div className="mt-3 pt-3 border-t border-red-200/50">
                 <p className="text-xs text-red-600 font-medium flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  {oldestDays}+ days - requires immediate attention
+                  {t('followUps.requiresImmediateAttention', { days: oldestDays })}
                 </p>
               </div>
             )}
@@ -493,7 +495,7 @@ export default function GroupedFollowUpSection({
             onClick={() => setDisplayCount(displayCount + 12)}
             className="w-full py-3 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-2xl font-medium transition-colors border border-gray-200 shadow-sm"
           >
-            Show {Math.min(12, groups.length - displayCount)} more customers
+            {t('followUps.showMoreCustomers', { count: Math.min(12, groups.length - displayCount) })}
           </button>
         </div>
       )}

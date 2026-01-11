@@ -260,7 +260,7 @@ export default function FeesPage() {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          All <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${statusFilter === 'all' ? 'bg-white/20' : 'bg-gray-200'}`}>{feesData.length}</span>
+          {t('fees.all')} <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${statusFilter === 'all' ? 'bg-white/20' : 'bg-gray-200'}`}>{feesData.length}</span>
         </button>
         <button
           onClick={() => setStatusFilter('urgent')}
@@ -270,7 +270,7 @@ export default function FeesPage() {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Urgent <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${statusFilter === 'urgent' ? 'bg-white/20' : 'bg-gray-200'}`}>{urgentCount}</span>
+          {t('fees.urgent')} <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${statusFilter === 'urgent' ? 'bg-white/20' : 'bg-gray-200'}`}>{urgentCount}</span>
         </button>
         <button
           onClick={() => setStatusFilter('normal')}
@@ -280,7 +280,7 @@ export default function FeesPage() {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Normal <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${statusFilter === 'normal' ? 'bg-white/20' : 'bg-gray-200'}`}>{normalCount}</span>
+          {t('fees.normal')} <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${statusFilter === 'normal' ? 'bg-white/20' : 'bg-gray-200'}`}>{normalCount}</span>
         </button>
       </div>
 
@@ -290,7 +290,7 @@ export default function FeesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search for customer, mailbox number..."
+            placeholder={t('fees.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -298,7 +298,7 @@ export default function FeesPage() {
         </div>
         <button className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
           <SlidersHorizontal className="w-5 h-5" />
-          Filters
+          {t('fees.filters')}
         </button>
       </div>
 
@@ -359,7 +359,7 @@ export default function FeesPage() {
                     <div className="flex items-center gap-2 mb-3">
                       <span className={`w-2 h-2 rounded-full ${isUrgent ? 'bg-red-500' : 'bg-green-500'}`} />
                       <span className={`text-sm font-medium ${isUrgent ? 'text-red-600' : 'text-green-600'}`}>
-                        {isUrgent ? 'Urgent' : 'Pending'}
+                        {isUrgent ? t('fees.urgent') : t('mailStatus.pending')}
                       </span>
                     </div>
                     
@@ -369,17 +369,17 @@ export default function FeesPage() {
                     {/* Stats Row */}
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-500 text-sm">Mailbox</span>
+                        <span className="text-gray-500 text-sm">{t('fees.mailbox')}</span>
                         <span className="text-gray-900 font-medium">{group.contact.mailbox_number || 'N/A'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-500 text-sm">Amount</span>
+                        <span className="text-gray-500 text-sm">{t('fees.amount')}</span>
                         <span className="text-gray-900 font-bold text-lg">${group.totalFees.toFixed(2)}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-500 text-sm">Days Pending</span>
+                        <span className="text-gray-500 text-sm">{t('fees.daysPending')}</span>
                         <span className={`font-medium ${oldestDays >= 30 ? 'text-red-600' : oldestDays >= 14 ? 'text-orange-600' : 'text-gray-900'}`}>
-                          {oldestDays} days
+                          {t('followUps.nDays', { count: oldestDays })}
                         </span>
                       </div>
                     </div>
@@ -393,7 +393,7 @@ export default function FeesPage() {
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${isUrgent ? 'bg-red-500' : 'bg-green-500'}`} />
                           <span className="text-sm font-medium text-gray-700">
-                            {totalItems} package{totalItems !== 1 ? 's' : ''}
+                            {totalItems === 1 ? t('fees.nPackages', { count: totalItems }) : t('fees.nPackagesPlural', { count: totalItems })}
                           </span>
                         </div>
                         {isPersonExpanded ? 
@@ -442,19 +442,19 @@ export default function FeesPage() {
                         className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
                       >
                         <Banknote className="w-4 h-4" />
-                        Collect
+                        {t('fees.collect')}
                       </button>
                       <button
                         onClick={() => openWaiveFeeModal(group)}
                         className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
                       >
-                        Waive
+                        {t('fees.waive')}
                       </button>
                       <button
                         onClick={() => navigate(`/dashboard/contacts/${group.contact.contact_id}`)}
                         className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
                       >
-                        Profile
+                        {t('fees.profile')}
                       </button>
                     </div>
                   </div>

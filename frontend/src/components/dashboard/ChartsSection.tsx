@@ -7,6 +7,7 @@
 import React from 'react';
 import { TrendingUp, UserPlus, Loader2 } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext.tsx';
 
 interface ChartData {
   date: string;
@@ -29,6 +30,7 @@ export default function ChartsSection({
   onTimeRangeChange,
   loading
 }: ChartsSectionProps) {
+  const { t } = useLanguage();
   
   const handleRangeChange = (range: 7 | 14 | 30) => {
     if (loading) return; // Prevent multiple clicks while loading
@@ -68,7 +70,7 @@ export default function ChartsSection({
                 : 'text-blue-600 hover:text-blue-800 hover:bg-white/40'
             } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {range} Days
+            {t('dashboard.nDays', { count: range })}
           </button>
         ))}
       </div>
@@ -82,8 +84,8 @@ export default function ChartsSection({
               <TrendingUp className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-gray-900">Mail Volume</h2>
-              <p className="text-xs text-gray-500">Last {chartTimeRange} days</p>
+              <h2 className="text-sm font-bold text-gray-900">{t('dashboard.mailVolume')}</h2>
+              <p className="text-xs text-gray-500">{t('dashboard.lastNDays', { count: chartTimeRange })}</p>
             </div>
           </div>
           
@@ -144,8 +146,8 @@ export default function ChartsSection({
               <UserPlus className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-gray-900">New Customers</h2>
-              <p className="text-xs text-gray-500">Last {chartTimeRange} days</p>
+              <h2 className="text-sm font-bold text-gray-900">{t('dashboard.newCustomers')}</h2>
+              <p className="text-xs text-gray-500">{t('dashboard.lastNDays', { count: chartTimeRange })}</p>
             </div>
           </div>
           

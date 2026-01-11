@@ -58,7 +58,7 @@ export default function QuickNotifyModal({
         notes: notes.trim() || null
       });
 
-      toast.success(`✓ ${customerName} notified via ${notificationMethod}`);
+      toast.success(`✓ ${customerName} ${t('notifyModal.customerNotifiedVia', { method: notificationMethod })}`);
       onSuccess();
       handleClose();
     } catch (err) {
@@ -81,7 +81,7 @@ export default function QuickNotifyModal({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Mark as Notified</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('notifyModal.title')}</h2>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -93,14 +93,14 @@ export default function QuickNotifyModal({
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-600">Customer:</p>
+            <p className="text-sm text-gray-600">{t('actionModal.customerLabel')}</p>
             <p className="font-semibold text-gray-900">{customerName}</p>
           </div>
 
           {/* Who Notified */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Who notified? <span className="text-red-500">*</span>
+              {t('notifyModal.whoNotified')} <span className="text-red-500">*</span>
             </label>
             <select
               value={notifiedBy}
@@ -108,16 +108,16 @@ export default function QuickNotifyModal({
               required
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              <option value="">Select staff member...</option>
-              <option value="Merlin">Merlin</option>
-              <option value="Madison">Madison</option>
+              <option value="">{t('staff.selectStaff')}</option>
+              <option value="Merlin">{t('staff.merlin')}</option>
+              <option value="Madison">{t('staff.madison')}</option>
             </select>
           </div>
 
           {/* Notification Method */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              How did you notify? <span className="text-red-500">*</span>
+              {t('notifyModal.howNotified')} <span className="text-red-500">*</span>
             </label>
             <select
               value={notificationMethod}
@@ -125,23 +125,23 @@ export default function QuickNotifyModal({
               required
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              <option value="Email">Email</option>
-              <option value="Phone">Phone Call</option>
-              <option value="Text">Text Message</option>
-              <option value="WeChat">WeChat</option>
-              <option value="In-Person">In-Person</option>
+              <option value="Email">{t('notificationMethods.email')}</option>
+              <option value="Phone">{t('notificationMethods.phone')}</option>
+              <option value="Text">{t('notificationMethods.text')}</option>
+              <option value="WeChat">{t('notificationMethods.wechat')}</option>
+              <option value="In-Person">{t('notificationMethods.inPerson')}</option>
             </select>
           </div>
 
           {/* Optional Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Notes (Optional)
+              {t('notifyModal.notesOptional')}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional details..."
+              placeholder={t('notifyModal.additionalDetails')}
               rows={3}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
@@ -154,14 +154,14 @@ export default function QuickNotifyModal({
               onClick={handleClose}
               className="flex-1 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Saving...' : 'Mark as Notified'}
+              {loading ? t('common.saving') : t('notifyModal.markAsNotified')}
             </button>
           </div>
         </form>

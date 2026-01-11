@@ -1,5 +1,6 @@
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext.tsx';
 
 const COLORS = {
   blue: '#3B82F6',
@@ -41,6 +42,8 @@ interface AnalyticsSectionProps {
 }
 
 export default function AnalyticsSection({ analytics, loading }: AnalyticsSectionProps) {
+  const { t } = useLanguage();
+  
   if (loading) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
@@ -58,14 +61,14 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
 
   // Prepare data for charts
   const serviceTierData = [
-    { name: 'Tier 1', value: analytics.serviceTiers.tier1, color: COLORS.blue },
-    { name: 'Tier 2', value: analytics.serviceTiers.tier2, color: COLORS.purple },
+    { name: t('dashboard.tier1'), value: analytics.serviceTiers.tier1, color: COLORS.blue },
+    { name: t('dashboard.tier2'), value: analytics.serviceTiers.tier2, color: COLORS.purple },
   ];
 
   const languageData = [
-    { name: 'English', value: analytics.languageDistribution.English, color: COLORS.blue },
-    { name: 'Chinese', value: analytics.languageDistribution.Chinese, color: COLORS.red },
-    { name: 'Both', value: analytics.languageDistribution.Both, color: COLORS.purple },
+    { name: t('language.english'), value: analytics.languageDistribution.English, color: COLORS.blue },
+    { name: t('language.chinese'), value: analytics.languageDistribution.Chinese, color: COLORS.red },
+    { name: t('language.both'), value: analytics.languageDistribution.Both, color: COLORS.purple },
   ].filter(item => item.value > 0);
 
   const statusData = Object.entries(analytics.statusDistribution)
@@ -111,7 +114,7 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* Service Tiers */}
           <div>
-            <p className="text-xs font-bold text-gray-700 mb-2">Service Tiers</p>
+            <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.serviceTiers')}</p>
             <div className="flex items-center gap-2">
               <ResponsiveContainer width={100} height={100}>
                 <PieChart>
@@ -147,7 +150,7 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
           {/* Language */}
           {languageData.length > 0 && (
             <div>
-              <p className="text-xs font-bold text-gray-700 mb-2">Language</p>
+              <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.language')}</p>
               <div className="flex items-center gap-2">
                 <ResponsiveContainer width={100} height={100}>
                   <PieChart>
@@ -182,7 +185,7 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
           {/* Status */}
           {statusData.length > 0 && (
             <div>
-              <p className="text-xs font-bold text-gray-700 mb-2">Mail Status</p>
+              <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.mailStatus')}</p>
               <div className="flex items-center gap-2">
                 <ResponsiveContainer width={100} height={100}>
                   <PieChart>
@@ -217,7 +220,7 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
           {/* Payment Methods */}
           {paymentData.length > 0 && (
             <div>
-              <p className="text-xs font-bold text-gray-700 mb-2">Payment</p>
+              <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.payment')}</p>
               <div className="flex items-center gap-2">
                 <ResponsiveContainer width={100} height={100}>
                   <PieChart>

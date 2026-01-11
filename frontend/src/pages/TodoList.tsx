@@ -172,7 +172,7 @@ export default function TodoList() {
       // Close modal immediately for smooth UX
       setIsCompletionModalOpen(false);
       setTodoToComplete(null);
-      toast.success(`Task completed by ${staffMember}!`);
+      toast.success(t('todos.taskCompletedBy', { name: staffMember }));
       
       // Then update server in background
       await api.todos.update(todoToComplete.todo_id, {
@@ -398,7 +398,7 @@ export default function TodoList() {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          All
+          {t('todos.all')}
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
             filter === 'all' ? 'bg-white/20' : 'bg-gray-200'
           }`}>
@@ -413,7 +413,7 @@ export default function TodoList() {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Incompleted
+          {t('todos.incompleted')}
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
             filter === 'active' ? 'bg-white/20' : 'bg-gray-200'
           }`}>
@@ -428,7 +428,7 @@ export default function TodoList() {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Completed
+          {t('todos.completed')}
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
             filter === 'completed' ? 'bg-white/20' : 'bg-gray-200'
           }`}>
@@ -441,14 +441,14 @@ export default function TodoList() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">
-            {filter === 'active' ? 'All Incomplete Tasks' : 'Today'}
+            {filter === 'active' ? t('todos.allIncompleteTasks') : t('todos.today')}
           </h2>
           {filter !== 'active' && (
             <button
               onClick={goToToday}
               className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              Today
+              {t('todos.today')}
             </button>
           )}
         </div>
@@ -457,7 +457,7 @@ export default function TodoList() {
         {filter === 'active' && (
           <div className="mb-4 px-4 py-3 bg-pink-50 border border-pink-200 rounded-xl">
             <p className="text-sm text-pink-800">
-              Showing all incomplete tasks across all dates, grouped by date with oldest first.
+              {t('todos.showingAllIncomplete')}
             </p>
           </div>
         )}
@@ -468,7 +468,7 @@ export default function TodoList() {
           <button
             onClick={goToPreviousWeek}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-            title="Previous week"
+            title={t('todos.previousWeek')}
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
@@ -520,7 +520,7 @@ export default function TodoList() {
           <button
             onClick={goToNextWeek}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-            title="Next week"
+            title={t('todos.nextWeek')}
           >
             <ChevronRight className="w-5 h-5 text-gray-600" />
           </button>
@@ -535,7 +535,7 @@ export default function TodoList() {
           className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
         >
           <Plus className="w-6 h-6" />
-          Add New Task
+          {t('todos.addNewTask')}
         </button>
       </div>
 
@@ -624,10 +624,10 @@ export default function TodoList() {
             className="w-48 h-48 mx-auto mb-4"
           />
           <p className="text-gray-500 text-lg font-medium mb-2">
-            {filter === 'active' ? 'No incomplete tasks' : 'No tasks for this day'}
+            {filter === 'active' ? t('todos.noIncompleteTasks') : t('todos.noTasksForDay')}
           </p>
           <p className="text-gray-400 text-sm">
-            {filter === 'active' ? 'Great job! All tasks are completed.' : 'Add a task above to get started'}
+            {filter === 'active' ? t('todos.allTasksCompleted') : t('todos.addTaskToStart')}
           </p>
         </div>
       ) : filter === 'active' ? (
@@ -860,20 +860,20 @@ export default function TodoList() {
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Add New Task"
+        title={t('todos.addNewTask')}
       >
         <form onSubmit={handleAddTodo} className="space-y-4">
           {/* Title */}
           <div>
             <label htmlFor="add-title" className="block text-sm font-medium text-gray-700 mb-1">
-              Task Title *
+              {t('todos.taskTitle')} *
             </label>
             <input
               type="text"
               id="add-title"
               value={newTodoTitle}
               onChange={(e) => setNewTodoTitle(e.target.value)}
-              placeholder="Enter task title"
+              placeholder={t('todos.enterTaskTitle')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
               autoFocus
@@ -883,16 +883,14 @@ export default function TodoList() {
           {/* Notes / Details */}
           <div>
             <label htmlFor="add-notes" className="block text-sm font-medium text-gray-700 mb-1">
-              Notes / Details
+              {t('todos.notesDetails')}
             </label>
             <textarea
               id="add-notes"
               value={newTodoNotes}
               onChange={(e) => setNewTodoNotes(e.target.value)}
               rows={4}
-              placeholder="Add details, bullet points, or notes...
-• Item 1
-• Item 2"
+              placeholder={t('todos.notesPlaceholder')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
           </div>
@@ -900,7 +898,7 @@ export default function TodoList() {
           {/* Date */}
           <div>
             <label htmlFor="add-date" className="block text-sm font-medium text-gray-700 mb-1">
-              Date
+              {t('todos.date')}
             </label>
             <input
               type="date"
@@ -914,14 +912,14 @@ export default function TodoList() {
           {/* Category */}
           <div>
             <label htmlFor="add-category" className="block text-sm font-medium text-gray-700 mb-1">
-              Category
+              {t('todos.category')}
             </label>
             <input
               type="text"
               id="add-category"
               value={newTodoCategory}
               onChange={(e) => setNewTodoCategory(e.target.value)}
-              placeholder="e.g., Mail, Social Media"
+              placeholder={t('todos.categoryPlaceholder')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -929,7 +927,7 @@ export default function TodoList() {
           {/* Priority */}
           <div>
             <label htmlFor="add-priority" className="block text-sm font-medium text-gray-700 mb-1">
-              Priority
+              {t('todos.priority')}
             </label>
             <select
               id="add-priority"
@@ -937,15 +935,15 @@ export default function TodoList() {
               onChange={(e) => setNewTodoPriority(Number(e.target.value))}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value={0}>Normal</option>
-              <option value={1}>Priority</option>
+              <option value={0}>{t('todos.normal')}</option>
+              <option value={1}>{t('todos.priorityHigh')}</option>
             </select>
           </div>
 
           {/* Assigned To */}
           <div>
             <label htmlFor="add-staff" className="block text-sm font-medium text-gray-700 mb-1">
-              Assigned To
+              {t('todos.assignedTo')}
             </label>
             <select
               id="add-staff"
@@ -953,11 +951,11 @@ export default function TodoList() {
               onChange={(e) => setNewTodoStaff(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="Merlin">Merlin</option>
-              <option value="Madison">Madison</option>
+              <option value="Merlin">{t('staff.merlin')}</option>
+              <option value="Madison">{t('staff.madison')}</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Who should complete this task?
+              {t('todos.whoShouldComplete')}
             </p>
           </div>
 
@@ -968,14 +966,14 @@ export default function TodoList() {
               onClick={() => setIsAddModalOpen(false)}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
-              Add Task
+              {t('todos.addTask')}
             </button>
           </div>
         </form>
@@ -985,13 +983,13 @@ export default function TodoList() {
       <Modal
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
-        title="Edit Task"
+        title={t('todos.editTask')}
       >
         <form onSubmit={handleEditSubmit} className="space-y-4">
           {/* Title */}
           <div>
             <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 mb-1">
-              Task Title *
+              {t('todos.taskTitle')} *
             </label>
             <input
               type="text"
@@ -1007,7 +1005,7 @@ export default function TodoList() {
           {/* Notes / Description */}
           <div>
             <label htmlFor="edit-notes" className="block text-sm font-medium text-gray-700 mb-1">
-              Notes / Details
+              {t('todos.notesDetails')}
             </label>
             <textarea
               id="edit-notes"
@@ -1015,20 +1013,18 @@ export default function TodoList() {
               value={editFormData.notes}
               onChange={handleEditFormChange}
               rows={4}
-              placeholder="Add details, bullet points, or notes...
-• Item 1
-• Item 2"
+              placeholder={t('todos.notesPlaceholder')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Tip: Use • for bullet points, or just write details on multiple lines
+              {t('todos.notesTip')}
             </p>
           </div>
 
           {/* Date */}
           <div>
             <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700 mb-1">
-              Date
+              {t('todos.date')}
             </label>
             <input
               type="date"
@@ -1043,7 +1039,7 @@ export default function TodoList() {
           {/* Category */}
           <div>
             <label htmlFor="edit-category" className="block text-sm font-medium text-gray-700 mb-1">
-              Category
+              {t('todos.category')}
             </label>
             <input
               type="text"
@@ -1051,7 +1047,7 @@ export default function TodoList() {
               name="category"
               value={editFormData.category}
               onChange={handleEditFormChange}
-              placeholder="e.g., Mail, Social Media"
+              placeholder={t('todos.categoryPlaceholder')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -1059,7 +1055,7 @@ export default function TodoList() {
           {/* Priority */}
           <div>
             <label htmlFor="edit-priority" className="block text-sm font-medium text-gray-700 mb-1">
-              Priority
+              {t('todos.priority')}
             </label>
             <select
               id="edit-priority"
@@ -1068,15 +1064,15 @@ export default function TodoList() {
               onChange={handleEditFormChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value={0}>Normal</option>
-              <option value={1}>Priority</option>
+              <option value={0}>{t('todos.normal')}</option>
+              <option value={1}>{t('todos.priorityHigh')}</option>
             </select>
           </div>
 
           {/* Assigned To */}
           <div>
             <label htmlFor="edit-staff" className="block text-sm font-medium text-gray-700 mb-1">
-              Assigned To
+              {t('todos.assignedTo')}
             </label>
             <select
               id="edit-staff"
@@ -1085,11 +1081,11 @@ export default function TodoList() {
               onChange={handleEditFormChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="Merlin">Merlin</option>
-              <option value="Madison">Madison</option>
+              <option value="Merlin">{t('staff.merlin')}</option>
+              <option value="Madison">{t('staff.madison')}</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Who should complete this task?
+              {t('todos.whoShouldComplete')}
             </p>
           </div>
 
@@ -1100,13 +1096,13 @@ export default function TodoList() {
               onClick={closeEditModal}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
             >
-              Save Changes
+              {t('common.saveChanges')}
             </button>
           </div>
         </form>
@@ -1119,11 +1115,11 @@ export default function TodoList() {
           setIsCompletionModalOpen(false);
           setTodoToComplete(null);
         }}
-        title="Who completed this task?"
+        title={t('todos.whoCompletedTask')}
       >
         <div className="space-y-4">
           <p className="text-gray-600 text-sm">
-            Select who completed: <strong>{todoToComplete?.title}</strong>
+            {t('todos.selectWhoCompleted')} <strong>{todoToComplete?.title}</strong>
           </p>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1134,7 +1130,7 @@ export default function TodoList() {
               <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold group-hover:bg-blue-200">
                 MR
               </div>
-              <span className="font-medium text-gray-900">Merlin</span>
+              <span className="font-medium text-gray-900">{t('staff.merlin')}</span>
             </button>
             
             <button
@@ -1144,7 +1140,7 @@ export default function TodoList() {
               <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xl font-bold group-hover:bg-purple-200">
                 MP
               </div>
-              <span className="font-medium text-gray-900">Madison</span>
+              <span className="font-medium text-gray-900">{t('staff.madison')}</span>
             </button>
           </div>
           
@@ -1156,7 +1152,7 @@ export default function TodoList() {
               }}
               className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

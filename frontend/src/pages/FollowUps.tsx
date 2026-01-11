@@ -282,7 +282,7 @@ export default function FollowUpsPage() {
                 <div className="w-px h-5 bg-gray-300" />
                 <div className="flex items-center gap-2">
                   <span className="text-xl font-semibold text-gray-900">${totalFees.toFixed(0)}</span>
-                  <span>in fees</span>
+                  <span>{t('followUps.inFees')}</span>
                 </div>
               </>
             )}
@@ -291,7 +291,7 @@ export default function FollowUpsPage() {
                 <div className="w-px h-5 bg-gray-300" />
                 <div className="flex items-center gap-2">
                   <span className="text-xl font-semibold text-red-600">{abandonedCount}</span>
-                  <span>30+ days</span>
+                  <span>{t('followUps.daysPlus', { count: 30 })}</span>
                 </div>
               </>
             )}

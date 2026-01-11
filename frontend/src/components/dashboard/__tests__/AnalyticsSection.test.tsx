@@ -80,7 +80,7 @@ describe('AnalyticsSection', () => {
     expect(screen.getByText('Language')).toBeInTheDocument();
     expect(screen.getByText('English: 40')).toBeInTheDocument();
     expect(screen.getByText('Chinese: 25')).toBeInTheDocument();
-    expect(screen.getByText('Both: 5')).toBeInTheDocument();
+    expect(screen.getByText(/Both.*: 5/)).toBeInTheDocument();
   });
 
   it('should display Mail Status section with correct data', () => {
