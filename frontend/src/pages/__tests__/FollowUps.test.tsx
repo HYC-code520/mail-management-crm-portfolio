@@ -149,7 +149,7 @@ describe('FollowUpsPage', () => {
     // FollowUpsPage now shows its own loading state with mail animation
     const mailAnimation = screen.getByAltText('Loading mail animation');
     expect(mailAnimation).toBeInTheDocument();
-    expect(screen.getByText('Loading follow-ups...')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('displays follow-up data after loading', async () => {

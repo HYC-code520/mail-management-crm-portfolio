@@ -119,7 +119,7 @@ describe('NewContact Page', () => {
     const user = userEvent.setup();
     render(<NewContact />);
     
-    const backButton = screen.getByText(/back to customers/i);
+    const backButton = screen.getByText(/back to directory/i);
     await user.click(backButton);
     
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/contacts');

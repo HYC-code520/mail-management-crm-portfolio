@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '../../test/test-utils';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
 import IntakePage from '../Intake';
 import { api } from '../../lib/api-client';
 import { getTodayNY, getNYTimestamp } from '../../utils/timezone';
@@ -83,11 +82,7 @@ describe('IntakePage', () => {
   });
 
   const renderIntakePage = () => {
-    return render(
-      <BrowserRouter>
-        <IntakePage />
-      </BrowserRouter>
-    );
+    return render(<IntakePage />);
   };
 
   describe('Initial Render', () => {
@@ -175,7 +170,7 @@ describe('IntakePage', () => {
       await user.click(screen.getByText('John Doe'));
 
       // Submit form
-      await user.click(screen.getByText('Save Mail Entry'));
+      await user.click(screen.getByText('Log Mail'));
 
       await waitFor(() => {
         expect(api.mailItems.create).toHaveBeenCalledWith({
@@ -207,7 +202,7 @@ describe('IntakePage', () => {
       await user.click(screen.getByText('John Doe'));
 
       // Submit form
-      await user.click(screen.getByText('Save Mail Entry'));
+      await user.click(screen.getByText('Log Mail'));
 
       await waitFor(() => {
         expect(api.mailItems.create).toHaveBeenCalledWith({
@@ -240,7 +235,7 @@ describe('IntakePage', () => {
       await user.type(dateInput, '2025-12-05');
 
       // Submit form
-      await user.click(screen.getByText('Save Mail Entry'));
+      await user.click(screen.getByText('Log Mail'));
 
       await waitFor(() => {
         expect(api.mailItems.create).toHaveBeenCalledWith({
@@ -274,11 +269,11 @@ describe('IntakePage', () => {
       await user.tripleClick(quantityInput);
       await user.keyboard('3');
 
-      const noteInput = screen.getByPlaceholderText(/Add any relevant notes/);
+      const noteInput = screen.getByPlaceholderText(/Add any notes about this mail item/);
       await user.type(noteInput, 'Priority mail');
 
       // Submit
-      await user.click(screen.getByText('Save Mail Entry'));
+      await user.click(screen.getByText('Log Mail'));
 
       await waitFor(() => {
         expect(api.mailItems.create).toHaveBeenCalledWith({
@@ -308,7 +303,7 @@ describe('IntakePage', () => {
       await user.selectOptions(typeSelect, 'Package');
 
       // Submit
-      await user.click(screen.getByText('Save Mail Entry'));
+      await user.click(screen.getByText('Log Mail'));
 
       await waitFor(() => {
         expect(api.mailItems.create).toHaveBeenCalledWith({
@@ -332,7 +327,7 @@ describe('IntakePage', () => {
       await waitFor(() => screen.getByText('John Doe'));
       await user.click(screen.getByText('John Doe'));
 
-      await user.click(screen.getByText('Save Mail Entry'));
+      await user.click(screen.getByText('Log Mail'));
 
       await waitFor(() => {
         expect(api.mailItems.create).toHaveBeenCalled();
@@ -355,7 +350,7 @@ describe('IntakePage', () => {
       renderIntakePage();
 
       // Try to submit without selecting contact
-      await user.click(screen.getByText('Save Mail Entry'));
+      await user.click(screen.getByText('Log Mail'));
 
       // Should not call API
       expect(api.mailItems.create).not.toHaveBeenCalled();

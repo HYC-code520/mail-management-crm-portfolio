@@ -315,18 +315,14 @@ describe('Templates Page - Grouped View', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText(/New Template/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
       });
 
-      const createButton = screen.getByText(/New Template/i);
+      const createButton = screen.getByRole('button', { name: /add/i });
       expect(createButton).toBeInTheDocument();
-      
+
       // Verify button is clickable (not disabled)
-      expect(createButton.closest('button')).not.toBeDisabled();
-      
-      // Verify button has Plus icon (indicates it's a create action)
-      const buttonElement = createButton.closest('button');
-      expect(buttonElement).toBeInTheDocument();
+      expect(createButton).not.toBeDisabled();
     });
   });
 
