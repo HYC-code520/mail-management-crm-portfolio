@@ -10,6 +10,7 @@ import { matchContactByName } from '../utils/nameMatching';
 import CameraModal from '../components/scan/CameraModal';
 import BulkScanEmailModal from '../components/scan/BulkScanEmailModal';
 import { getCustomerDisplayName } from '../utils/customerDisplay';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 import type {
   ScannedItem,
   ScanSession,
@@ -22,6 +23,7 @@ const SESSION_TIMEOUT_HOURS = 4;
 const CONFIDENCE_THRESHOLD = 0.5; // Lowered from 0.7 to 0.5 to accept more matches
 
 export default function ScanSessionPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -980,10 +982,10 @@ export default function ScanSessionPage() {
                 <Camera className="w-12 h-12 text-blue-600" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-3">
-                Mail Scan Session
+                {t('mail.scanMail')}
               </h1>
               <p className="text-gray-600">
-                Scan multiple mail items with your camera. 
+                Scan multiple mail items with your camera.
                 AI will recognize recipients automatically.
               </p>
             </div>
@@ -999,7 +1001,7 @@ export default function ScanSessionPage() {
               onClick={() => navigate('/dashboard')}
               className="mt-4 w-full py-3 text-gray-600 hover:text-gray-900 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

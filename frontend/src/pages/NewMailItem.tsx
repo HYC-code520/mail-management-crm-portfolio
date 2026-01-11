@@ -2,6 +2,7 @@ import React, { useState, useEffect, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface Contact {
   contact_id: string;
@@ -11,6 +12,7 @@ interface Contact {
 }
 
 export default function NewMailItemPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -41,7 +43,7 @@ export default function NewMailItemPage() {
     e.preventDefault();
     
     if (!formData.contact_id) {
-      toast.error('Please select a contact');
+      toast.error(t('validation.selectCustomer'));
       return;
     }
 
@@ -49,7 +51,7 @@ export default function NewMailItemPage() {
 
     try {
       await api.mailItems.create(formData);
-      toast.success('Mail item logged successfully!');
+      toast.success(t('toast.mailLogged'));
       navigate('/dashboard');
     } catch (err) {
       toast.error(`Failed to create mail item: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -87,10 +89,10 @@ export default function NewMailItemPage() {
           onClick={() => navigate(-1)}
           className="text-blue-400 hover:text-blue-300 mb-4 flex items-center gap-2"
         >
-          ← Back
+          ← {t('common.back')}
         </button>
-        <h1 className="text-3xl font-bold text-white">Add Mail Item</h1>
-        <p className="text-zinc-400 mt-2">Log a new package or mail received</p>
+        <h1 className="text-3xl font-bold text-white">{t('mail.addNewMail')}</h1>
+        <p className="text-zinc-400 mt-2">{t('mail.logNewMailDesc')}</p>
       </div>
 
       {/* Form */}
@@ -99,11 +101,11 @@ export default function NewMailItemPage() {
           {/* Contact Selection */}
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-2">
-              Select Contact <span className="text-red-400">*</span>
+              {t('mail.selectCustomer')} <span className="text-red-400">*</span>
             </label>
             {loadingContacts ? (
               <div className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-500">
-                Loading contacts...
+                {t('mail.loadingCustomers')}
               </div>
             ) : (
               <select
@@ -113,7 +115,7 @@ export default function NewMailItemPage() {
                 required
                 className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-zinc-500"
               >
-                <option value="">Select a contact...</option>
+                <option value="">{t('mail.selectCustomer')}...</option>
                 {contacts.map(contact => (
                   <option key={contact.contact_id} value={contact.contact_id}>
                     {getContactDisplayName(contact)}
@@ -137,7 +139,7 @@ export default function NewMailItemPage() {
                  {/* Item Type */}
                  <div>
                    <label className="block text-sm font-medium text-zinc-300 mb-2">
-                     Item Type <span className="text-red-400">*</span>
+                     {t('mail.itemType')} <span className="text-red-400">*</span>
                    </label>
                    <select
                      name="item_type"
@@ -146,15 +148,15 @@ export default function NewMailItemPage() {
                      required
                      className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-zinc-500"
                    >
-                     <option value="Package">📦 Package</option>
-                     <option value="Letter">✉️ Letter</option>
+                     <option value="Package">📦 {t('mailTypes.package')}</option>
+                     <option value="Letter">✉️ {t('mailTypes.letter')}</option>
                    </select>
                  </div>
 
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-2">
-              Description / Notes
+              {t('mail.descriptionOptional')}
             </label>
             <textarea
               name="description"
@@ -172,7 +174,7 @@ export default function NewMailItemPage() {
           {/* Status */}
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-2">
-              Status
+              {t('common.status')}
             </label>
             <select
               name="status"
@@ -180,8 +182,8 @@ export default function NewMailItemPage() {
               onChange={handleChange}
               className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-zinc-500"
             >
-              <option value="Received">Received (Just logged)</option>
-              <option value="Notified">Notified (Already contacted customer)</option>
+              <option value="Received">{t('mailStatus.received')}</option>
+              <option value="Notified">{t('mailStatus.notified')}</option>
             </select>
           </div>
 
@@ -205,14 +207,14 @@ export default function NewMailItemPage() {
             disabled={loading}
             className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={loading || contacts.length === 0}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
           >
-            {loading ? 'Creating...' : 'Add Mail Item'}
+            {loading ? t('common.saving') : t('mail.addNewMail')}
           </button>
         </div>
       </form>

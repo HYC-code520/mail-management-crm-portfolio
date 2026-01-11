@@ -3,6 +3,7 @@ import { Mail, CheckCircle, XCircle, Info, ChevronDown, AlertCircle, Lock, Eye, 
 import { toast } from 'react-hot-toast';
 import { api } from '../lib/api-client';
 import { supabase } from '../lib/supabase';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface GmailStatus {
   connected: boolean;
@@ -10,6 +11,7 @@ interface GmailStatus {
 }
 
 export default function SettingsPage() {
+  const { t } = useLanguage();
   const [gmailStatus, setGmailStatus] = useState<GmailStatus>({ connected: false });
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -133,8 +135,8 @@ export default function SettingsPage() {
     <div className="max-w-full mx-auto px-16 py-6">
       {/* Header - Matches Dashboard Style */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-        <p className="text-gray-600">Manage your account settings and integrations</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('settings.title')}</h1>
+        <p className="text-gray-600">{t('settings.manageAccount')}</p>
       </div>
 
       {/* Gmail Integration Section - Matches Dashboard Card Style */}
@@ -147,7 +149,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                Gmail Integration
+                {t('settings.gmailIntegration')}
                 
                 {/* Info Icon with Tooltip */}
                 <div className="relative group inline-block">
@@ -196,7 +198,7 @@ export default function SettingsPage() {
               {gmailStatus.connected ? (
                 <>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    Gmail Connected
+                    {t('settings.gmailConnected')}
                   </h3>
                   <p className="text-gray-600 mb-4">
                     Your Gmail account is connected and ready to send emails.
@@ -276,7 +278,7 @@ export default function SettingsPage() {
                     disabled={connecting}
                     className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
-                    {connecting ? 'Disconnecting...' : 'Disconnect Gmail'}
+                    {connecting ? t('common.processing') : t('settings.disconnectGmail')}
                   </button>
                 </>
               ) : (
@@ -344,7 +346,7 @@ export default function SettingsPage() {
                     className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
                   >
                     <Mail className="w-5 h-5" />
-                    {connecting ? 'Connecting...' : 'Connect Gmail Account'}
+                    {connecting ? t('common.processing') : t('settings.connectGmail')}
                   </button>
                 </>
               )}
@@ -363,7 +365,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">
-                Change Password
+                {t('settings.changePassword')}
               </h2>
               <p className="text-sm text-gray-600 mt-0.5">
                 Update your account password
@@ -378,7 +380,7 @@ export default function SettingsPage() {
             {/* New Password */}
             <div>
               <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
-                New Password
+                {t('settings.newPassword')}
               </label>
               <div className="relative">
                 <input
@@ -386,7 +388,7 @@ export default function SettingsPage() {
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min 6 characters)"
+                  placeholder={t('settings.passwordMinLength')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-10"
                   disabled={changingPassword}
                 />
@@ -403,7 +405,7 @@ export default function SettingsPage() {
             {/* Confirm Password */}
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
-                Confirm New Password
+                {t('settings.confirmPassword')}
               </label>
               <div className="relative">
                 <input
@@ -411,7 +413,7 @@ export default function SettingsPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter new password"
+                  placeholder={t('settings.reenterPassword')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-10"
                   disabled={changingPassword}
                 />
@@ -433,7 +435,7 @@ export default function SettingsPage() {
                 className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
               >
                 <Lock className="w-5 h-5" />
-                {changingPassword ? 'Changing Password...' : 'Change Password'}
+                {changingPassword ? t('common.processing') : t('settings.changePassword')}
               </button>
             </div>
 

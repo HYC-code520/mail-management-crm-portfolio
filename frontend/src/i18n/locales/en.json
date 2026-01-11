@@ -1,0 +1,362 @@
+{
+  "app": {
+    "name": "Mei Way Mail",
+    "tagline": "Professional Mail & Package Management Services"
+  },
+
+  "nav": {
+    "dashboard": "Dashboard",
+    "mailLog": "Mail Log",
+    "customers": "Customers",
+    "templates": "Email Templates",
+    "scan": "Scan",
+    "todos": "To-Do",
+    "followUps": "Follow-ups",
+    "fees": "Fee Collection",
+    "settings": "Settings",
+    "intake": "Mail Intake",
+    "new": "New"
+  },
+
+  "common": {
+    "save": "Save",
+    "saveChanges": "Save Changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "searchPlaceholder": "Search...",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "deleting": "Deleting...",
+    "processing": "Processing...",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "viewAll": "View All",
+    "refresh": "Refresh",
+    "loadMore": "Load More",
+    "noResults": "No results found",
+    "required": "Required",
+    "optional": "Optional",
+    "yes": "Yes",
+    "no": "No",
+    "languageSwitched": "Language updated",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "type": "Type",
+    "notes": "Notes",
+    "description": "Description",
+    "or": "or",
+    "email": "Email",
+    "error": "An error occurred",
+    "comingSoon": "Coming soon..."
+  },
+
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "staffSignIn": "Staff Sign In",
+    "staffRegistration": "Staff Registration",
+    "tagline": "Professional Mail & Package Management Services",
+    "welcomeTitle": "Welcome to Mei Way Mail Plus",
+    "welcomeSubtitle": "Your trusted partner for comprehensive mail and business services in Flushing, NY.",
+    "location": "Location",
+    "phone": "Phone",
+    "alreadyHaveAccount": "Already have an account? Sign in",
+    "dontHaveAccount": "Don't have an account? Sign up",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "signUpSuccess": "Sign up successful! Please check your email to confirm your account.",
+    "signInSuccess": "Signed in successfully!",
+    "services": {
+      "mailbox": "Private Mailbox Services",
+      "mailboxDesc": "Secure mail and package receiving, logging, storage, and pickup",
+      "virtual": "Virtual Mailbox",
+      "virtualDesc": "Mail scanning and forwarding services for remote access",
+      "shipping": "Shipping Services",
+      "shippingDesc": "Domestic and international shipping solutions",
+      "business": "Business Support",
+      "businessDesc": "LLC formation assistance, eBay consignment, and document handling",
+      "notifications": "Email Notifications",
+      "notificationsDesc": "Stay informed about your mail, packages, and account activity"
+    }
+  },
+
+  "customers": {
+    "title": "Customers",
+    "addNew": "Add New Customer",
+    "addCustomer": "Add Customer",
+    "editCustomer": "Edit Customer",
+    "saveCustomer": "Save Customer",
+    "customerProfile": "Customer Profile",
+    "contactDetail": "Contact Detail",
+    "searchPlaceholder": "Search by Name / Company / Mailbox #",
+    "noCustomers": "No customers yet",
+    "getStarted": "Get started by adding your first customer",
+    "showArchived": "Show Archived",
+    "viewingArchived": "Viewing Archived",
+    "archive": "Archive",
+    "restore": "Restore",
+    "backToDirectory": "Back to Directory",
+    "customerSince": "Customer Since",
+    "showing": "Showing {{count}} of {{total}} customers",
+    "enterInfo": "Enter customer information"
+  },
+
+  "customerForm": {
+    "name": "Name",
+    "fullName": "Full name",
+    "company": "Company",
+    "companyName": "Company name",
+    "email": "Email",
+    "phone": "Phone",
+    "phoneNumber": "Phone number",
+    "mailboxNumber": "Mailbox #",
+    "unitNumber": "Unit #",
+    "serviceTier": "Service Tier",
+    "languagePreference": "Preferred Language",
+    "status": "Customer Status",
+    "displayNamePreference": "Display Name Preference",
+    "displayNameHelp": "How should this customer appear in lists?",
+    "displayBoth": "Both (Company - Person)",
+    "displayCompany": "Company Name Only",
+    "displayPerson": "Person Name Only",
+    "tier1": "Tier 1 - Basic",
+    "tier2": "Tier 2 - Standard",
+    "contactInfo": "Contact Information",
+    "showsBothNames": "Shows both names, or whichever is available"
+  },
+
+  "customerStatus": {
+    "pending": "Pending",
+    "active": "Active",
+    "archived": "Archived",
+    "inactive": "Inactive"
+  },
+
+  "mail": {
+    "title": "Mail Log",
+    "logMail": "Log Mail",
+    "logNewMail": "Log New Mail",
+    "addNewMail": "Add New Mail",
+    "scanMail": "Scan Mail",
+    "mailIntake": "Mail Intake",
+    "mailHistory": "Mail History",
+    "noMailHistory": "No mail history yet",
+    "noEntriesYet": "No entries yet today",
+    "todaysEntries": "Today's Entries",
+    "todaysMail": "Today's Mail",
+    "pendingPickups": "Pending Pickups",
+    "customer": "Customer",
+    "selectCustomer": "Select a customer",
+    "loadingCustomers": "Loading customers...",
+    "itemType": "Item Type",
+    "quantity": "Quantity",
+    "receivedDate": "Received Date",
+    "viewInLog": "View in Log",
+    "descriptionOptional": "Description (Optional)",
+    "addNotesPlaceholder": "Add any notes about this mail item...",
+    "logging": "Logging...",
+    "logNewMailDesc": "Log a new package or mail received",
+    "allMailReceived": "All packages and mail received",
+    "viewContact": "View Contact"
+  },
+
+  "mailTypes": {
+    "letter": "Letter",
+    "package": "Package",
+    "largePackage": "Large Package",
+    "certifiedMail": "Certified Mail"
+  },
+
+  "mailStatus": {
+    "received": "Received",
+    "notified": "Notified",
+    "readyForPickup": "Ready for Pickup",
+    "pickedUp": "Picked Up",
+    "forward": "Forward",
+    "scanned": "Scanned",
+    "abandoned": "Abandoned"
+  },
+
+  "mailActions": {
+    "markAsNotified": "Mark as Notified",
+    "markAsPickedUp": "Mark as Picked Up",
+    "markAllPickedUp": "Mark All Picked Up",
+    "confirmPickup": "Confirm Pick Up",
+    "confirmForward": "Confirm Forward",
+    "confirmScan": "Confirm Scan",
+    "confirmAbandoned": "Confirm Abandoned",
+    "whoNotified": "Who notified?",
+    "howNotified": "How did you notify?",
+    "whoPerformed": "Who performed this action?"
+  },
+
+  "fees": {
+    "title": "Fee Collection",
+    "outstandingFees": "Outstanding Fees",
+    "collectFees": "Collect Fees",
+    "waiveFees": "Waive Fees",
+    "collectFee": "Collect Fee",
+    "waiveFee": "Waive Fee",
+    "paymentMethod": "Payment Method",
+    "whoCollected": "Who collected?",
+    "waiveReason": "Waive Reason",
+    "whoWaiving": "Who is waiving this fee?",
+    "cash": "Cash",
+    "card": "Card",
+    "venmo": "Venmo",
+    "zelle": "Zelle",
+    "paypal": "PayPal",
+    "check": "Check",
+    "other": "Other"
+  },
+
+  "followUps": {
+    "title": "Follow-ups",
+    "noFollowUps": "No follow-ups",
+    "needsAttention": "{{count}} customers need attention",
+    "overdue": "Overdue"
+  },
+
+  "todos": {
+    "title": "To-Do",
+    "todoList": "To-Do List",
+    "noTasks": "No tasks",
+    "completed": "Completed",
+    "tasksCompleted": "tasks completed"
+  },
+
+  "templates": {
+    "title": "Email Templates",
+    "sendEmail": "Send Email",
+    "subjectLine": "Subject Line",
+    "message": "Message",
+    "sentBy": "Sent By",
+    "translateToChinese": "Translate to Chinese"
+  },
+
+  "settings": {
+    "title": "Settings",
+    "manageAccount": "Manage your account settings and integrations",
+    "gmailIntegration": "Gmail Integration",
+    "connectGmail": "Connect Gmail Account",
+    "disconnectGmail": "Disconnect Gmail",
+    "gmailConnected": "Gmail Connected",
+    "changePassword": "Change Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "passwordMinLength": "Enter new password (min 6 characters)",
+    "reenterPassword": "Re-enter new password"
+  },
+
+  "dashboard": {
+    "title": "Dashboard",
+    "todaysOverview": "Today's Overview",
+    "mailAgeDistribution": "Mail Age Distribution",
+    "currentPendingByAge": "Current pending items by age",
+    "staffPerformance": "Staff Performance",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "newCustomers": "New Customers",
+    "vsLastMonth": "vs {{count}} last month"
+  },
+
+  "ageRanges": {
+    "0to3days": "0-3 days",
+    "4to7days": "4-7 days",
+    "8to14days": "8-14 days",
+    "15to30days": "15-30 days",
+    "over30days": "30+ days"
+  },
+
+  "quickActions": {
+    "title": "Quick Actions",
+    "shortcut": "Quick action [CTRL + K]",
+    "scanMail": "Scan Mail",
+    "startNewScan": "Start a new scan session",
+    "logMail": "Log Mail",
+    "manuallyAdd": "Manually add mail items",
+    "addCustomer": "Add Customer",
+    "createProfile": "Create a new customer profile"
+  },
+
+  "modals": {
+    "notifyCustomer": "Notify Customer",
+    "additionalDetails": "Any additional details...",
+    "addNotes": "Add any notes about this mail item..."
+  },
+
+  "toast": {
+    "mailLogged": "Mail logged successfully!",
+    "customerAdded": "Customer added successfully!",
+    "customerUpdated": "Customer updated successfully!",
+    "customerArchived": "Customer archived successfully!",
+    "customerRestored": "Customer restored successfully!",
+    "emailSent": "Email sent successfully",
+    "emailSentTo": "Email sent to {{customer}}",
+    "markedAsNotified": "Marked as notified!",
+    "markedAsPickedUp": "Marked as picked up",
+    "markedAsForwarded": "Marked as forwarded",
+    "markedAsScanned": "Marked as scanned",
+    "markedAsAbandoned": "Marked as abandoned",
+    "passwordChanged": "Password changed successfully!",
+    "gmailDisconnected": "Gmail disconnected successfully",
+    "signedOut": "Signed out successfully",
+    "itemsMarkedAs": "{{count}} entries for {{customer}} marked as {{status}}",
+    "failedToLoad": "Failed to load {{item}}",
+    "failedToSave": "Failed to save {{item}}",
+    "failedToDelete": "Failed to delete {{item}}",
+    "failedToLogMail": "Failed to log mail",
+    "failedToAddCustomer": "Failed to add customer",
+    "failedToLoadCustomers": "Failed to load customers",
+    "errorSigningOut": "Error signing out"
+  },
+
+  "validation": {
+    "selectCustomer": "Please select a customer",
+    "enterNameOrCompany": "Please enter either a name or company name",
+    "mailboxRequired": "Mailbox number is required",
+    "phoneMustBe10Digits": "Phone number must be exactly 10 digits",
+    "passwordMinLength": "Password must be at least 6 characters long",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "provideReason": "Please provide a reason (at least 5 characters)",
+    "selectPerformer": "Please select who performed this action"
+  },
+
+  "warnings": {
+    "tier1NoPackages": "Tier 1 customers typically don't receive packages",
+    "tier1PackageWarning": "Warning: This customer is on Service Tier 1, which typically does not include package handling. Are you sure you want to log a package for this customer?",
+    "confirmArchive": "Are you sure you want to archive this customer?",
+    "confirmRestore": "Are you sure you want to restore this customer?",
+    "confirmDisconnectGmail": "Are you sure you want to disconnect your Gmail account?",
+    "canRestoreLater": "You can restore it later from the archived view",
+    "needToReconnect": "You will need to reconnect to send emails"
+  },
+
+  "language": {
+    "english": "English",
+    "chinese": "Chinese",
+    "both": "Both Languages",
+    "en": "EN",
+    "cn": "CN"
+  },
+
+  "languageOptions": {
+    "english": "English",
+    "chinese": "Chinese",
+    "both": "Both"
+  }
+}

@@ -13,6 +13,7 @@ import AnalyticsSection from '../components/dashboard/AnalyticsSection.tsx';
 import toast from 'react-hot-toast';
 import { getTodayNY, toNYDateString } from '../utils/timezone.ts';
 import { getCustomerDisplayName } from '../utils/customerDisplay';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface PackageFee {
   fee_id: string;
@@ -113,6 +114,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartsLoading, setChartsLoading] = useState(false); // Separate loading state for charts
@@ -473,12 +475,12 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xs font-bold text-gray-900">Merlin</h3>
-                      <p className="text-xs text-gray-500">This Week</p>
+                      <p className="text-xs text-gray-500">{t('dashboard.thisWeek')}</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-3xl font-bold text-blue-600">{stats.analytics.staffPerformance.Merlin}</p>
-                    <p className="text-xs text-gray-600">tasks completed</p>
+                    <p className="text-xs text-gray-600">{t('todos.tasksCompleted')}</p>
                   </div>
                 </div>
               </div>
@@ -512,12 +514,12 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xs font-bold text-gray-900">Madison</h3>
-                      <p className="text-xs text-gray-500">This Week</p>
+                      <p className="text-xs text-gray-500">{t('dashboard.thisWeek')}</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-3xl font-bold text-purple-600">{stats.analytics.staffPerformance.Madison}</p>
-                    <p className="text-xs text-gray-600">tasks completed</p>
+                    <p className="text-xs text-gray-600">{t('todos.tasksCompleted')}</p>
                   </div>
                 </div>
               </div>
@@ -529,7 +531,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 h-full flex flex-col justify-center">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-gray-900">Today's Overview</h2>
+              <h2 className="text-sm font-bold text-gray-900">{t('dashboard.todaysOverview')}</h2>
               
               {/* Info Icon with Tooltip */}
               <div className="relative group">
@@ -563,7 +565,7 @@ export default function DashboardPage() {
                   <Mail className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Today's Mail</p>
+                  <p className="text-xs text-gray-600 truncate">{t('mail.todaysMail')}</p>
                   <p className="text-xl font-bold text-gray-900">{stats?.todaysMail || 0}</p>
                 </div>
               </div>
@@ -574,7 +576,7 @@ export default function DashboardPage() {
                   <Package className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Pending Pickups</p>
+                  <p className="text-xs text-gray-600 truncate">{t('mail.pendingPickups')}</p>
                   <p className="text-xl font-bold text-gray-900">{stats?.pendingPickups || 0}</p>
                 </div>
               </div>
@@ -585,7 +587,7 @@ export default function DashboardPage() {
                   <AlertCircle className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Overdue</p>
+                  <p className="text-xs text-gray-600 truncate">{t('followUps.overdue')}</p>
                   <p className="text-xl font-bold text-red-600">{stats?.overdueMail || 0}</p>
                 </div>
               </div>
@@ -596,7 +598,7 @@ export default function DashboardPage() {
                   <CheckCircle2 className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-600 truncate">Completed</p>
+                  <p className="text-xs text-gray-600 truncate">{t('todos.completed')}</p>
                   <p className="text-xl font-bold text-green-600">{stats?.completedToday || 0}</p>
                 </div>
               </div>
@@ -650,7 +652,7 @@ export default function DashboardPage() {
                 <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Package className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs text-green-700 font-semibold uppercase">This Month Mail</p>
+                <p className="text-xs text-green-700 font-semibold uppercase">{t('dashboard.thisMonth')} Mail</p>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-baseline gap-2">
@@ -689,7 +691,7 @@ export default function DashboardPage() {
                   );
                 })()}
               </div>
-              <p className="text-xs text-gray-500 mt-1">vs {stats.analytics.comparison.lastMonth.mail} last month</p>
+              <p className="text-xs text-gray-500 mt-1">{t('dashboard.vsLastMonth', { count: stats.analytics.comparison.lastMonth.mail })}</p>
             </div>
 
             {/* New Customers - takes 1/2 of container height */}
@@ -698,7 +700,7 @@ export default function DashboardPage() {
                 <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Users className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs text-orange-700 font-semibold uppercase">New Customers</p>
+                <p className="text-xs text-orange-700 font-semibold uppercase">{t('dashboard.newCustomers')}</p>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-baseline gap-2">
@@ -737,7 +739,7 @@ export default function DashboardPage() {
                   );
                 })()}
               </div>
-              <p className="text-xs text-gray-500 mt-1">vs {stats.analytics.comparison.lastMonth.customers} last month</p>
+              <p className="text-xs text-gray-500 mt-1">{t('dashboard.vsLastMonth', { count: stats.analytics.comparison.lastMonth.customers })}</p>
             </div>
           </div>
         )}
@@ -750,17 +752,17 @@ export default function DashboardPage() {
                 <Clock className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Mail Age Distribution</h3>
-                <p className="text-xs text-gray-500">Current pending items by age</p>
+                <h3 className="text-sm font-bold text-gray-900">{t('dashboard.mailAgeDistribution')}</h3>
+                <p className="text-xs text-gray-500">{t('dashboard.currentPendingByAge')}</p>
               </div>
             </div>
             <div className="flex-1 flex flex-col justify-center gap-3">
               {[
-                { name: '0-3 days', value: stats.analytics.ageDistribution['0-3'], color: '#10B981' },
-                { name: '4-7 days', value: stats.analytics.ageDistribution['4-7'], color: '#FCD34D' },
-                { name: '8-14 days', value: stats.analytics.ageDistribution['8-14'], color: '#F59E0B' },
-                { name: '15-30 days', value: stats.analytics.ageDistribution['15-30'], color: '#EF4444' },
-                { name: '30+ days', value: stats.analytics.ageDistribution['30+'], color: '#A855F7' }
+                { name: t('ageRanges.0to3days'), value: stats.analytics.ageDistribution['0-3'], color: '#10B981' },
+                { name: t('ageRanges.4to7days'), value: stats.analytics.ageDistribution['4-7'], color: '#FCD34D' },
+                { name: t('ageRanges.8to14days'), value: stats.analytics.ageDistribution['8-14'], color: '#F59E0B' },
+                { name: t('ageRanges.15to30days'), value: stats.analytics.ageDistribution['15-30'], color: '#EF4444' },
+                { name: t('ageRanges.over30days'), value: stats.analytics.ageDistribution['30+'], color: '#A855F7' }
               ].map((item) => {
                 const total = Object.values(stats.analytics?.ageDistribution || {}).reduce((sum, v) => sum + v, 0);
                 const percentage = total > 0 ? (item.value / total) * 100 : 0;
@@ -803,15 +805,15 @@ export default function DashboardPage() {
                   <AlertTriangle className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-gray-900">Needs Follow-up</h2>
-                  <p className="text-xs text-gray-500">{stats.needsFollowUp.length} {stats.needsFollowUp.length === 1 ? 'customer' : 'customers'} need attention</p>
+                  <h2 className="text-sm font-bold text-gray-900">{t('followUps.title')}</h2>
+                  <p className="text-xs text-gray-500">{t('followUps.needsAttention', { count: stats.needsFollowUp.length })}</p>
                 </div>
               </div>
               <button
                 onClick={() => navigate('/dashboard/follow-ups')}
                 className="px-2 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs font-semibold whitespace-nowrap ml-2"
               >
-                View All
+                {t('common.viewAll')}
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -838,35 +840,35 @@ export default function DashboardPage() {
       </div>
 
       {/* Add Customer Modal */}
-      <Modal 
-        isOpen={isAddCustomerModalOpen} 
+      <Modal
+        isOpen={isAddCustomerModalOpen}
         onClose={closeAddCustomerModal}
-        title="Add New Customer"
+        title={t('customers.addNew')}
       >
         <form onSubmit={handleAddCustomerSubmit} className="space-y-6">
           {/* Name & Company */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Name <span className="text-red-500">*</span>
+                {t('customerForm.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="contact_person"
                 value={formData.contact_person}
                 onChange={handleFormChange}
-                placeholder="Full name"
+                placeholder={t('customerForm.fullName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Company</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.company')}</label>
               <input
                 type="text"
                 name="company_name"
                 value={formData.company_name}
                 onChange={handleFormChange}
-                placeholder="Company name"
+                placeholder={t('customerForm.companyName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -876,7 +878,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Mailbox # <span className="text-red-500">*</span>
+                {t('customerForm.mailboxNumber')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -889,16 +891,16 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Preferred Language</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.languagePreference')}</label>
               <select
                 name="language_preference"
                 value={formData.language_preference}
                 onChange={handleFormChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="English">English</option>
-                <option value="Chinese">Chinese</option>
-                <option value="Both">Both</option>
+                <option value="English">{t('languageOptions.english')}</option>
+                <option value="Chinese">{t('languageOptions.chinese')}</option>
+                <option value="Both">{t('languageOptions.both')}</option>
               </select>
             </div>
           </div>
@@ -906,7 +908,7 @@ export default function DashboardPage() {
           {/* Email & Phone */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.email')}</label>
               <input
                 type="email"
                 name="email"
@@ -917,7 +919,7 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Phone</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.phone')}</label>
               <input
                 type="tel"
                 name="phone_number"
@@ -933,7 +935,7 @@ export default function DashboardPage() {
           {/* Unit & Service Tier */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Unit #</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.unitNumber')}</label>
               <input
                 type="text"
                 name="unit_number"
@@ -944,15 +946,15 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Service Tier</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.serviceTier')}</label>
               <select
                 name="service_tier"
                 value={formData.service_tier}
                 onChange={handleFormChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value={1}>Tier 1 - Basic</option>
-                <option value={2}>Tier 2 - Standard</option>
+                <option value={1}>{t('customerForm.tier1')}</option>
+                <option value={2}>{t('customerForm.tier2')}</option>
               </select>
             </div>
           </div>
@@ -965,30 +967,30 @@ export default function DashboardPage() {
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={saving}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Customer'}
+              {saving ? t('common.saving') : t('customers.saveCustomer')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Log New Mail Modal */}
-      <Modal 
-        isOpen={isLogMailModalOpen} 
+      <Modal
+        isOpen={isLogMailModalOpen}
         onClose={closeLogMailModal}
-        title="Log New Mail"
+        title={t('mail.logNewMail')}
       >
         <form onSubmit={handleLogMailSubmit} className="space-y-6">
           {/* Customer Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Customer <span className="text-red-500">*</span>
+              {t('mail.customer')} <span className="text-red-500">*</span>
             </label>
             <select
               name="contact_id"
@@ -998,7 +1000,7 @@ export default function DashboardPage() {
               disabled={contactsLoading}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-wait"
             >
-              <option value="">{contactsLoading ? 'Loading customers...' : 'Select a customer'}</option>
+              <option value="">{contactsLoading ? t('mail.loadingCustomers') : t('mail.selectCustomer')}</option>
               {contacts
                 .sort((a, b) => (a.mailbox_number || '').localeCompare(b.mailbox_number || ''))
                 .map(contact => (
@@ -1014,7 +1016,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Item Type <span className="text-red-500">*</span>
+                {t('mail.itemType')} <span className="text-red-500">*</span>
               </label>
               <select
                 name="item_type"
@@ -1023,23 +1025,23 @@ export default function DashboardPage() {
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Letter">Letter</option>
-                <option value="Package">Package</option>
-                <option value="Large Package">Large Package</option>
-                <option value="Certified Mail">Certified Mail</option>
+                <option value="Letter">{t('mailTypes.letter')}</option>
+                <option value="Package">{t('mailTypes.package')}</option>
+                <option value="Large Package">{t('mailTypes.largePackage')}</option>
+                <option value="Certified Mail">{t('mailTypes.certifiedMail')}</option>
               </select>
-              {(logMailFormData.item_type === 'Package' || logMailFormData.item_type === 'Large Package') && 
-               logMailFormData.contact_id && 
+              {(logMailFormData.item_type === 'Package' || logMailFormData.item_type === 'Large Package') &&
+               logMailFormData.contact_id &&
                contacts.find(c => c.contact_id === logMailFormData.contact_id)?.service_tier === 1 && (
                 <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
                   <AlertTriangle className="w-4 h-4" />
-                  Tier 1 customers typically don't receive packages
+                  {t('warnings.tier1NoPackages')}
                 </p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Status <span className="text-red-500">*</span>
+                {t('common.status')} <span className="text-red-500">*</span>
               </label>
               <select
                 name="status"
@@ -1048,13 +1050,13 @@ export default function DashboardPage() {
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Received">Received</option>
-                <option value="Notified">Notified</option>
-                <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Picked Up">Picked Up</option>
-                <option value="Forward">Forward</option>
-                <option value="Scanned">Scanned</option>
-                <option value="Abandoned">Abandoned</option>
+                <option value="Received">{t('mailStatus.received')}</option>
+                <option value="Notified">{t('mailStatus.notified')}</option>
+                <option value="Ready for Pickup">{t('mailStatus.readyForPickup')}</option>
+                <option value="Picked Up">{t('mailStatus.pickedUp')}</option>
+                <option value="Forward">{t('mailStatus.forward')}</option>
+                <option value="Scanned">{t('mailStatus.scanned')}</option>
+                <option value="Abandoned">{t('mailStatus.abandoned')}</option>
               </select>
             </div>
           </div>
@@ -1063,7 +1065,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Quantity
+                {t('mail.quantity')}
               </label>
               <input
                 type="number"
@@ -1076,7 +1078,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Received Date <span className="text-red-500">*</span>
+                {t('mail.receivedDate')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -1092,14 +1094,14 @@ export default function DashboardPage() {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Description (Optional)
+              {t('mail.descriptionOptional')}
             </label>
             <textarea
               name="description"
               value={logMailFormData.description}
               onChange={handleLogMailFormChange}
               rows={3}
-              placeholder="Add any notes about this mail item..."
+              placeholder={t('mail.addNotesPlaceholder')}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
           </div>
@@ -1112,7 +1114,7 @@ export default function DashboardPage() {
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={saving}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -1122,10 +1124,10 @@ export default function DashboardPage() {
               {saving ? (
                 <>
                   <LoadingSpinner size="sm" />
-                  <span>Logging...</span>
+                  <span>{t('mail.logging')}</span>
                 </>
               ) : (
-                'Log Mail'
+                t('mail.logMail')
               )}
             </button>
           </div>

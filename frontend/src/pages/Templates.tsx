@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';
 import LoadingSpinner from '../components/LoadingSpinner.tsx';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface Template {
   template_id: string;
@@ -34,6 +35,7 @@ const splitBilingualContent = (content: string) => {
 };
 
 export default function TemplatesPage() {
+  const { t } = useLanguage();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
@@ -274,13 +276,13 @@ export default function TemplatesPage() {
     <div className="max-w-full mx-auto px-4 md:px-8 lg:px-16 py-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Email Templates</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('templates.title')}</h1>
         <button
           onClick={openCreateModal}
           className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors text-sm md:text-base whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
-          <span>New Template</span>
+          <span>{t('common.add')}</span>
         </button>
       </div>
 

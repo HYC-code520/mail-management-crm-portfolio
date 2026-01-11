@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import GroupedFollowUpSection from '../components/dashboard/GroupedFollowUp.tsx';
 import SendEmailModal from '../components/SendEmailModal.tsx';
 import { getTodayNY, toNYDateString, extractNYDate } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface PackageFee {
   fee_id: string;
@@ -50,6 +51,7 @@ interface GroupedFollowUp {
 }
 
 export default function FollowUpsPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [followUps, setFollowUps] = useState<GroupedFollowUp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,7 +235,7 @@ export default function FollowUpsPage() {
       <div className="max-w-full mx-auto px-4 md:px-8 lg:px-16 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('followUps.title')}</h1>
         </div>
 
         {/* Loading Animation */}
@@ -246,7 +248,7 @@ export default function FollowUpsPage() {
             />
           </div>
           <p className="mt-4 text-lg font-medium text-gray-600 animate-pulse">
-            Loading follow-ups...
+            {t('common.loading')}
           </p>
         </div>
       </div>
@@ -266,14 +268,14 @@ export default function FollowUpsPage() {
     <div className="max-w-full mx-auto px-4 md:px-8 lg:px-16 py-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('followUps.title')}</h1>
 
         {/* Summary stats */}
         {totalCustomers > 0 && (
           <div className="flex items-center gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <span className="text-xl font-semibold text-gray-900">{totalCustomers}</span>
-              <span>customers</span>
+              <span>{t('nav.customers').toLowerCase()}</span>
             </div>
             {totalFees > 0 && (
               <>

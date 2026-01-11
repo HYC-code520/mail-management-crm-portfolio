@@ -1,0 +1,362 @@
+{
+  "app": {
+    "name": "美威邮件",
+    "tagline": "专业邮件和包裹管理服务"
+  },
+
+  "nav": {
+    "dashboard": "仪表板",
+    "mailLog": "邮件日志",
+    "customers": "客户",
+    "templates": "邮件模板",
+    "scan": "扫描",
+    "todos": "待办",
+    "followUps": "跟进",
+    "fees": "费用收取",
+    "settings": "设置",
+    "intake": "邮件收件",
+    "new": "新"
+  },
+
+  "common": {
+    "save": "保存",
+    "saveChanges": "保存更改",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "search": "搜索",
+    "searchPlaceholder": "搜索...",
+    "loading": "加载中...",
+    "saving": "保存中...",
+    "deleting": "删除中...",
+    "processing": "处理中...",
+    "confirm": "确认",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "viewAll": "查看全部",
+    "refresh": "刷新",
+    "loadMore": "加载更多",
+    "noResults": "未找到结果",
+    "required": "必填",
+    "optional": "可选",
+    "yes": "是",
+    "no": "否",
+    "languageSwitched": "语言已更新",
+    "actions": "操作",
+    "status": "状态",
+    "date": "日期",
+    "type": "类型",
+    "notes": "备注",
+    "description": "描述",
+    "or": "或",
+    "email": "邮箱",
+    "error": "发生错误",
+    "comingSoon": "即将推出..."
+  },
+
+  "auth": {
+    "signIn": "登录",
+    "signUp": "注册",
+    "signOut": "退出",
+    "logout": "退出登录",
+    "email": "邮箱",
+    "password": "密码",
+    "forgotPassword": "忘记密码？",
+    "noAccount": "还没有账户？",
+    "hasAccount": "已有账户？",
+    "staffSignIn": "员工登录",
+    "staffRegistration": "员工注册",
+    "tagline": "专业邮件和包裹管理服务",
+    "welcomeTitle": "欢迎来到美威邮件",
+    "welcomeSubtitle": "您在法拉盛值得信赖的邮件和商务服务合作伙伴。",
+    "location": "地址",
+    "phone": "电话",
+    "alreadyHaveAccount": "已有账户？登录",
+    "dontHaveAccount": "没有账户？注册",
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "服务条款",
+    "signUpSuccess": "注册成功！请查收邮件确认您的账户。",
+    "signInSuccess": "登录成功！",
+    "services": {
+      "mailbox": "私人信箱服务",
+      "mailboxDesc": "安全的邮件和包裹接收、登记、存储和取件",
+      "virtual": "虚拟信箱",
+      "virtualDesc": "邮件扫描和转寄服务，随时随地查收邮件",
+      "shipping": "快递服务",
+      "shippingDesc": "国内和国际快递解决方案",
+      "business": "商务支持",
+      "businessDesc": "LLC公司注册协助、eBay代售和文件处理",
+      "notifications": "邮件通知",
+      "notificationsDesc": "及时了解您的邮件、包裹和账户动态"
+    }
+  },
+
+  "customers": {
+    "title": "客户",
+    "addNew": "添加新客户",
+    "addCustomer": "添加客户",
+    "editCustomer": "编辑客户",
+    "saveCustomer": "保存客户",
+    "customerProfile": "客户资料",
+    "contactDetail": "联系详情",
+    "searchPlaceholder": "按姓名/公司/信箱号搜索",
+    "noCustomers": "暂无客户",
+    "getStarted": "添加第一位客户开始使用",
+    "showArchived": "显示已归档",
+    "viewingArchived": "查看已归档",
+    "archive": "归档",
+    "restore": "恢复",
+    "backToDirectory": "返回目录",
+    "customerSince": "客户自",
+    "showing": "显示 {{count}} / {{total}} 位客户",
+    "enterInfo": "输入客户信息"
+  },
+
+  "customerForm": {
+    "name": "姓名",
+    "fullName": "全名",
+    "company": "公司",
+    "companyName": "公司名称",
+    "email": "邮箱",
+    "phone": "电话",
+    "phoneNumber": "电话号码",
+    "mailboxNumber": "信箱号",
+    "unitNumber": "单元号",
+    "serviceTier": "服务等级",
+    "languagePreference": "语言偏好",
+    "status": "客户状态",
+    "displayNamePreference": "显示名称偏好",
+    "displayNameHelp": "在列表中如何显示此客户？",
+    "displayBoth": "两者（公司 - 个人）",
+    "displayCompany": "仅公司名称",
+    "displayPerson": "仅个人姓名",
+    "tier1": "等级1 - 基础",
+    "tier2": "等级2 - 标准",
+    "contactInfo": "联系信息",
+    "showsBothNames": "显示两个名称，或显示可用的那个"
+  },
+
+  "customerStatus": {
+    "pending": "待处理",
+    "active": "活跃",
+    "archived": "已归档",
+    "inactive": "非活跃"
+  },
+
+  "mail": {
+    "title": "邮件日志",
+    "logMail": "记录邮件",
+    "logNewMail": "记录新邮件",
+    "addNewMail": "添加新邮件",
+    "scanMail": "扫描邮件",
+    "mailIntake": "邮件收件",
+    "mailHistory": "邮件历史",
+    "noMailHistory": "暂无邮件历史",
+    "noEntriesYet": "今日暂无记录",
+    "todaysEntries": "今日记录",
+    "todaysMail": "今日邮件",
+    "pendingPickups": "待取件",
+    "customer": "客户",
+    "selectCustomer": "选择客户",
+    "loadingCustomers": "加载客户中...",
+    "itemType": "物品类型",
+    "quantity": "数量",
+    "receivedDate": "收件日期",
+    "viewInLog": "在日志中查看",
+    "descriptionOptional": "描述（可选）",
+    "addNotesPlaceholder": "添加关于此邮件的备注...",
+    "logging": "记录中...",
+    "logNewMailDesc": "记录新收到的包裹或邮件",
+    "allMailReceived": "所有收到的包裹和邮件",
+    "viewContact": "查看联系人"
+  },
+
+  "mailTypes": {
+    "letter": "信件",
+    "package": "包裹",
+    "largePackage": "大包裹",
+    "certifiedMail": "挂号信"
+  },
+
+  "mailStatus": {
+    "received": "已收到",
+    "notified": "已通知",
+    "readyForPickup": "待取件",
+    "pickedUp": "已取走",
+    "forward": "转寄",
+    "scanned": "已扫描",
+    "abandoned": "已放弃"
+  },
+
+  "mailActions": {
+    "markAsNotified": "标记为已通知",
+    "markAsPickedUp": "标记为已取走",
+    "markAllPickedUp": "全部标记为已取走",
+    "confirmPickup": "确认取件",
+    "confirmForward": "确认转寄",
+    "confirmScan": "确认扫描",
+    "confirmAbandoned": "确认放弃",
+    "whoNotified": "谁通知的？",
+    "howNotified": "如何通知的？",
+    "whoPerformed": "谁执行的此操作？"
+  },
+
+  "fees": {
+    "title": "费用收取",
+    "outstandingFees": "未付费用",
+    "collectFees": "收取费用",
+    "waiveFees": "免除费用",
+    "collectFee": "收取费用",
+    "waiveFee": "免除费用",
+    "paymentMethod": "付款方式",
+    "whoCollected": "谁收取的？",
+    "waiveReason": "免除原因",
+    "whoWaiving": "谁免除的此费用？",
+    "cash": "现金",
+    "card": "刷卡",
+    "venmo": "Venmo",
+    "zelle": "Zelle",
+    "paypal": "PayPal",
+    "check": "支票",
+    "other": "其他"
+  },
+
+  "followUps": {
+    "title": "跟进",
+    "noFollowUps": "暂无跟进",
+    "needsAttention": "{{count}} 位客户需要关注",
+    "overdue": "逾期"
+  },
+
+  "todos": {
+    "title": "待办",
+    "todoList": "待办事项",
+    "noTasks": "暂无任务",
+    "completed": "已完成",
+    "tasksCompleted": "任务已完成"
+  },
+
+  "templates": {
+    "title": "邮件模板",
+    "sendEmail": "发送邮件",
+    "subjectLine": "主题",
+    "message": "内容",
+    "sentBy": "发送人",
+    "translateToChinese": "翻译成中文"
+  },
+
+  "settings": {
+    "title": "设置",
+    "manageAccount": "管理您的账户设置和集成",
+    "gmailIntegration": "Gmail 集成",
+    "connectGmail": "连接 Gmail 账户",
+    "disconnectGmail": "断开 Gmail",
+    "gmailConnected": "Gmail 已连接",
+    "changePassword": "修改密码",
+    "newPassword": "新密码",
+    "confirmPassword": "确认新密码",
+    "passwordMinLength": "输入新密码（至少6个字符）",
+    "reenterPassword": "重新输入新密码"
+  },
+
+  "dashboard": {
+    "title": "仪表板",
+    "todaysOverview": "今日概览",
+    "mailAgeDistribution": "邮件积压分布",
+    "currentPendingByAge": "按时长分类的待处理邮件",
+    "staffPerformance": "员工绩效",
+    "thisWeek": "本周",
+    "thisMonth": "本月",
+    "newCustomers": "新客户",
+    "vsLastMonth": "对比上月 {{count}}"
+  },
+
+  "ageRanges": {
+    "0to3days": "0-3 天",
+    "4to7days": "4-7 天",
+    "8to14days": "8-14 天",
+    "15to30days": "15-30 天",
+    "over30days": "30+ 天"
+  },
+
+  "quickActions": {
+    "title": "快捷操作",
+    "shortcut": "快捷操作 [CTRL + K]",
+    "scanMail": "扫描邮件",
+    "startNewScan": "开始新的扫描",
+    "logMail": "记录邮件",
+    "manuallyAdd": "手动添加邮件",
+    "addCustomer": "添加客户",
+    "createProfile": "创建新客户资料"
+  },
+
+  "modals": {
+    "notifyCustomer": "通知客户",
+    "additionalDetails": "其他详情...",
+    "addNotes": "添加关于此邮件的备注..."
+  },
+
+  "toast": {
+    "mailLogged": "邮件记录成功！",
+    "customerAdded": "客户添加成功！",
+    "customerUpdated": "客户更新成功！",
+    "customerArchived": "客户归档成功！",
+    "customerRestored": "客户恢复成功！",
+    "emailSent": "邮件发送成功",
+    "emailSentTo": "邮件已发送至 {{customer}}",
+    "markedAsNotified": "已标记为已通知！",
+    "markedAsPickedUp": "已标记为已取走",
+    "markedAsForwarded": "已标记为已转寄",
+    "markedAsScanned": "已标记为已扫描",
+    "markedAsAbandoned": "已标记为已放弃",
+    "passwordChanged": "密码修改成功！",
+    "gmailDisconnected": "Gmail 已断开连接",
+    "signedOut": "已成功退出",
+    "itemsMarkedAs": "{{customer}} 的 {{count}} 条记录已标记为 {{status}}",
+    "failedToLoad": "加载 {{item}} 失败",
+    "failedToSave": "保存 {{item}} 失败",
+    "failedToDelete": "删除 {{item}} 失败",
+    "failedToLogMail": "记录邮件失败",
+    "failedToAddCustomer": "添加客户失败",
+    "failedToLoadCustomers": "加载客户失败",
+    "errorSigningOut": "退出时发生错误"
+  },
+
+  "validation": {
+    "selectCustomer": "请选择客户",
+    "enterNameOrCompany": "请输入姓名或公司名称",
+    "mailboxRequired": "信箱号为必填项",
+    "phoneMustBe10Digits": "电话号码必须为10位数字",
+    "passwordMinLength": "密码至少需要6个字符",
+    "passwordsDoNotMatch": "两次输入的密码不一致",
+    "provideReason": "请提供原因（至少5个字符）",
+    "selectPerformer": "请选择执行此操作的人员"
+  },
+
+  "warnings": {
+    "tier1NoPackages": "等级1客户通常不接收包裹",
+    "tier1PackageWarning": "警告：此客户为服务等级1，通常不包含包裹处理。确定要为此客户记录包裹吗？",
+    "confirmArchive": "确定要归档此客户吗？",
+    "confirmRestore": "确定要恢复此客户吗？",
+    "confirmDisconnectGmail": "确定要断开 Gmail 账户吗？",
+    "canRestoreLater": "您可以稍后从归档视图中恢复",
+    "needToReconnect": "您需要重新连接才能发送邮件"
+  },
+
+  "language": {
+    "english": "English",
+    "chinese": "中文",
+    "both": "双语",
+    "en": "EN",
+    "cn": "中"
+  },
+
+  "languageOptions": {
+    "english": "English",
+    "chinese": "中文",
+    "both": "双语"
+  }
+}

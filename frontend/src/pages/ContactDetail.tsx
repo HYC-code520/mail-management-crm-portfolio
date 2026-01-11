@@ -11,6 +11,7 @@ import { validateContactForm } from '../utils/validation.ts';
 import toast from 'react-hot-toast';
 import { getCustomerAvatarUrl } from '../utils/customerAvatars.ts';
 import { formatNYDateDisplay } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 // Helper function to generate avatar color based on name
 const getAvatarColor = (name: string): string => {
@@ -163,6 +164,7 @@ const groupMailItems = (items: MailItem[]): GroupedMailItem[] => {
 };
 
 export default function ContactDetailPage() {
+  const { t } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
   const [contact, setContact] = useState<Contact | null>(null);
@@ -645,7 +647,7 @@ export default function ContactDetailPage() {
         className="flex items-center gap-2 text-gray-900 hover:text-gray-700 mb-4 sm:mb-6 font-medium text-sm sm:text-base"
       >
         <span>←</span>
-        <span>Back to Directory</span>
+        <span>{t('customers.backToDirectory')}</span>
       </button>
 
       {/* Header */}
@@ -680,7 +682,7 @@ export default function ContactDetailPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
               {contact.contact_person || contact.company_name || 'Unnamed Contact'}
             </h1>
-            <p className="text-sm sm:text-base text-gray-600">Customer Profile</p>
+            <p className="text-sm sm:text-base text-gray-600">{t('customers.customerProfile')}</p>
           </div>
         </div>
         <button
@@ -688,7 +690,7 @@ export default function ContactDetailPage() {
           className="w-full sm:w-auto px-4 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
         >
           <Edit className="w-4 h-4" />
-          Edit Contact
+          {t('customers.editCustomer')}
         </button>
       </div>
 
@@ -696,7 +698,7 @@ export default function ContactDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Column - Contact Information */}
         <div className="lg:col-span-1 bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm h-fit">
-          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-6">Contact Information</h2>
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-6">{t('customerForm.contactInfo')}</h2>
           
           <div className="space-y-4 sm:space-y-6">
             {/* Name */}
@@ -860,7 +862,7 @@ export default function ContactDetailPage() {
         {/* Right Column - Mail History */}
         <div className={`lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm ${openMenuGroupKey ? 'overflow-visible' : 'overflow-hidden'}`}>
           <div className="p-4 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-base sm:text-lg font-bold text-gray-900">Mail History</h2>
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">{t('mail.mailHistory')}</h2>
             {pendingItems.length > 0 && (
               <button
                 onClick={() => setIsBulkPickupModalOpen(true)}

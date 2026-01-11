@@ -8,6 +8,7 @@ import { getTodayNY, toNYDateString } from '../utils/timezone.ts';
 import { format } from 'date-fns';
 import { Package, ChevronDown, ChevronUp, Banknote, Search, SlidersHorizontal } from 'lucide-react';
 import { getCustomerDisplayName } from '../utils/customerDisplay';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface PackageFee {
   fee_id: string;
@@ -55,6 +56,7 @@ interface GroupedFee {
 }
 
 export default function FeesPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [feesData, setFeesData] = useState<GroupedFee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -237,13 +239,13 @@ export default function FeesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Fee Collection</h1>
-          <span className="text-gray-400 text-sm">{feesData.length} customers</span>
+          <h1 className="text-2xl font-bold text-gray-900">{t('fees.title')}</h1>
+          <span className="text-gray-400 text-sm">{feesData.length} {t('nav.customers').toLowerCase()}</span>
         </div>
-        
+
         {/* Total Outstanding Badge */}
         <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full">
-          <span className="text-sm text-green-700">Total Outstanding</span>
+          <span className="text-sm text-green-700">{t('fees.outstandingFees')}</span>
           <span className="text-lg font-bold text-green-700">${totalOutstanding.toFixed(2)}</span>
         </div>
       </div>

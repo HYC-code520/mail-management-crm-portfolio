@@ -4,6 +4,7 @@ import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
 import { formatNYDate } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface Todo {
   todo_id: string;
@@ -24,6 +25,7 @@ interface Todo {
 }
 
 export default function TodoList() {
+  const { t } = useLanguage();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTodoTitle, setNewTodoTitle] = useState('');
@@ -379,9 +381,9 @@ export default function TodoList() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">To-Do</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('todos.title')}</h1>
           <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-            {todos.filter(t => !t.is_completed).length} tasks left
+            {todos.filter(todo => !todo.is_completed).length} {t('todos.tasksCompleted')}
           </span>
         </div>
       </div>

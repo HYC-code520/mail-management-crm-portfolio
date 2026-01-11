@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api-client.ts';
 import { formatNYDate } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 export default function MailItemsPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [searchParams] = useSearchParams();
@@ -87,7 +89,7 @@ export default function MailItemsPage() {
             />
           </div>
           <p className="mt-4 text-lg font-medium text-gray-600 animate-pulse">
-            Loading mail items...
+            {t('common.loading')}
           </p>
         </div>
         <div className="animate-pulse space-y-6 opacity-50 mt-8">
@@ -103,14 +105,14 @@ export default function MailItemsPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Mail Items</h1>
-          <p className="text-zinc-400 mt-1">All packages and mail received</p>
+          <h1 className="text-3xl font-bold text-white">{t('mail.title')}</h1>
+          <p className="text-zinc-400 mt-1">{t('mail.allMailReceived')}</p>
         </div>
         <button
           onClick={() => navigate('/dashboard/mail-items/new')}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
         >
-          + Add Mail Item
+          + {t('mail.addNewMail')}
         </button>
       </div>
 
@@ -179,7 +181,7 @@ export default function MailItemsPage() {
                     onClick={() => navigate(`/dashboard/contacts/${item.contact_id}`)}
                     className="text-sm text-blue-400 hover:text-blue-300"
                   >
-                    View Contact
+                    {t('mail.viewContact')}
                   </button>
                   {item.status === 'Received' && (
                     <>
@@ -188,7 +190,7 @@ export default function MailItemsPage() {
                         onClick={() => alert('Send notification feature coming soon!')}
                         className="text-sm text-green-400 hover:text-green-300"
                       >
-                        Notify Customer
+                        {t('modals.notifyCustomer')}
                       </button>
                     </>
                   )}
@@ -199,7 +201,7 @@ export default function MailItemsPage() {
                         onClick={() => alert('Mark as picked up feature coming soon!')}
                         className="text-sm text-gray-400 hover:text-gray-300"
                       >
-                        Mark Picked Up
+                        {t('mailActions.markAsPickedUp')}
                       </button>
                     </>
                   )}
@@ -224,7 +226,7 @@ export default function MailItemsPage() {
                 onClick={() => navigate('/dashboard/mail-items/new')}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
               >
-                + Add Mail Item
+                + {t('mail.addNewMail')}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, Languages, Mail, AlertCircle, Menu, X, User, Settings, LayoutDashboard, Inbox, Users, FileText, CheckSquare, Camera, ChevronLeft, ChevronRight, Bell, DollarSign, Search, UserPlus, Zap, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.tsx';
+import { useLanguage } from '../../contexts/LanguageContext.tsx';
 import toast from 'react-hot-toast';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../lib/api-client.ts';
@@ -19,9 +20,9 @@ interface Contact {
 
 export default function DashboardLayout() {
   const { user, signOut } = useAuth();
+  const { language: currentLanguage, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentLanguage, setCurrentLanguage] = useState<'EN' | 'CN' | 'BOTH'>('EN');
   const [gmailConnected, setGmailConnected] = useState<boolean | null>(null);
   const [gmailAddress, setGmailAddress] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -305,12 +306,8 @@ export default function DashboardLayout() {
   };
 
   const handleLanguageChange = (lang: 'EN' | 'CN' | 'BOTH') => {
-    setCurrentLanguage(lang);
-    toast('🚧 Language switching feature coming soon!', {
-      icon: '🔜',
-      duration: 3000,
-    });
-    // TODO: Implement actual language switching logic
+    setLanguage(lang);
+    toast.success(t('common.languageSwitched'));
   };
 
   const isActive = (path: string) => {
@@ -328,7 +325,7 @@ export default function DashboardLayout() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex-1 ml-16 group"
           >
             <Zap className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-            <span className="text-gray-500 text-base group-hover:text-gray-700 transition-colors">Quick action [CTRL + K]</span>
+            <span className="text-gray-500 text-base group-hover:text-gray-700 transition-colors">{t('quickActions.shortcut')}</span>
           </button>
 
           <div className="flex items-center gap-3 pr-16">
@@ -438,7 +435,7 @@ export default function DashboardLayout() {
                       className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-gray-700"
                     >
                       <Settings className="w-5 h-5" />
-                      <span className="font-medium">Settings</span>
+                      <span className="font-medium">{t('nav.settings')}</span>
                     </Link>
                   </div>
 
@@ -452,7 +449,7 @@ export default function DashboardLayout() {
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors font-medium"
                     >
                       <LogOut className="w-4 h-4" />
-                      <span>Logout</span>
+                      <span>{t('auth.logout')}</span>
                     </button>
                   </div>
                 </div>
@@ -532,7 +529,7 @@ export default function DashboardLayout() {
                   title={sidebarCollapsed ? 'Dashboard' : ''}
             >
                   <LayoutDashboard className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Dashboard</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">{t('nav.dashboard')}</span>}
             </Link>
               </li>
             
@@ -549,7 +546,7 @@ export default function DashboardLayout() {
                   title={sidebarCollapsed ? 'Mail Log' : ''}
             >
                   <Inbox className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Mail Log</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">{t('nav.mailLog')}</span>}
             </Link>
               </li>
             
@@ -566,7 +563,7 @@ export default function DashboardLayout() {
                   title={sidebarCollapsed ? 'Customers' : ''}
             >
                   <Users className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Customers</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">{t('nav.customers')}</span>}
             </Link>
               </li>
 
@@ -583,7 +580,7 @@ export default function DashboardLayout() {
                   title={sidebarCollapsed ? 'Follow-ups' : ''}
                 >
                   <Bell className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Follow-ups</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">{t('nav.followUps')}</span>}
             </Link>
               </li>
 
@@ -600,7 +597,7 @@ export default function DashboardLayout() {
                   title={sidebarCollapsed ? 'Fees' : ''}
                 >
                   <DollarSign className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Fee Collection</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">{t('nav.fees')}</span>}
                 </Link>
               </li>
 
@@ -619,10 +616,10 @@ export default function DashboardLayout() {
                   <CheckSquare className="w-5 h-5 shrink-0" />
                   {!sidebarCollapsed && (
                     <span className="flex items-center gap-3 whitespace-nowrap flex-1">
-                      <span>To-Do</span>
+                      <span>{t('nav.todos')}</span>
                       {hasNewTodos && (
                         <span className="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-semibold rounded-full">
-                          New
+                          {t('nav.new')}
                         </span>
                       )}
                     </span>
@@ -643,7 +640,7 @@ export default function DashboardLayout() {
                   title={sidebarCollapsed ? 'Email Templates' : ''}
             >
                   <FileText className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Email Templates</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">{t('nav.templates')}</span>}
             </Link>
               </li>
 
@@ -660,7 +657,7 @@ export default function DashboardLayout() {
                   title={sidebarCollapsed ? 'Scan' : ''}
             >
                   <Camera className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Scan</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">{t('nav.scan')}</span>}
             </Link>
               </li>
             </ul>
@@ -682,12 +679,12 @@ export default function DashboardLayout() {
                   {gmailConnected ? (
                     <>
                       <Mail className="w-4 h-4 shrink-0" />
-                      {!sidebarCollapsed && <span className="whitespace-nowrap">Gmail Connected</span>}
+                      {!sidebarCollapsed && <span className="whitespace-nowrap">{t('settings.gmailConnected')}</span>}
                     </>
                   ) : (
                     <>
                       <AlertCircle className="w-4 h-4 shrink-0" />
-                      {!sidebarCollapsed && <span className="whitespace-nowrap">Connect Gmail</span>}
+                      {!sidebarCollapsed && <span className="whitespace-nowrap">{t('settings.connectGmail')}</span>}
                     </>
                   )}
             </Link>
@@ -724,7 +721,7 @@ export default function DashboardLayout() {
                 className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium transition-colors hover:bg-blue-100 mb-4"
               >
                 <Search className="w-5 h-5" />
-                <span>Quick Actions</span>
+                <span>{t('quickActions.title')}</span>
               </button>
 
               {/* Navigation Links */}
@@ -738,7 +735,7 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Dashboard
+                  {t('nav.dashboard')}
                 </Link>
                 <Link
                   to="/dashboard/mail"
@@ -749,7 +746,7 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Mail Log
+                  {t('nav.mailLog')}
                 </Link>
                 <Link
                   to="/dashboard/contacts"
@@ -760,7 +757,7 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Customers
+                  {t('nav.customers')}
                 </Link>
                 <Link
                   to="/dashboard/templates"
@@ -771,7 +768,7 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Email Templates
+                  {t('nav.templates')}
                 </Link>
                 <Link
                   to="/dashboard/fees"
@@ -782,7 +779,7 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Fee Collection
+                  {t('nav.fees')}
                 </Link>
                 <Link
                   to="/dashboard/todos"
@@ -793,10 +790,10 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <span>To-Do</span>
+                  <span>{t('nav.todos')}</span>
                   {hasNewTodos && (
                     <span className="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-semibold rounded-full">
-                      New
+                      {t('nav.new')}
                     </span>
                   )}
                 </Link>
@@ -809,7 +806,7 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Scan Mail
+                  {t('nav.scan')}
                 </Link>
                 <Link
                   to="/dashboard/settings"
@@ -820,7 +817,7 @@ export default function DashboardLayout() {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Settings
+                  {t('nav.settings')}
                 </Link>
               </nav>
 
@@ -833,7 +830,7 @@ export default function DashboardLayout() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 transition-colors font-medium"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
+                <span>{t('auth.signOut')}</span>
               </button>
             </div>
           </div>
@@ -857,7 +854,7 @@ export default function DashboardLayout() {
             <div className="p-6">
               <div className="mb-3 px-2">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Quick Actions
+                  {t('quickActions.title')}
                 </h3>
               </div>
               <div className="space-y-1">
@@ -873,8 +870,8 @@ export default function DashboardLayout() {
                     <Camera className="w-5 h-5" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-medium text-gray-900">Scan Mail</p>
-                    <p className="text-sm text-gray-500">Start a new scan session</p>
+                    <p className="font-medium text-gray-900">{t('quickActions.scanMail')}</p>
+                    <p className="text-sm text-gray-500">{t('quickActions.startNewScan')}</p>
                   </div>
                 </button>
 
@@ -890,8 +887,8 @@ export default function DashboardLayout() {
                     <Inbox className="w-5 h-5" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-medium text-gray-900">Log Mail</p>
-                    <p className="text-sm text-gray-500">Manually add mail items</p>
+                    <p className="font-medium text-gray-900">{t('quickActions.logMail')}</p>
+                    <p className="text-sm text-gray-500">{t('quickActions.manuallyAdd')}</p>
                   </div>
                 </button>
 
@@ -907,8 +904,8 @@ export default function DashboardLayout() {
                     <UserPlus className="w-5 h-5" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-medium text-gray-900">Add Customer</p>
-                    <p className="text-sm text-gray-500">Create a new customer profile</p>
+                    <p className="font-medium text-gray-900">{t('quickActions.addCustomer')}</p>
+                    <p className="text-sm text-gray-500">{t('quickActions.createProfile')}</p>
                   </div>
                 </button>
               </div>
@@ -921,13 +918,13 @@ export default function DashboardLayout() {
       <Modal
         isOpen={isLogMailModalOpen}
         onClose={closeLogMailModal}
-        title="Log New Mail"
+        title={t('mail.logNewMail')}
       >
         <form onSubmit={handleLogMailSubmit} className="space-y-6">
           {/* Customer Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Customer <span className="text-red-500">*</span>
+              {t('mail.customer')} <span className="text-red-500">*</span>
             </label>
             <select
               name="contact_id"
@@ -937,7 +934,7 @@ export default function DashboardLayout() {
               disabled={contactsLoading}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-wait"
             >
-              <option value="">{contactsLoading ? 'Loading customers...' : 'Select a customer'}</option>
+              <option value="">{contactsLoading ? t('mail.loadingCustomers') : t('mail.selectCustomer')}</option>
               {contacts
                 .sort((a, b) => (a.mailbox_number || '').localeCompare(b.mailbox_number || ''))
                 .map(contact => (
@@ -953,7 +950,7 @@ export default function DashboardLayout() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Item Type <span className="text-red-500">*</span>
+                {t('mail.itemType')} <span className="text-red-500">*</span>
               </label>
               <select
                 name="item_type"
@@ -962,23 +959,23 @@ export default function DashboardLayout() {
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Letter">Letter</option>
-                <option value="Package">Package</option>
-                <option value="Large Package">Large Package</option>
-                <option value="Certified Mail">Certified Mail</option>
+                <option value="Letter">{t('mailTypes.letter')}</option>
+                <option value="Package">{t('mailTypes.package')}</option>
+                <option value="Large Package">{t('mailTypes.largePackage')}</option>
+                <option value="Certified Mail">{t('mailTypes.certifiedMail')}</option>
               </select>
               {(logMailFormData.item_type === 'Package' || logMailFormData.item_type === 'Large Package') &&
                logMailFormData.contact_id &&
                contacts.find(c => c.contact_id === logMailFormData.contact_id)?.service_tier === 1 && (
                 <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
                   <AlertTriangle className="w-4 h-4" />
-                  Tier 1 customers typically don't receive packages
+                  {t('warnings.tier1NoPackages')}
                 </p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Status <span className="text-red-500">*</span>
+                {t('common.status')} <span className="text-red-500">*</span>
               </label>
               <select
                 name="status"
@@ -987,13 +984,13 @@ export default function DashboardLayout() {
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Received">Received</option>
-                <option value="Notified">Notified</option>
-                <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Picked Up">Picked Up</option>
-                <option value="Forward">Forward</option>
-                <option value="Scanned">Scanned</option>
-                <option value="Abandoned">Abandoned</option>
+                <option value="Received">{t('mailStatus.received')}</option>
+                <option value="Notified">{t('mailStatus.notified')}</option>
+                <option value="Ready for Pickup">{t('mailStatus.readyForPickup')}</option>
+                <option value="Picked Up">{t('mailStatus.pickedUp')}</option>
+                <option value="Forward">{t('mailStatus.forward')}</option>
+                <option value="Scanned">{t('mailStatus.scanned')}</option>
+                <option value="Abandoned">{t('mailStatus.abandoned')}</option>
               </select>
             </div>
           </div>
@@ -1002,7 +999,7 @@ export default function DashboardLayout() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Quantity
+                {t('mail.quantity')}
               </label>
               <input
                 type="number"
@@ -1015,7 +1012,7 @@ export default function DashboardLayout() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Received Date <span className="text-red-500">*</span>
+                {t('mail.receivedDate')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -1031,14 +1028,14 @@ export default function DashboardLayout() {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Description (Optional)
+              {t('mail.descriptionOptional')}
             </label>
             <textarea
               name="description"
               value={logMailFormData.description}
               onChange={handleLogMailFormChange}
               rows={3}
-              placeholder="Add any notes about this mail item..."
+              placeholder={t('mail.addNotesPlaceholder')}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
           </div>
@@ -1051,7 +1048,7 @@ export default function DashboardLayout() {
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={saving}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -1061,10 +1058,10 @@ export default function DashboardLayout() {
               {saving ? (
                 <>
                   <LoadingSpinner size="sm" />
-                  <span>Logging...</span>
+                  <span>{t('mail.logging')}</span>
                 </>
               ) : (
-                'Log Mail'
+                t('mail.logMail')
               )}
             </button>
           </div>
@@ -1075,32 +1072,32 @@ export default function DashboardLayout() {
       <Modal
         isOpen={isAddCustomerModalOpen}
         onClose={closeAddCustomerModal}
-        title="Add New Customer"
+        title={t('customers.addNew')}
       >
         <form onSubmit={handleAddCustomerSubmit} className="space-y-6">
           {/* Name & Company */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Name <span className="text-red-500">*</span>
+                {t('customerForm.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="contact_person"
                 value={customerFormData.contact_person}
                 onChange={handleCustomerFormChange}
-                placeholder="Full name"
+                placeholder={t('customerForm.fullName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Company</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.company')}</label>
               <input
                 type="text"
                 name="company_name"
                 value={customerFormData.company_name}
                 onChange={handleCustomerFormChange}
-                placeholder="Company name"
+                placeholder={t('customerForm.companyName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -1110,7 +1107,7 @@ export default function DashboardLayout() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Mailbox # <span className="text-red-500">*</span>
+                {t('customerForm.mailboxNumber')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -1123,16 +1120,16 @@ export default function DashboardLayout() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Preferred Language</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.languagePreference')}</label>
               <select
                 name="language_preference"
                 value={customerFormData.language_preference}
                 onChange={handleCustomerFormChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="English">English</option>
-                <option value="Chinese">Chinese</option>
-                <option value="Both">Both</option>
+                <option value="English">{t('languageOptions.english')}</option>
+                <option value="Chinese">{t('languageOptions.chinese')}</option>
+                <option value="Both">{t('languageOptions.both')}</option>
               </select>
             </div>
           </div>
@@ -1140,7 +1137,7 @@ export default function DashboardLayout() {
           {/* Email & Phone */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.email')}</label>
               <input
                 type="email"
                 name="email"
@@ -1151,7 +1148,7 @@ export default function DashboardLayout() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Phone</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.phone')}</label>
               <input
                 type="tel"
                 name="phone_number"
@@ -1167,7 +1164,7 @@ export default function DashboardLayout() {
           {/* Unit & Service Tier */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Unit #</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.unitNumber')}</label>
               <input
                 type="text"
                 name="unit_number"
@@ -1178,7 +1175,7 @@ export default function DashboardLayout() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Service Tier</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.serviceTier')}</label>
               <select
                 name="service_tier"
                 value={customerFormData.service_tier}
@@ -1193,24 +1190,24 @@ export default function DashboardLayout() {
 
           {/* Customer Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Customer Status</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.status')}</label>
             <select
               name="status"
               value={customerFormData.status}
               onChange={handleCustomerFormChange}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="Pending">Pending</option>
-              <option value="Active">Active</option>
-              <option value="No">Archived</option>
+              <option value="Pending">{t('customerStatus.pending')}</option>
+              <option value="Active">{t('customerStatus.active')}</option>
+              <option value="No">{t('customerStatus.archived')}</option>
             </select>
           </div>
 
           {/* Display Name Preference */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Display Name Preference
-              <span className="text-xs text-gray-500 ml-2 font-normal">How should this customer appear in lists?</span>
+              {t('customerForm.displayNamePreference')}
+              <span className="text-xs text-gray-500 ml-2 font-normal">{t('customerForm.displayNameHelp')}</span>
             </label>
             <select
               name="display_name_preference"
@@ -1218,11 +1215,11 @@ export default function DashboardLayout() {
               onChange={handleCustomerFormChange}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="both">Both (Company - Person)</option>
-              <option value="company">Company Name Only</option>
-              <option value="person">Person Name Only</option>
+              <option value="both">{t('customerForm.displayBoth')}</option>
+              <option value="company">{t('customerForm.displayCompany')}</option>
+              <option value="person">{t('customerForm.displayPerson')}</option>
             </select>
-            <p className="text-xs text-gray-500 mt-1">Shows both names, or whichever is available</p>
+            <p className="text-xs text-gray-500 mt-1">{t('customerForm.showsBothNames')}</p>
           </div>
 
           {/* Buttons */}
@@ -1233,14 +1230,14 @@ export default function DashboardLayout() {
               className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg font-medium transition-colors"
               disabled={saving}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Customer'}
+              {saving ? t('common.saving') : t('customers.saveCustomer')}
             </button>
           </div>
         </form>

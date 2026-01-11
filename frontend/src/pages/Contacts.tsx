@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner.tsx';
 import BulkEmailModal from '../components/BulkEmailModal.tsx';
 import { validateContactForm } from '../utils/validation.ts';
 import { getCustomerAvatarUrl } from '../utils/customerAvatars.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 // Helper function to generate avatar color based on name
 const getAvatarColor = (name: string): string => {
@@ -50,6 +51,7 @@ interface Contact {
 
 export default function ContactsPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [allContacts, setAllContacts] = useState<Contact[]>([]); // Store all contacts including archived
   const [loading, setLoading] = useState(true);
@@ -341,7 +343,7 @@ export default function ContactsPage() {
     <div className="max-w-full mx-auto px-16 py-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('customers.title')}</h1>
         <div className="flex items-center gap-4">
           {/* Bulk Email Button */}
           <button
@@ -350,27 +352,27 @@ export default function ContactsPage() {
             title="Send bulk emails to multiple customers"
           >
             <Mail className="w-4 h-4" />
-            <span>Bulk Email</span>
+            <span>{t('templates.sendEmail')}</span>
           </button>
-          
+
           {/* Show Archived Toggle */}
           <button
             onClick={() => setShowArchived(!showArchived)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              showArchived 
-                ? 'bg-gray-600 text-white hover:bg-gray-700' 
+              showArchived
+                ? 'bg-gray-600 text-white hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {showArchived ? (
               <>
                 <ArchiveRestore className="w-4 h-4" />
-                <span>Viewing Archived</span>
+                <span>{t('customers.viewingArchived')}</span>
               </>
             ) : (
               <>
                 <Archive className="w-4 h-4" />
-                <span>Show Archived</span>
+                <span>{t('customers.showArchived')}</span>
               </>
             )}
           </button>
@@ -379,7 +381,7 @@ export default function ContactsPage() {
             className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <span>+</span>
-            <span>Add New Customer</span>
+            <span>{t('customers.addNew')}</span>
           </button>
         </div>
       </div>
@@ -390,7 +392,7 @@ export default function ContactsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by Name / Company / Mailbox # / Unit #..."
+            placeholder={t('customers.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -403,13 +405,13 @@ export default function ContactsPage() {
         {filteredContacts.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">👥</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No customers yet</h3>
-            <p className="text-gray-600 mb-6">Get started by adding your first customer</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('customers.noCustomers')}</h3>
+            <p className="text-gray-600 mb-6">{t('customers.getStarted')}</p>
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors"
             >
-              + Add New Customer
+              + {t('customers.addNew')}
             </button>
           </div>
         ) : (
@@ -418,12 +420,12 @@ export default function ContactsPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {/* Contact Name - Sortable */}
-                  <th 
+                  <th
                     className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center gap-2">
-                      Contact / Company
+                      {t('customerForm.name')} / {t('customerForm.company')}
                       {sortColumn === 'name' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                       ) : (
@@ -431,17 +433,17 @@ export default function ContactsPage() {
                       )}
                     </div>
                   </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Email</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Phone</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Service Tier</th>
-                  
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.email')}</th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.phone')}</th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.serviceTier')}</th>
+
                   {/* Mailbox # - Sortable */}
-                  <th 
+                  <th
                     className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                     onClick={() => handleSort('mailbox')}
                   >
                     <div className="flex items-center gap-2">
-                      Mailbox #
+                      {t('customerForm.mailboxNumber')}
                       {sortColumn === 'mailbox' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                       ) : (
@@ -449,16 +451,16 @@ export default function ContactsPage() {
                       )}
                     </div>
                   </th>
-                  
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Unit #</th>
-                  
+
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.unitNumber')}</th>
+
                   {/* Status - Sortable */}
-                  <th 
+                  <th
                     className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center gap-2">
-                      Status
+                      {t('common.status')}
                       {sortColumn === 'status' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                       ) : (
@@ -466,8 +468,8 @@ export default function ContactsPage() {
                       )}
                     </div>
                   </th>
-                  
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Actions</th>
+
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -611,40 +613,40 @@ export default function ContactsPage() {
 
       {filteredContacts.length > 0 && (
         <div className="mt-4 text-sm text-gray-600 text-center">
-          Showing {filteredContacts.length} of {contacts.length} customers
+          {t('customers.showing', { count: filteredContacts.length, total: contacts.length })}
         </div>
       )}
 
       {/* Add/Edit Customer Modal */}
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingContact ? 'Edit Customer' : 'Add New Customer'}
+        title={editingContact ? t('customers.editCustomer') : t('customers.addNew')}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name & Company */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Name <span className="text-red-500">*</span>
+                {t('customerForm.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="contact_person"
                 value={formData.contact_person}
                 onChange={handleChange}
-                placeholder="Full name"
+                placeholder={t('customerForm.fullName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Company</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.company')}</label>
               <input
                 type="text"
                 name="company_name"
                 value={formData.company_name}
                 onChange={handleChange}
-                placeholder="Company name"
+                placeholder={t('customerForm.companyName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -654,7 +656,7 @@ export default function ContactsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Mailbox # <span className="text-red-500">*</span>
+                {t('customerForm.mailboxNumber')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -667,16 +669,16 @@ export default function ContactsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Preferred Language</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.languagePreference')}</label>
               <select
                 name="language_preference"
                 value={formData.language_preference}
                 onChange={handleChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="English">English</option>
-                <option value="Chinese">Chinese</option>
-                <option value="Both">Both</option>
+                <option value="English">{t('languageOptions.english')}</option>
+                <option value="Chinese">{t('languageOptions.chinese')}</option>
+                <option value="Both">{t('languageOptions.both')}</option>
               </select>
             </div>
           </div>
@@ -684,7 +686,7 @@ export default function ContactsPage() {
           {/* Email & Phone */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.email')}</label>
               <input
                 type="email"
                 name="email"
@@ -695,7 +697,7 @@ export default function ContactsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Phone</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.phone')}</label>
               <input
                 type="tel"
                 name="phone_number"
@@ -711,7 +713,7 @@ export default function ContactsPage() {
           {/* Unit & Service Tier */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Unit #</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.unitNumber')}</label>
               <input
                 type="text"
                 name="unit_number"
@@ -722,7 +724,7 @@ export default function ContactsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Service Tier</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.serviceTier')}</label>
               <select
                 name="service_tier"
                 value={formData.service_tier}
@@ -737,25 +739,25 @@ export default function ContactsPage() {
 
           {/* Customer Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Customer Status</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.status')}</label>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="PENDING">Pending</option>
-              <option value="Active">Active</option>
-              <option value="No">Archived</option>
+              <option value="PENDING">{t('customerStatus.pending')}</option>
+              <option value="Active">{t('customerStatus.active')}</option>
+              <option value="No">{t('customerStatus.archived')}</option>
             </select>
           </div>
 
           {/* Display Name Preference */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Display Name Preference
+              {t('customerForm.displayNamePreference')}
               <span className="text-xs text-gray-500 ml-2 font-normal">
-                How should this customer appear in lists?
+                {t('customerForm.displayNameHelp')}
               </span>
             </label>
             <select
@@ -764,9 +766,9 @@ export default function ContactsPage() {
               onChange={handleChange}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="both">Both (Company - Person)</option>
-              <option value="company">Company Name Only</option>
-              <option value="person">Person Name Only</option>
+              <option value="both">{t('customerForm.displayBoth')}</option>
+              <option value="company">{t('customerForm.displayCompany')}</option>
+              <option value="person">{t('customerForm.displayPerson')}</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">
               {formData.display_name_preference === 'company' && formData.company_name && `Will show: "${formData.company_name}"`}
@@ -776,7 +778,7 @@ export default function ContactsPage() {
               {(formData.display_name_preference === 'both' || !formData.display_name_preference) && formData.company_name && formData.contact_person &&
                 `Will show: "${formData.company_name} - ${formData.contact_person}"`}
               {(formData.display_name_preference === 'both' || !formData.display_name_preference) && (!formData.company_name || !formData.contact_person) &&
-                'Shows both names, or whichever is available'}
+                t('customerForm.showsBothNames')}
             </p>
           </div>
 
@@ -788,14 +790,14 @@ export default function ContactsPage() {
               disabled={saving}
               className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving...' : (editingContact ? 'Update Customer' : 'Save Customer')}
+              {saving ? t('common.saving') : (editingContact ? t('customers.editCustomer') : t('customers.saveCustomer'))}
             </button>
           </div>
         </form>

@@ -2,8 +2,10 @@ import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 export default function NewContactPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,12 +61,12 @@ export default function NewContactPage() {
     e.preventDefault();
     
     if (!formData.contact_person && !formData.company_name) {
-      toast.error('Please enter either a name or company name');
+      toast.error(t('validation.enterNameOrCompany'));
       return;
     }
 
     if (!formData.mailbox_number) {
-      toast.error('Mailbox number is required');
+      toast.error(t('validation.mailboxRequired'));
       return;
     }
 
@@ -72,7 +74,7 @@ export default function NewContactPage() {
     if (formData.phone_number) {
       const digitsOnly = formData.phone_number.replace(/\D/g, '');
       if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
-        toast.error('Phone number must be exactly 10 digits');
+        toast.error(t('validation.phoneMustBe10Digits'));
         return;
       }
     }
@@ -81,7 +83,7 @@ export default function NewContactPage() {
 
     try {
       await api.contacts.create(formData);
-      toast.success('Customer added successfully!');
+      toast.success(t('toast.customerAdded'));
       navigate('/dashboard/contacts');
     } catch (err) {
       console.error('Failed to create contact:', err);
@@ -99,13 +101,13 @@ export default function NewContactPage() {
         className="text-gray-600 hover:text-gray-900 mb-6 flex items-center gap-2"
       >
         <span>←</span>
-        <span>Back to Customers</span>
+        <span>{t('customers.backToDirectory')}</span>
       </button>
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Customer</h1>
-        <p className="text-gray-600">Enter customer information</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('customers.addNew')}</h1>
+        <p className="text-gray-600">{t('customers.enterInfo')}</p>
       </div>
 
       {/* Form */}
@@ -115,28 +117,28 @@ export default function NewContactPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Name
+                {t('customerForm.name')}
               </label>
               <input
                 type="text"
                 name="contact_person"
                 value={formData.contact_person}
                 onChange={handleChange}
-                placeholder="Full name"
+                placeholder={t('customerForm.fullName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Company
+                {t('customerForm.company')}
               </label>
               <input
                 type="text"
                 name="company_name"
                 value={formData.company_name}
                 onChange={handleChange}
-                placeholder="Company name"
+                placeholder={t('customerForm.companyName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -146,7 +148,7 @@ export default function NewContactPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Mailbox # <span className="text-red-500">*</span>
+                {t('customerForm.mailboxNumber')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -161,7 +163,7 @@ export default function NewContactPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Preferred Language
+                {t('customerForm.languagePreference')}
               </label>
               <select
                 name="language_preference"
@@ -169,9 +171,9 @@ export default function NewContactPage() {
                 onChange={handleChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="English">English</option>
-                <option value="Chinese">Chinese</option>
-                <option value="Both">Both</option>
+                <option value="English">{t('languageOptions.english')}</option>
+                <option value="Chinese">{t('languageOptions.chinese')}</option>
+                <option value="Both">{t('languageOptions.both')}</option>
               </select>
             </div>
           </div>
@@ -180,7 +182,7 @@ export default function NewContactPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Email
+                {t('common.email')}
               </label>
               <input
                 type="email"
@@ -194,7 +196,7 @@ export default function NewContactPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Phone
+                {t('customerForm.phone')}
               </label>
               <input
                 type="tel"
@@ -212,7 +214,7 @@ export default function NewContactPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Unit #
+                {t('customerForm.unitNumber')}
               </label>
               <input
                 type="text"
@@ -226,7 +228,7 @@ export default function NewContactPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Status
+                {t('common.status')}
               </label>
               <select
                 name="status"
@@ -234,9 +236,9 @@ export default function NewContactPage() {
                 onChange={handleChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Pending">Pending</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="Pending">{t('customerStatus.pending')}</option>
+                <option value="Active">{t('customerStatus.active')}</option>
+                <option value="Inactive">{t('customerStatus.inactive')}</option>
               </select>
             </div>
           </div>
@@ -261,9 +263,9 @@ export default function NewContactPage() {
           {/* Display Name Preference - Row 6 */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Display Name Preference
+              {t('customerForm.displayNamePreference')}
               <span className="text-xs text-gray-500 ml-2 font-normal">
-                How should this customer appear in lists?
+                {t('customerForm.displayNameHelp')}
               </span>
             </label>
             <select
@@ -272,9 +274,9 @@ export default function NewContactPage() {
               onChange={handleChange}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="both">Both (Company - Person)</option>
-              <option value="company">Company Name Only</option>
-              <option value="person">Person Name Only</option>
+              <option value="both">{t('customerForm.displayBoth')}</option>
+              <option value="company">{t('customerForm.displayCompany')}</option>
+              <option value="person">{t('customerForm.displayPerson')}</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">
               {formData.display_name_preference === 'company' && formData.company_name && `Will show: "${formData.company_name}"`}
@@ -284,7 +286,7 @@ export default function NewContactPage() {
               {(formData.display_name_preference === 'both' || !formData.display_name_preference) && formData.company_name && formData.contact_person &&
                 `Will show: "${formData.company_name} - ${formData.contact_person}"`}
               {(formData.display_name_preference === 'both' || !formData.display_name_preference) && (!formData.company_name || !formData.contact_person) &&
-                'Shows both names, or whichever is available'}
+                t('customerForm.showsBothNames')}
             </p>
           </div>
 
@@ -296,14 +298,14 @@ export default function NewContactPage() {
               disabled={loading}
               className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Saving...' : 'Save Customer'}
+              {loading ? t('common.saving') : t('customers.saveCustomer')}
             </button>
           </div>
         </div>

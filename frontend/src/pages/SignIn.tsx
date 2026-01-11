@@ -4,8 +4,10 @@ import { Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase.ts';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext.tsx';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 export default function SignInPage() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +28,7 @@ export default function SignInPage() {
 
         if (error) throw error;
 
-        toast.success('Sign up successful! Please check your email to confirm your account.');
+        toast.success(t('auth.signUpSuccess'));
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -35,11 +37,11 @@ export default function SignInPage() {
 
         if (error) throw error;
 
-        toast.success('Signed in successfully!');
+        toast.success(t('auth.signInSuccess'));
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred');
+      toast.error(error.message || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -55,45 +57,45 @@ export default function SignInPage() {
             <span>Mei Way Mail Plus</span>
           </div>
           <p className="text-gray-600 mt-2 text-lg">
-            Professional Mail & Package Management Services
+            {t('auth.tagline')}
           </p>
         </div>
 
         {/* App Description */}
         <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Mei Way Mail Plus</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('auth.welcomeTitle')}</h2>
           <p className="text-gray-700 mb-4">
-            Your trusted partner for comprehensive mail and business services in Flushing, NY.
+            {t('auth.welcomeSubtitle')}
           </p>
           
           <div className="space-y-3 text-gray-700">
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
-              <p><strong>Private Mailbox Services:</strong> Secure mail and package receiving, logging, storage, and pickup</p>
+              <p><strong>{t('auth.services.mailbox')}:</strong> {t('auth.services.mailboxDesc')}</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
-              <p><strong>Virtual Mailbox:</strong> Mail scanning and forwarding services for remote access</p>
+              <p><strong>{t('auth.services.virtual')}:</strong> {t('auth.services.virtualDesc')}</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
-              <p><strong>Shipping Services:</strong> Domestic and international shipping solutions</p>
+              <p><strong>{t('auth.services.shipping')}:</strong> {t('auth.services.shippingDesc')}</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
-              <p><strong>Business Support:</strong> LLC formation assistance, eBay consignment, and document handling</p>
+              <p><strong>{t('auth.services.business')}:</strong> {t('auth.services.businessDesc')}</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
-              <p><strong>Email Notifications:</strong> Stay informed about your mail, packages, and account activity</p>
+              <p><strong>{t('auth.services.notifications')}:</strong> {t('auth.services.notificationsDesc')}</p>
             </div>
           </div>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-600">
-              <strong>Location:</strong> 37-02 Main Street, Unit B1, Flushing, NY 11354<br/>
-              <strong>Phone:</strong> <a href="tel:646-535-0363" className="text-brand hover:text-brand-hover">646-535-0363</a><br/>
-              <strong>Email:</strong> <a href="mailto:info@meiwaymail.com" className="text-brand hover:text-brand-hover">info@meiwaymail.com</a>
+              <strong>{t('auth.location')}:</strong> 37-02 Main Street, Unit B1, Flushing, NY 11354<br/>
+              <strong>{t('auth.phone')}:</strong> <a href="tel:646-535-0363" className="text-brand hover:text-brand-hover">646-535-0363</a><br/>
+              <strong>{t('common.email')}:</strong> <a href="mailto:info@meiwaymail.com" className="text-brand hover:text-brand-hover">info@meiwaymail.com</a>
             </p>
           </div>
         </div>
@@ -101,12 +103,12 @@ export default function SignInPage() {
         {/* Sign In/Up Form */}
         <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
-            {isSignUp ? 'Staff Registration' : 'Staff Sign In'}
+            {isSignUp ? t('auth.staffRegistration') : t('auth.staffSignIn')}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+                {t('common.email')}
               </label>
               <input
                 id="email"
@@ -121,7 +123,7 @@ export default function SignInPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -140,7 +142,7 @@ export default function SignInPage() {
               disabled={loading}
               className="w-full bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {loading ? t('common.loading') : isSignUp ? t('auth.signUp') : t('auth.signIn')}
             </button>
           </form>
 
@@ -150,8 +152,8 @@ export default function SignInPage() {
               className="text-sm text-brand hover:text-brand-hover transition-colors"
             >
               {isSignUp
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"}
+                ? t('auth.alreadyHaveAccount')
+                : t('auth.dontHaveAccount')}
             </button>
           </div>
         </div>
@@ -159,11 +161,11 @@ export default function SignInPage() {
         {/* Footer Links */}
         <div className="mt-6 text-center text-sm text-gray-600">
           <a href="/privacy-policy" className="text-brand hover:text-brand-hover transition-colors">
-            Privacy Policy
+            {t('auth.privacyPolicy')}
           </a>
           <span className="mx-2">·</span>
           <a href="/terms-of-service" className="text-brand hover:text-brand-hover transition-colors">
-            Terms of Service
+            {t('auth.termsOfService')}
           </a>
         </div>
       </div>
