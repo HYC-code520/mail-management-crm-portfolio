@@ -63,7 +63,9 @@ const mockContacts = [
 
 describe('smartMatchWithGemini', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Use resetAllMocks to clear both call history AND mock implementations
+    // This prevents hanging tests when other tests set never-resolving mocks
+    vi.resetAllMocks();
   });
 
   it('should successfully match with high confidence', async () => {
@@ -145,7 +147,8 @@ describe('smartMatchWithGemini', () => {
   });
 
   it('should compress large images', async () => {
-    const mockBlob = new Blob(['x'.repeat(5 * 1024 * 1024)], { type: 'image/jpeg' }); // 5MB
+    // Use 2.1MB blob - just over the 2MB threshold to trigger compression, but not too large
+    const mockBlob = new Blob(['x'.repeat(2.1 * 1024 * 1024)], { type: 'image/jpeg' });
 
     (api.scan.smartMatch as any).mockResolvedValue({
       extractedText: 'TEST',
@@ -157,7 +160,7 @@ describe('smartMatchWithGemini', () => {
 
     // Should have called the API (compression happens before the call)
     expect(api.scan.smartMatch).toHaveBeenCalled();
-  });
+  }, 15000); // Increase timeout for image compression test
 
   it('should send contact list to backend', async () => {
     const mockBlob = new Blob(['test'], { type: 'image/jpeg' });

@@ -90,7 +90,9 @@ const renderComponent = () => {
 
 describe('ScanSession - Skip Notification Feature', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Use resetAllMocks to clear both call history AND mock implementations
+    // This prevents hanging tests when other tests set never-resolving mocks
+    vi.resetAllMocks();
     localStorage.clear();
     sessionStorage.clear();
     // Mock window.confirm to return true for test dialogs

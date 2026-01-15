@@ -103,9 +103,12 @@ const createMockDashboardStatsWithAnalytics = (ageDistribution = {
 
 describe('Dashboard - Mail Age Distribution', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Use resetAllMocks to clear both call history AND mock implementations
+    // This prevents hanging tests when other tests set never-resolving mocks
+    vi.resetAllMocks();
     (api.contacts.getAll as any).mockResolvedValue([]);
     (api.mailItems.getAll as any).mockResolvedValue([]);
+    (api.stats.getDashboardStats as any).mockResolvedValue(createMockDashboardStatsWithAnalytics());
     (api.fees.getUnpaidByContact as any).mockResolvedValue({ fees: [], total: 0 });
   });
 

@@ -53,7 +53,9 @@ describe('LogPage - Staff Selection Toggle Buttons in Edit Modal', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Use resetAllMocks to clear both call history AND mock implementations
+    // This prevents hanging tests when other tests set never-resolving mocks
+    vi.resetAllMocks();
     (api.mailItems.getAll as any).mockResolvedValue([mockMailItem]);
     (api.contacts.getAll as any).mockResolvedValue([mockContact]);
     (api.actionHistory.getByMailItem as any).mockResolvedValue([]);

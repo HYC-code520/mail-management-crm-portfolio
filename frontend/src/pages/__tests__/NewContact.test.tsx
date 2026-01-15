@@ -37,7 +37,9 @@ vi.mock('react-hot-toast', () => ({
 
 describe('NewContact Page', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Use resetAllMocks to clear both call history AND mock implementations
+    // This prevents hanging tests when other tests set never-resolving mocks
+    vi.resetAllMocks();
   });
 
   it('renders new contact form', () => {

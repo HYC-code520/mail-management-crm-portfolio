@@ -38,13 +38,15 @@ const { getDaysSinceNY, toNYDateString, getTodayNY, getDaysAgoNY, getStartOfDayN
 /**
  * Helper to setup all required Supabase mocks for getDashboardStats
  * The controller makes these queries:
- * 1. package_fees (monthly revenue) - .select().eq().eq().not()
- * 2. contacts - .select().order()
- * 3. mail_items - .select().order()
- * 4. notification_history - .select()
- * 5. package_fees (all fees) - .select().in()
+ * 1. contacts - .select().order()
+ * 2. mail_items - .select().order()
+ * 3. notification_history - .select()
+ * 4. package_fees (all fees) - .select().in()
+ * 5. todos - .select().eq().not().gte()
+ * 6. followup_dismissals - .select().is()
+ * 7. package_fees (monthly revenue for getMonthlyRevenue) - .select().eq().eq().not()
  */
-function setupSupabaseMocks(mockSupabase, { contacts = [], mailItems = [], notifications = [], packageFees = [], todos = [] }) {
+function setupSupabaseMocks(mockSupabase, { contacts = [], mailItems = [], notifications = [], packageFees = [], todos = [], followupDismissals = [] }) {
   let packageFeesCallCount = 0;
 
   mockSupabase.from.mockImplementation((table) => {
@@ -115,6 +117,16 @@ function setupSupabaseMocks(mockSupabase, { contacts = [], mailItems = [], notif
           }),
         }),
       };
+    } else if (table === 'followup_dismissals') {
+      // Dismissals query: .select().is()
+      return {
+        select: jest.fn().mockReturnValue({
+          is: jest.fn().mockResolvedValue({
+            data: followupDismissals,
+            error: null,
+          }),
+        }),
+      };
     }
     // Default fallback
     return {
@@ -124,6 +136,10 @@ function setupSupabaseMocks(mockSupabase, { contacts = [], mailItems = [], notif
           error: null,
         }),
         eq: jest.fn().mockResolvedValue({
+          data: [],
+          error: null,
+        }),
+        is: jest.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
