@@ -316,11 +316,11 @@ describe('BulkScanEmailModal', () => {
       });
 
       // Should have editable input for subject
-      const subjectInput = screen.getByPlaceholderText('Email subject...');
+      const subjectInput = screen.getByPlaceholderText('Subject');
       expect(subjectInput).toBeInTheDocument();
 
       // Should have editable textarea for body
-      const bodyTextarea = screen.getByPlaceholderText('Email message...');
+      const bodyTextarea = screen.getByPlaceholderText('Compose email...');
       expect(bodyTextarea).toBeInTheDocument();
     });
   });
@@ -386,11 +386,11 @@ describe('BulkScanEmailModal', () => {
       });
 
       // Modify subject
-      const subjectInput = screen.getByPlaceholderText('Email subject...');
+      const subjectInput = screen.getByPlaceholderText('Subject');
       fireEvent.change(subjectInput, { target: { value: 'Custom Subject' } });
 
       // Modify body
-      const bodyTextarea = screen.getByPlaceholderText('Email message...');
+      const bodyTextarea = screen.getByPlaceholderText('Compose email...');
       fireEvent.change(bodyTextarea, { target: { value: 'Custom Body' } });
 
       // Send

@@ -33,6 +33,9 @@ const getDayOfWeekKey = (dayIndex: number): string => {
 export default function TodoList() {
   const { t } = useLanguage();
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [totalPendingCount, setTotalPendingCount] = useState(0);
+  const [totalCompletedCount, setTotalCompletedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoNotes, setNewTodoNotes] = useState('');
@@ -42,6 +45,7 @@ export default function TodoList() {
   const [newTodoStaff, setNewTodoStaff] = useState('Merlin'); // Default to Merlin
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showAllCompleted, setShowAllCompleted] = useState(true); // Toggle for completed filter view mode
   
   // Add modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -74,8 +78,15 @@ export default function TodoList() {
       const filters = filter === 'active' ? { completed: false } : 
                      filter === 'completed' ? { completed: true } : 
                      {};
-      const data = await api.todos.getAll(filters);
+      const [data, pendingData, completedData] = await Promise.all([
+        api.todos.getAll(filters),
+        api.todos.getAll({ completed: false }), // Always fetch pending count
+        api.todos.getAll({ completed: true })   // Always fetch completed count
+      ]);
       setTodos(data);
+      setTotalPendingCount(pendingData.length);
+      setTotalCompletedCount(completedData.length);
+      setTotalCount(pendingData.length + completedData.length);
     } catch (error: any) {
       console.error('Failed to load todos:', error);
       toast.error(t('todos.failedToLoad'));
@@ -147,14 +158,16 @@ export default function TodoList() {
       } else {
         // Task is being marked as incomplete - optimistic update
         // Update UI immediately
-        setTodos(prevTodos => 
-          prevTodos.map(t => 
-            t.todo_id === todo.todo_id 
+        setTodos(prevTodos =>
+          prevTodos.map(t =>
+            t.todo_id === todo.todo_id
               ? { ...t, is_completed: false }
               : t
           )
         );
-        
+        setTotalPendingCount(prev => prev + 1);
+        setTotalCompletedCount(prev => Math.max(0, prev - 1));
+
         // Then update server in background
         await api.todos.update(todo.todo_id, {
           is_completed: false,
@@ -174,14 +187,16 @@ export default function TodoList() {
     
     try {
       // Optimistic update - update UI immediately
-      setTodos(prevTodos => 
-        prevTodos.map(t => 
-          t.todo_id === todoToComplete.todo_id 
+      setTodos(prevTodos =>
+        prevTodos.map(t =>
+          t.todo_id === todoToComplete.todo_id
             ? { ...t, is_completed: true, last_edited_by_name: staffMember }
             : t
         )
       );
-      
+      setTotalPendingCount(prev => Math.max(0, prev - 1));
+      setTotalCompletedCount(prev => prev + 1);
+
       // Close modal immediately for smooth UX
       setIsCompletionModalOpen(false);
       setTodoToComplete(null);
@@ -322,8 +337,8 @@ export default function TodoList() {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    if (date.toDateString() === today.toDateString()) return t('todos.today');
+    if (date.toDateString() === yesterday.toDateString()) return t('todos.yesterday');
     
     return formatNYDate(date, { 
       month: 'short', 
@@ -396,7 +411,9 @@ export default function TodoList() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900">{t('todos.title')}</h1>
           <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-            {todos.filter(todo => !todo.is_completed).length} {t('todos.tasksCompleted')}
+            {totalPendingCount === 1 
+              ? t('todos.nTaskPending', { count: totalPendingCount })
+              : t('todos.nTasksPending', { count: totalPendingCount })}
           </span>
         </div>
       </div>
@@ -415,7 +432,7 @@ export default function TodoList() {
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
             filter === 'all' ? 'bg-white/20' : 'bg-gray-200'
           }`}>
-            {todos.length}
+            {totalCount}
           </span>
         </button>
         <button
@@ -430,7 +447,7 @@ export default function TodoList() {
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
             filter === 'active' ? 'bg-white/20' : 'bg-gray-200'
           }`}>
-            {todos.filter(t => !t.is_completed).length}
+            {totalPendingCount}
           </span>
         </button>
         <button
@@ -445,7 +462,7 @@ export default function TodoList() {
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
             filter === 'completed' ? 'bg-white/20' : 'bg-gray-200'
           }`}>
-            {todos.filter(t => t.is_completed).length}
+            {totalCompletedCount}
           </span>
         </button>
       </div>
@@ -454,16 +471,47 @@ export default function TodoList() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">
-            {filter === 'active' ? t('todos.allIncompleteTasks') : t('todos.today')}
+            {filter === 'active' 
+              ? t('todos.allIncompleteTasks') 
+              : filter === 'completed' && showAllCompleted 
+              ? t('todos.allCompletedTasks') 
+              : t('todos.today')}
           </h2>
-          {filter !== 'active' && (
-            <button
-              onClick={goToToday}
-              className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              {t('todos.today')}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* View mode toggle for completed filter */}
+            {filter === 'completed' && (
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setShowAllCompleted(false)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    !showAllCompleted
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {t('todos.byDate')}
+                </button>
+                <button
+                  onClick={() => setShowAllCompleted(true)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    showAllCompleted
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {t('todos.viewAll')}
+                </button>
+              </div>
+            )}
+            {(filter === 'all' || (filter === 'completed' && !showAllCompleted)) && (
+              <button
+                onClick={goToToday}
+                className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                {t('todos.today')}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Show info message when viewing all incomplete tasks */}
@@ -475,8 +523,17 @@ export default function TodoList() {
           </div>
         )}
 
-        {/* Date selector - only show for 'all' and 'completed' filters */}
-        {filter !== 'active' && (
+        {/* Show info message when viewing all completed tasks */}
+        {filter === 'completed' && showAllCompleted && (
+          <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">
+            <p className="text-sm text-green-800">
+              {t('todos.showingAllCompleted')}
+            </p>
+          </div>
+        )}
+
+        {/* Date selector - show for 'all' filter and 'completed' filter when not showing all */}
+        {(filter === 'all' || (filter === 'completed' && !showAllCompleted)) && (
         <div className="flex items-center gap-4">
           <button
             onClick={goToPreviousWeek}
@@ -500,30 +557,32 @@ export default function TodoList() {
                 <button
                   key={dateKey}
                   onClick={() => setSelectedDate(date)}
-                  className={`flex flex-col items-center px-2 md:px-4 py-3 rounded-xl transition-all ${
+                  className={`flex flex-col items-center justify-center px-2 md:px-4 py-3 rounded-2xl transition-all min-h-[88px] ${
                     isSelected
-                      ? 'bg-gradient-to-br from-amber-100 to-orange-100 border-2 border-amber-300 shadow-md'
+                      ? 'bg-blue-50 shadow-sm border-2 border-blue-500'
                       : isTodayDate
-                      ? 'bg-white border-2 border-gray-300 hover:border-amber-300'
-                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
+                      ? 'bg-white shadow-sm hover:shadow-md border border-gray-100'
+                      : 'bg-white shadow-sm hover:shadow-md border border-gray-100'
                   }`}
                 >
                   <span className={`text-xs font-semibold uppercase mb-1 ${
-                    isSelected ? 'text-amber-800' : 'text-gray-500'
+                    isSelected ? 'text-blue-600' : 'text-gray-400'
                   }`}>
                     {t(`daysOfWeek.${getDayOfWeekKey(date.getDay())}`)}
                   </span>
                   <span className={`text-xl md:text-2xl font-bold ${
-                    isSelected ? 'text-gray-900' : isTodayDate ? 'text-blue-600' : 'text-gray-700'
+                    isSelected ? 'text-blue-700' : isTodayDate ? 'text-gray-900' : 'text-gray-700'
                   }`}>
                     {date.getDate()}
                   </span>
-                  {tasksForDate.length > 0 && (
+                  {tasksForDate.length > 0 ? (
                     <span className={`text-xs mt-1 px-2 py-0.5 rounded-full ${
-                      isSelected ? 'bg-amber-200 text-amber-800' : 'bg-blue-100 text-blue-700'
+                      isSelected ? 'bg-blue-100 text-blue-700' : 'bg-blue-100 text-blue-700'
                     }`}>
                       {tasksForDate.length}
                     </span>
+                  ) : (
+                    <span className="text-xs mt-1 px-2 py-0.5 invisible">0</span>
                   )}
                 </button>
               );
@@ -569,17 +628,33 @@ export default function TodoList() {
               const dateB = b.date_header || '9999-99-99';
               return dateA.localeCompare(dateB);
             });
+        } else if (filter === 'completed' && showAllCompleted) {
+          // Show ALL completed tasks, sorted by date (most recent first)
+          filteredTodos = todos
+            .filter(t => t.is_completed)
+            .sort((a, b) => {
+              const dateA = a.date_header || '0000-00-00';
+              const dateB = b.date_header || '0000-00-00';
+              return dateB.localeCompare(dateA); // Newest first
+            });
+        } else if (filter === 'completed' && !showAllCompleted) {
+          // Filter completed tasks by selected date
+          filteredTodos = todos.filter(t => {
+            if (!t.date_header) return false;
+            return t.date_header.startsWith(dateKey) && t.is_completed;
+          });
         } else {
-          // Filter by selected date for 'all' and 'completed'
+          // Filter by selected date for 'all' only
           filteredTodos = todos.filter(t => {
             if (!t.date_header) return false;
             return t.date_header.startsWith(dateKey);
           });
         }
 
-        // Group tasks by date for 'active' filter
+        // Group tasks by date for 'active' filter and 'completed' filter when showing all
         const groupedByDate: { [key: string]: Todo[] } = {};
-        if (filter === 'active') {
+        const useGroupedView = filter === 'active' || (filter === 'completed' && showAllCompleted);
+        if (useGroupedView) {
           filteredTodos.forEach(todo => {
             const todoDate = todo.date_header?.split('T')[0] || 'No Date';
             if (!groupedByDate[todoDate]) {
@@ -605,11 +680,12 @@ export default function TodoList() {
           const yesterday = new Date(today);
           yesterday.setDate(yesterday.getDate() - 1);
 
-          if (date.toDateString() === today.toDateString()) return 'Today';
-          if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+          if (date.toDateString() === today.toDateString()) return t('todos.today');
+          if (date.toDateString() === yesterday.toDateString()) return t('todos.yesterday');
 
-          // Calculate days overdue
-          if (isOverdue(dateStr)) {
+          // Only show "overdue" for incomplete tasks (active filter)
+          // Completed tasks shouldn't show as overdue
+          if (filter === 'active' && isOverdue(dateStr)) {
             const diffTime = today.getTime() - date.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             const formattedDate = formatNYDate(date, {
@@ -628,6 +704,11 @@ export default function TodoList() {
             year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
           });
         };
+        
+        // Check if date should show overdue styling (only for active/incomplete filter)
+        const shouldShowOverdueStyle = (dateStr: string) => {
+          return filter === 'active' && isOverdue(dateStr);
+        };
 
         return filteredTodos.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
@@ -637,40 +718,44 @@ export default function TodoList() {
             className="w-48 h-48 mx-auto mb-4"
           />
           <p className="text-gray-500 text-lg font-medium mb-2">
-            {filter === 'active' ? t('todos.noIncompleteTasks') : t('todos.noTasksForDay')}
+            {filter === 'active' ? t('todos.noIncompleteTasks') : filter === 'completed' ? t('todos.noCompletedTasksForDay') : t('todos.noTasksForDay')}
           </p>
           <p className="text-gray-400 text-sm">
-            {filter === 'active' ? t('todos.allTasksCompleted') : t('todos.addTaskToStart')}
+            {filter === 'active' ? t('todos.allTasksCompleted') : ''}
           </p>
         </div>
-      ) : filter === 'active' ? (
-        // Grouped view for incomplete tasks
+      ) : useGroupedView ? (
+        // Grouped view for incomplete/completed tasks
         <div className="space-y-4">
           {Object.entries(groupedByDate).map(([dateStr, dateTodos]) => (
             <div key={dateStr} className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
               {/* Date Header */}
               <div className={`px-6 py-3 border-b ${
-                isOverdue(dateStr)
+                shouldShowOverdueStyle(dateStr)
                   ? 'bg-red-50 border-red-200'
                   : dateStr === todayKey
                   ? 'bg-blue-50 border-blue-200'
+                  : filter === 'completed'
+                  ? 'bg-green-50 border-green-200'
                   : 'bg-gray-50 border-gray-200'
               }`}>
                 <div className="flex items-center gap-2">
                   <Calendar className={`w-4 h-4 ${
-                    isOverdue(dateStr) ? 'text-red-600' : 'text-gray-500'
+                    shouldShowOverdueStyle(dateStr) ? 'text-red-600' : filter === 'completed' ? 'text-green-600' : 'text-gray-500'
                   }`} />
                   <span className={`font-semibold ${
-                    isOverdue(dateStr) ? 'text-red-700' : 'text-gray-700'
+                    shouldShowOverdueStyle(dateStr) ? 'text-red-700' : filter === 'completed' ? 'text-green-700' : 'text-gray-700'
                   }`}>
                     {formatDateHeader(dateStr)}
                   </span>
                   <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    isOverdue(dateStr)
+                    shouldShowOverdueStyle(dateStr)
                       ? 'bg-red-100 text-red-700'
+                      : filter === 'completed'
+                      ? 'bg-green-100 text-green-700'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
-                    {dateTodos.length} task{dateTodos.length !== 1 ? 's' : ''}
+                    {dateTodos.length === 1 ? t('todos.nTasks', { count: 1 }) : t('todos.nTasksPlural', { count: dateTodos.length })}
                   </span>
                 </div>
               </div>
@@ -680,7 +765,7 @@ export default function TodoList() {
                   <div
                     key={todo.todo_id}
                     className={`px-6 py-4 hover:bg-gray-50 transition-colors group ${
-                      isOverdue(todo.date_header?.split('T')[0] || '') ? 'bg-red-50/30' : ''
+                      shouldShowOverdueStyle(todo.date_header?.split('T')[0] || '') ? 'bg-red-50/30' : ''
                     }`}
                   >
                     <div className="flex items-start gap-4">
@@ -689,11 +774,17 @@ export default function TodoList() {
                         onClick={() => handleToggleComplete(todo)}
                         className="flex-shrink-0 mt-0.5"
                       >
-                        <div className={`w-6 h-6 rounded-md border-2 ${
-                          isOverdue(todo.date_header?.split('T')[0] || '')
-                            ? 'border-red-400 hover:border-red-500'
-                            : 'border-gray-300 hover:border-blue-500'
-                        } transition-colors`} />
+                        {todo.is_completed ? (
+                          <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        ) : (
+                          <div className={`w-6 h-6 rounded-md border-2 ${
+                            shouldShowOverdueStyle(todo.date_header?.split('T')[0] || '')
+                              ? 'border-red-400 hover:border-red-500'
+                              : 'border-gray-300 hover:border-blue-500'
+                          } transition-colors`} />
+                        )}
                       </button>
 
                       {/* Content */}
@@ -701,7 +792,9 @@ export default function TodoList() {
                         {/* Title with Priority */}
                         <div className="flex items-start gap-2 mb-2">
                           {getPriorityIcon(todo.priority)}
-                          <p className="text-base font-medium break-words flex-1 text-gray-900">
+                          <p className={`text-base font-medium break-words flex-1 ${
+                            todo.is_completed ? 'line-through text-gray-400' : 'text-gray-900'
+                          }`}>
                             {todo.title}
                           </p>
                         </div>
@@ -722,10 +815,32 @@ export default function TodoList() {
                             </span>
                           )}
 
-                          {/* Assigned To */}
-                          {todo.created_by_name && (
-                            <div className="flex items-center gap-1.5 ml-auto text-gray-400">
-                              {getStaffAvatar(todo.created_by_name, 'sm')}
+                          {/* Completion Status with Avatar - Only show if completed */}
+                          {todo.is_completed && todo.last_edited_by_name && (
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.last_edited_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <Check className={`w-3.5 h-3.5 ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-600' : 'text-purple-600'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.last_edited_by_name}</span>
+                            </div>
+                          )}
+
+                          {/* Assigned To - Only show if NOT completed */}
+                          {!todo.is_completed && todo.created_by_name && (
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.created_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <span className={`text-xs font-medium ${
+                                todo.created_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.created_by_name}</span>
                             </div>
                           )}
                         </div>
@@ -736,14 +851,14 @@ export default function TodoList() {
                         <button
                           onClick={() => openEditModal(todo)}
                           className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-blue-600"
-                          title="Edit"
+                          title={t('common.edit')}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteTodo(todo.todo_id)}
                           className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-red-600"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -822,20 +937,30 @@ export default function TodoList() {
                           
                           {/* Completion Status with Avatar - Only show if completed */}
                           {todo.is_completed && todo.last_edited_by_name && (
-                            <div className="flex items-center gap-1.5 ml-auto">
-                              <div className="relative">
-                                {getStaffAvatar(todo.last_edited_by_name, 'sm')}
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                                  <Check className="w-2 h-2 text-white" />
-                                </div>
-                              </div>
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.last_edited_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <Check className={`w-3.5 h-3.5 ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-600' : 'text-purple-600'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.last_edited_by_name}</span>
                             </div>
                           )}
                           
                           {/* Assigned To - Only show if NOT completed */}
                           {!todo.is_completed && todo.created_by_name && (
-                            <div className="flex items-center gap-1.5 ml-auto text-gray-400">
-                              {getStaffAvatar(todo.created_by_name, 'sm')}
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.created_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <span className={`text-xs font-medium ${
+                                todo.created_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.created_by_name}</span>
                             </div>
                           )}
                         </div>
@@ -847,7 +972,7 @@ export default function TodoList() {
                         <button
                           onClick={() => openEditModal(todo)}
                           className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-blue-600"
-                          title="Edit"
+                          title={t('common.edit')}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -856,7 +981,7 @@ export default function TodoList() {
                         <button
                           onClick={() => handleDeleteTodo(todo.todo_id)}
                           className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-red-600"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

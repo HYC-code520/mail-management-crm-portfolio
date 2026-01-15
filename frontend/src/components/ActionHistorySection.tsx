@@ -8,6 +8,7 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
 import { formatNYDate } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface ActionHistoryItem {
   action_id: string;
@@ -26,6 +27,8 @@ interface ActionHistorySectionProps {
 }
 
 export default function ActionHistorySection({ actions, loading }: ActionHistorySectionProps) {
+  const { t, formatDate: formatLocalizedDate } = useLanguage();
+  
   // Deduplicate bulk notification entries
   // When a bulk email is sent, each mail item gets its own action history entry
   // We want to show only one entry per bulk action (same timestamp, performer, action type, and notes)
@@ -66,6 +69,24 @@ export default function ActionHistorySection({ actions, loading }: ActionHistory
     if (!performedBy) return 'Staff';
     return performedBy; // Should already be "Merlin" or "Madison" from backend
   };
+  
+  // Helper to translate mail status
+  const translateMailStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'Received': 'received',
+      'Notified': 'notified',
+      'Pending': 'pending',
+      'Picked Up': 'pickedUp',
+      'Scanned': 'scanned',
+      'Scanned Document': 'scannedDocument',
+      'Forward': 'forward',
+      'Abandoned': 'abandoned',
+      'Abandoned Package': 'abandonedPackage',
+      'Resolved': 'resolved'
+    };
+    const key = statusMap[status];
+    return key ? t(`mailStatus.${key}`) : status;
+  };
 
   // Get dot color based on action type
   const getDotColor = (action: ActionHistoryItem) => {
@@ -91,10 +112,10 @@ export default function ActionHistorySection({ actions, loading }: ActionHistory
   };
 
   // Format date for timeline
-  const formatDate = (timestamp: string) => {
+  const formatDateForTimeline = (timestamp: string) => {
     return {
-      date: formatNYDate(new Date(timestamp), { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: formatNYDate(new Date(timestamp), { hour: 'numeric', minute: '2-digit', hour12: true })
+      date: formatLocalizedDate(new Date(timestamp), { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: formatLocalizedDate(new Date(timestamp), { hour: 'numeric', minute: '2-digit', hour12: true })
     };
   };
 
@@ -103,21 +124,21 @@ export default function ActionHistorySection({ actions, loading }: ActionHistory
     const actionType = action.action_type?.toLowerCase() || '';
 
     if (actionType.includes('notified')) {
-      return 'sent a notification';
+      return t('actionHistory.sentNotification');
     } else if (actionType.includes('picked up') || actionType.includes('pickup')) {
-      return 'marked as picked up';
+      return t('actionHistory.markedAsPickedUp');
     } else if (actionType.includes('scanned') || actionType.includes('received')) {
-      return 'scanned the item';
+      return t('actionHistory.scannedItem');
     } else if (actionType.includes('fee waived') || actionType.includes('waived')) {
-      return 'waived the fee';
+      return t('actionHistory.waivedFee');
     } else if (actionType.includes('fee collected') || actionType.includes('paid')) {
-      return 'collected fee payment';
+      return t('actionHistory.collectedFee');
     } else if (actionType.includes('abandoned')) {
-      return 'marked as abandoned';
+      return t('actionHistory.markedAsAbandoned');
     } else if (actionType.includes('forwarded')) {
-      return 'forwarded the item';
+      return t('actionHistory.forwardedItem');
     } else if (actionType.includes('updated') || actionType.includes('edited')) {
-      return 'updated the record';
+      return t('actionHistory.updatedRecord');
     } else if (actionType.includes('created')) {
       // Use action_description if available (e.g., "Letter logged (qty: 8)")
       if (action.action_description) {
@@ -130,15 +151,15 @@ export default function ActionHistorySection({ actions, loading }: ActionHistory
         if (qtyMatch && typeMatch) {
           const qty = parseInt(qtyMatch[1], 10);
           const itemType = typeMatch[1].toLowerCase();
-          const plural = qty > 1 ? 's' : '';
-          return `added ${qty} ${itemType}${plural}`;
+          const translatedType = itemType === 'package' ? t('mail.package') : t('mail.letter');
+          return t('actionHistory.addedItems', { count: qty, type: translatedType });
         }
         // Fallback: just use the description as-is
         return desc.toLowerCase().replace(' logged', '');
       }
-      return 'created the record';
+      return t('actionHistory.createdRecord');
     }
-    return action.action_type || 'performed an action';
+    return action.action_type || t('actionHistory.performedAction');
   };
 
   if (loading) {
@@ -146,17 +167,17 @@ export default function ActionHistorySection({ actions, loading }: ActionHistory
       <div>
         <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5 text-purple-600" />
-          Action History
+          {t('actionHistory.title')}
         </h3>
         <div className="flex flex-col items-center justify-center py-8">
           <div className="w-20 h-20">
             <img
               src="/mail-moving-animation.gif"
-              alt="Loading action history"
+              alt={t('actionHistory.loading')}
               className="w-full h-full object-contain"
             />
           </div>
-          <p className="mt-3 text-sm text-gray-500 animate-pulse">Loading history...</p>
+          <p className="mt-3 text-sm text-gray-500 animate-pulse">{t('actionHistory.loading')}</p>
         </div>
       </div>
     );
@@ -166,12 +187,12 @@ export default function ActionHistorySection({ actions, loading }: ActionHistory
     <div>
       <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
         <Clock className="w-5 h-5 text-purple-600" />
-        Action History
+        {t('actionHistory.title')}
       </h3>
       {deduplicatedActions.length > 0 ? (
         <div className="relative">
           {deduplicatedActions.map((action, index) => {
-            const { date, time } = formatDate(action.action_timestamp);
+            const { date, time } = formatDateForTimeline(action.action_timestamp);
             const isLast = index === deduplicatedActions.length - 1;
 
             return (
@@ -202,9 +223,9 @@ export default function ActionHistorySection({ actions, loading }: ActionHistory
                       {/* If we have previous/new values, show them cleanly */}
                       {action.previous_value && action.new_value ? (
                         <p className="text-sm text-gray-700">
-                          <span className="line-through text-gray-500">{action.previous_value}</span>
+                          <span className="line-through text-gray-500">{translateMailStatus(action.previous_value)}</span>
                           {' → '}
-                          <span className="font-medium">{action.new_value}</span>
+                          <span className="font-medium">{translateMailStatus(action.new_value)}</span>
                         </p>
                       ) : null}
                       

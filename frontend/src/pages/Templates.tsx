@@ -331,7 +331,7 @@ export default function TemplatesPage() {
                               <button
                                 onClick={() => openEditModal(template)}
                                 className="p-1.5 text-blue-600 hover:bg-blue-100 rounded bg-white shadow-sm border border-blue-200"
-                                title="Edit template"
+                                title={t('templates.editTemplate')}
                               >
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
@@ -365,7 +365,7 @@ export default function TemplatesPage() {
                               <button
                                 onClick={() => openEditModal(template)}
                                 className="p-1.5 text-blue-600 hover:bg-blue-100 rounded bg-white shadow-sm border border-blue-200"
-                                title="Edit template"
+                                title={t('templates.editTemplate')}
                               >
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
@@ -399,7 +399,7 @@ export default function TemplatesPage() {
                               <button
                                 onClick={() => openEditModal(template)}
                                 className="p-1.5 text-blue-600 hover:bg-blue-100 rounded bg-white shadow-sm border border-blue-200"
-                                title="Edit"
+                                title={t('common.edit')}
                               >
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
@@ -407,7 +407,7 @@ export default function TemplatesPage() {
                                 onClick={() => handleDelete(template)}
                                 disabled={deletingTemplateId === template.template_id}
                                 className="p-1.5 text-red-600 hover:bg-red-50 rounded bg-white shadow-sm border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Delete"
+                                title={t('common.delete')}
                               >
                                 {deletingTemplateId === template.template_id ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

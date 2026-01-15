@@ -291,7 +291,7 @@ export default function BulkEmailModal({ isOpen, onClose, contacts }: BulkEmailM
           {/* Search */}
           <input
             type="text"
-            placeholder="Search customers..."
+            placeholder={t('email.searchCustomers')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             disabled={sending}

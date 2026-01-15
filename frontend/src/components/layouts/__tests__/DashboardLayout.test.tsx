@@ -124,7 +124,7 @@ describe('DashboardLayout - Gmail Status Indicator', () => {
       });
 
       const link = screen.getByText(/gmail connected/i).closest('a');
-      expect(link).toHaveAttribute('title', 'Gmail connected: mwmailplus@gmail.com');
+      expect(link).toHaveAttribute('title', 'Gmail Connected: mwmailplus@gmail.com');
     });
   });
 

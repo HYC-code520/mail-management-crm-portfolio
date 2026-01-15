@@ -178,19 +178,28 @@ export default function FollowUpsPage() {
   // Dismiss a contact (all their items) from follow-up
   const handleDismissContact = (group: GroupedFollowUp) => {
     const customerName = getCustomerDisplayName(group.contact);
+    const contactId = group.contact.contact_id;
 
     openStaffModal(
       t('followUps.dismissCustomer'),
       t('followUps.dismissCustomerDesc', { name: customerName }),
       async (staffName: string) => {
+        // Optimistic update: immediately remove contact group from UI
+        setFollowUps(prevFollowUps => 
+          prevFollowUps.filter(g => g.contact.contact_id !== contactId)
+        );
+
         try {
-          await api.mailItems.dismissContact(group.contact.contact_id, staffName);
+          await api.mailItems.dismissContact(contactId, staffName);
           toast.success(t('followUps.contactDismissed', { name: customerName }));
-          loadFollowUps();
-          loadDismissedContacts();
+          // Reload to ensure data is in sync
+          await loadFollowUps();
+          await loadDismissedContacts();
         } catch (err) {
           console.error('Error dismissing contact:', err);
           toast.error(t('followUps.failedToDismiss'));
+          // Reload to restore if API failed
+          await loadFollowUps();
         }
       }
     );
@@ -202,13 +211,31 @@ export default function FollowUpsPage() {
       t('followUps.dismissItemTitle'),
       t('followUps.dismissItemDesc'),
       async (staffName: string) => {
+        // Optimistic update: immediately remove item from UI
+        setFollowUps(prevFollowUps => {
+          return prevFollowUps.map(group => {
+            const updatedPackages = group.packages.filter(p => p.mail_item_id !== itemId);
+            const updatedLetters = group.letters.filter(l => l.mail_item_id !== itemId);
+            
+            // If group has no items left, it will be filtered out below
+            return {
+              ...group,
+              packages: updatedPackages,
+              letters: updatedLetters,
+            };
+          }).filter(group => group.packages.length > 0 || group.letters.length > 0);
+        });
+
         try {
           await api.mailItems.dismissItem(itemId, staffName);
           toast.success(t('followUps.itemDismissed'));
-          loadFollowUps();
+          // Reload to ensure data is in sync with server
+          await loadFollowUps();
         } catch (err) {
           console.error('Error dismissing item:', err);
           toast.error(t('followUps.failedToDismiss'));
+          // Reload to restore the item if API failed
+          await loadFollowUps();
         }
       }
     );
@@ -217,19 +244,25 @@ export default function FollowUpsPage() {
   // Restore a dismissed contact
   const handleRestoreContact = (dismissedContact: DismissedContact) => {
     const customerName = getCustomerDisplayName(dismissedContact.contacts);
+    const contactId = dismissedContact.contact_id;
 
     openStaffModal(
       t('followUps.restoreCustomer'),
       t('followUps.restoreCustomerDesc', { name: customerName }),
       async (staffName: string) => {
+        // Optimistic update: immediately remove from dismissed list
+        setDismissedContacts(prev => prev.filter(dc => dc.contact_id !== contactId));
+
         try {
-          await api.mailItems.restoreContact(dismissedContact.contact_id, staffName);
+          await api.mailItems.restoreContact(contactId, staffName);
           toast.success(t('followUps.contactRestored', { name: customerName }));
-          loadFollowUps();
-          loadDismissedContacts();
+          await loadFollowUps();
+          await loadDismissedContacts();
         } catch (err) {
           console.error('Error restoring contact:', err);
           toast.error(t('followUps.failedToRestore'));
+          // Reload to restore if API failed
+          await loadDismissedContacts();
         }
       }
     );
@@ -237,26 +270,40 @@ export default function FollowUpsPage() {
 
   // Restore a dismissed item (no staff needed - just restore)
   const handleRestoreItem = async (item: DismissedItem) => {
+    const itemId = item.mail_item_id;
+    
+    // Optimistic update: immediately remove from dismissed items list
+    setDismissedItems(prev => prev.filter(i => i.mail_item_id !== itemId));
+
     try {
-      await api.mailItems.restoreItem(item.mail_item_id);
+      await api.mailItems.restoreItem(itemId);
       toast.success(t('followUps.itemRestored'));
-      loadFollowUps();
-      loadDismissedContacts();
+      await loadFollowUps();
+      await loadDismissedContacts();
     } catch (err) {
       console.error('Error restoring item:', err);
       toast.error(t('followUps.failedToRestore'));
+      // Reload to restore if API failed
+      await loadDismissedContacts();
     }
   };
 
   // Mark a dismissed item as resolved (removes from dismissed list permanently)
   const handleMarkResolved = async (item: DismissedItem) => {
+    const itemId = item.mail_item_id;
+    
+    // Optimistic update: immediately remove from dismissed items list
+    setDismissedItems(prev => prev.filter(i => i.mail_item_id !== itemId));
+
     try {
-      await api.mailItems.updateStatus(item.mail_item_id, 'Resolved');
+      await api.mailItems.updateStatus(itemId, 'Resolved');
       toast.success(t('followUps.itemResolved'));
-      loadDismissedContacts();
+      await loadDismissedContacts();
     } catch (err) {
       console.error('Error marking item as resolved:', err);
       toast.error(t('common.error'));
+      // Reload to restore if API failed
+      await loadDismissedContacts();
     }
   };
 
@@ -674,6 +721,29 @@ export default function FollowUpsPage() {
               {t('followUps.noDismissed')}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Color Legend */}
+      {followUps.length > 0 && (
+        <div className="flex flex-wrap items-center justify-end gap-4 mb-4 text-xs text-gray-600">
+          <span className="font-medium text-gray-700">{t('followUps.colorLegend')}:</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-gradient-to-br from-red-100 to-pink-100 border border-red-300"></span>
+            <span>{t('followUps.legend30Days')}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 border border-amber-300"></span>
+            <span>{t('followUps.legend14Days')}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-300"></span>
+            <span>{t('followUps.legend7Days')}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-gradient-to-br from-gray-100 to-slate-100 border border-gray-300"></span>
+            <span>{t('followUps.legendRecent')}</span>
+          </div>
         </div>
       )}
 

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import GroupedFollowUpSection from '../GroupedFollowUp';
+import { LanguageProvider } from '../../../contexts/LanguageContext';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -84,15 +85,17 @@ describe('GroupedFollowUpSection', () => {
 
   const renderComponent = (groups = mockGroups, getDaysSince = mockGetDaysSince) => {
     return render(
-      <BrowserRouter>
-        <GroupedFollowUpSection
-          groups={groups}
-          onSendEmail={mockOnSendEmail}
-          onMarkAbandoned={mockOnMarkAbandoned}
-          getDaysSince={getDaysSince}
-          loading={false}
-        />
-      </BrowserRouter>
+      <LanguageProvider>
+        <BrowserRouter>
+          <GroupedFollowUpSection
+            groups={groups}
+            onSendEmail={mockOnSendEmail}
+            onMarkAbandoned={mockOnMarkAbandoned}
+            getDaysSince={getDaysSince}
+            loading={false}
+          />
+        </BrowserRouter>
+      </LanguageProvider>
     );
   };
 
@@ -365,19 +368,21 @@ describe('GroupedFollowUpSection', () => {
     const mockGetDaysSinceAbandoned = vi.fn(() => 37);
 
     render(
-      <BrowserRouter>
-        <GroupedFollowUpSection
-          groups={abandonedGroups}
-          onSendEmail={mockOnSendEmail}
-          onMarkAbandoned={mockOnMarkAbandoned}
-          getDaysSince={mockGetDaysSinceAbandoned}
-          loading={false}
-        />
-      </BrowserRouter>
+      <LanguageProvider>
+        <BrowserRouter>
+          <GroupedFollowUpSection
+            groups={abandonedGroups}
+            onSendEmail={mockOnSendEmail}
+            onMarkAbandoned={mockOnMarkAbandoned}
+            getDaysSince={mockGetDaysSinceAbandoned}
+            loading={false}
+          />
+        </BrowserRouter>
+      </LanguageProvider>
     );
 
-    // Should show 30+ Days warning tag
-    expect(screen.getByText(/30\+ Days/i)).toBeInTheDocument();
+    // Should show days count tag (e.g., "37 days")
+    expect(screen.getByText(/37 days/i)).toBeInTheDocument();
     // Should show warning at bottom
     expect(screen.getByText(/requires immediate attention/i)).toBeInTheDocument();
   });

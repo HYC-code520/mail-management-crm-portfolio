@@ -1247,7 +1247,7 @@ export default function ScanSessionPage() {
         <div className="max-w-full mx-auto px-16 py-3">
           {/* Title */}
           <div className="mb-2">
-            <h1 className="text-2xl font-bold text-gray-900">Scan Session</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('scan.scanSession')}</h1>
           </div>
           
           {/* Compact Configuration Panel - All in One Row */}
@@ -1263,13 +1263,13 @@ export default function ScanSessionPage() {
               />
               <Zap className="w-4 h-4 text-green-600" />
               <label htmlFor="quickScanMode" className="cursor-pointer flex items-center gap-1.5">
-                <span className="text-sm font-medium text-gray-900">Quick Scan</span>
-                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Recommended</span>
+                <span className="text-sm font-medium text-gray-900">{t('scan.quickScan')}</span>
+                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">{t('scan.recommended')}</span>
               </label>
               <div className="group relative hover:z-[100]">
                 <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
                 <div className="invisible group-hover:visible absolute left-0 top-6 w-72 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg z-[100]">
-                  Auto-accept high confidence matches (≥70%) for faster bulk scanning. Uncheck if you want to review each scan manually.
+                  {t('scan.quickScanTooltip')}
                 </div>
               </div>
             </div>
@@ -1294,13 +1294,13 @@ export default function ScanSessionPage() {
               />
               <DollarSign className="w-4 h-4 text-blue-600" />
               <label htmlFor="batchMode" className="cursor-pointer flex items-center gap-1.5">
-                <span className="text-sm font-medium text-gray-900">Batch Mode</span>
-                <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">10x Savings</span>
+                <span className="text-sm font-medium text-gray-900">{t('scan.batchMode')}</span>
+                <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{t('scan.savings')}</span>
               </label>
               <div className="group relative hover:z-[100]">
                 <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
                 <div className="invisible group-hover:visible absolute left-0 top-6 w-72 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg z-[100]">
-                  Collect {BATCH_SIZE} photos, then process all at once. Uses 1 API call instead of 10 - saves cost AND avoids rate limits!
+                  {t('scan.batchModeTooltip')}
                 </div>
               </div>
             </div>
@@ -1312,21 +1312,21 @@ export default function ScanSessionPage() {
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="text-sm text-gray-700">
-                  <span className="font-semibold">{session.items.length}</span> Scanned
+                  <span className="font-semibold">{session.items.length}</span> {t('scan.scanned')}
                 </span>
               </div>
               {quickScanMode && !batchMode && processingQueue > 0 && (
                 <div className="flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
                   <span className="text-sm text-gray-700">
-                    <span className="font-semibold">{processingQueue}</span> Processing
+                    <span className="font-semibold">{processingQueue}</span> {t('scan.processing')}
                   </span>
                 </div>
               )}
               <div className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-gray-400" />
                 <span className="text-sm text-gray-500">
-                  <span className="font-semibold">{contacts.length}</span> Contacts
+                  <span className="font-semibold">{contacts.length}</span> {t('scan.contacts')}
                 </span>
               </div>
             </div>
@@ -1339,7 +1339,7 @@ export default function ScanSessionPage() {
                 <div className="flex items-center gap-2">
                   <Camera className="w-4 h-4 text-blue-600" />
                   <span className="text-sm font-medium text-blue-900">
-                    Batch Queue: {batchQueue.length} / {BATCH_SIZE}
+                    {t('scan.batchQueue')}: {batchQueue.length} / {BATCH_SIZE}
                   </span>
                 </div>
                 {batchQueue.length > 0 && !isProcessingBatch && (
@@ -1362,7 +1362,7 @@ export default function ScanSessionPage() {
                         alt={`Queue ${idx + 1}`}
                         className="w-12 h-12 object-cover rounded-lg border-2 border-blue-300 shadow-sm cursor-pointer hover:border-blue-500 transition-colors"
                         onClick={() => setPreviewImageUrl(item.previewUrl)}
-                        title="Click to preview"
+                        title={t('scan.clickToPreview')}
                       />
                       <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-semibold shadow">
                         {idx + 1}
@@ -1383,7 +1383,7 @@ export default function ScanSessionPage() {
                 </div>
               ) : (
                 <p className="text-sm text-blue-600">
-                  Take photos to add to the batch. Photos will be processed together when you click "Process".
+                  {t('scan.takePhotosToAdd')}
                 </p>
               )}
             </div>
@@ -1419,10 +1419,10 @@ export default function ScanSessionPage() {
               onClick={handleWebcamClick}
               disabled={isProcessing && !quickScanMode}
               className="py-2.5 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
-              title="Use computer webcam"
+              title={t('scan.useWebcam')}
             >
               <Video className="w-4 h-4" />
-              <span className="hidden sm:inline">Webcam</span>
+              <span className="hidden sm:inline">{t('scan.webcam')}</span>
             </button>
 
             {/* Upload/Camera Button */}
@@ -1430,7 +1430,7 @@ export default function ScanSessionPage() {
               onClick={handleCameraClick}
               disabled={isProcessing && !quickScanMode}
               className="py-2.5 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
-              title="Upload image or use phone camera"
+              title={t('scan.uploadOrCamera')}
             >
               {isProcessing && !quickScanMode ? (
                 <>
@@ -1440,7 +1440,7 @@ export default function ScanSessionPage() {
               ) : (
                 <>
                   <Camera className="w-4 h-4" />
-                  <span className="hidden sm:inline">Upload/Camera</span>
+                  <span className="hidden sm:inline">{t('scan.uploadCamera')}</span>
                 </>
               )}
             </button>
@@ -1492,8 +1492,8 @@ export default function ScanSessionPage() {
               </>
             ) : (
               <>
-                <p className="text-lg font-medium mb-2">No items scanned yet</p>
-                <p className="text-sm">Use "Webcam" or "Upload/Camera" below to start scanning</p>
+                <p className="text-lg font-medium mb-2">{t('scan.noItemsScanned')}</p>
+                <p className="text-sm">{t('scan.startScanning')}</p>
               </>
             )}
           </div>
@@ -1510,7 +1510,7 @@ export default function ScanSessionPage() {
                     alt="Scanned mail"
                     className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => setPreviewPhoto(item.photoPreviewUrl!)}
-                    title="Click to view full size"
+                    title={t('scan.clickToViewFullSize')}
                   />
                 )}
                 
@@ -1543,7 +1543,7 @@ export default function ScanSessionPage() {
                   <button
                     onClick={() => openEditModal(item)}
                     className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                    title="Edit"
+                    title={t('common.edit')}
                   >
                     <Edit className="w-5 h-5" />
                   </button>
@@ -1695,7 +1695,7 @@ function ConfirmModal({ item, contacts, onConfirm, onCancel, onPhotoClick }: Con
             alt="Scanned mail"
             className="w-full h-48 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => onPhotoClick(item.photoPreviewUrl!)}
-            title="Click to view full size"
+            title={t('scan.clickToViewFullSize')}
           />
         )}
 

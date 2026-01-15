@@ -324,10 +324,10 @@ export default function FeesPage() {
             </svg>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {searchQuery ? 'No Results Found' : 'All Caught Up!'}
+            {searchQuery ? t('common.noResultsFound') : t('common.allCaughtUp')}
           </h3>
           <p className="text-gray-600">
-            {searchQuery ? 'Try adjusting your search terms.' : 'No outstanding fees to collect at this time.'}
+            {searchQuery ? t('common.tryAdjustingSearch') : t('common.noOutstandingFees')}
           </p>
         </div>
       ) : (
@@ -418,7 +418,7 @@ export default function FeesPage() {
                                 <div className="flex items-center gap-2">
                                   <Package className="w-3.5 h-3.5 text-gray-400" />
                                   <span className="text-gray-600">{receivedDateStr}</span>
-                                  <span className="text-gray-400 text-xs">({days}d)</span>
+                                  <span className="text-gray-400 text-xs">({t('followUps.nDays', { count: days })})</span>
                                 </div>
                                 <span className={`font-medium ${
                                   isWaived ? 'text-gray-400 line-through' :

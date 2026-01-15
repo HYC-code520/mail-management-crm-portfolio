@@ -11,6 +11,7 @@ import { api } from '../../lib/api-client.ts';
 import { formatNYDateDisplay } from '../../utils/timezone.ts';
 import toast from 'react-hot-toast';
 import { Send, Edit2, Eye, Loader } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext.tsx';
 
 interface Contact {
   contact_id: string;
@@ -49,6 +50,7 @@ export default function BulkScanEmailModal({
   onConfirm,
   sending
 }: BulkScanEmailModalProps) {
+  const { t } = useLanguage();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
@@ -273,7 +275,7 @@ export default function BulkScanEmailModal({
                       onChange={(e) => setCustomSubject(e.target.value)}
                       disabled={sending}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                      placeholder="Email subject..."
+                      placeholder={t('email.subjectPlaceholder')}
                     />
                   ) : (
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
@@ -294,7 +296,7 @@ export default function BulkScanEmailModal({
                       disabled={sending}
                       rows={12}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50 font-mono text-sm"
-                      placeholder="Email message..."
+                      placeholder={t('email.composePlaceholder')}
                     />
                   ) : (
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 whitespace-pre-wrap max-h-96 overflow-y-auto">

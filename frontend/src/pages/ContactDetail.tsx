@@ -164,7 +164,44 @@ const groupMailItems = (items: MailItem[]): GroupedMailItem[] => {
 };
 
 export default function ContactDetailPage() {
-  const { t } = useLanguage();
+  const { t, formatDate: formatLocalizedDate } = useLanguage();
+  
+  // Helper to translate item type
+  const translateItemType = (itemType: string) => {
+    const typeKey = itemType.toLowerCase().replace(' ', '');
+    if (typeKey === 'package' || typeKey === 'largepackage') return t('mail.package');
+    if (typeKey === 'letter' || typeKey === 'certifiedmail') return t('mail.letter');
+    return itemType;
+  };
+  
+  // Helper to translate mail status
+  const translateMailStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'Received': 'received',
+      'Notified': 'notified',
+      'Pending': 'pending',
+      'Picked Up': 'pickedUp',
+      'Scanned': 'scanned',
+      'Scanned Document': 'scannedDocument',
+      'Forward': 'forward',
+      'Abandoned': 'abandoned',
+      'Abandoned Package': 'abandonedPackage',
+      'Resolved': 'resolved'
+    };
+    const key = statusMap[status];
+    return key ? t(`mailStatus.${key}`) : status;
+  };
+  
+  // Helper to translate language preference
+  const translateLanguage = (lang: string) => {
+    const langMap: Record<string, string> = {
+      'English': 'english',
+      'Chinese': 'chinese',
+      'Both': 'both'
+    };
+    const key = langMap[lang];
+    return key ? t(`language.${key}`) : lang;
+  };
   const { id } = useParams();
   const navigate = useNavigate();
   const [contact, setContact] = useState<Contact | null>(null);
@@ -754,7 +791,7 @@ export default function ContactDetailPage() {
             {/* Language */}
             <div>
               <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customerForm.languagePreference')}</p>
-              <p className="text-sm sm:text-base text-gray-900 font-medium">{contact.language_preference || 'English'}</p>
+              <p className="text-sm sm:text-base text-gray-900 font-medium">{translateLanguage(contact.language_preference || 'English')}</p>
             </div>
 
             {/* Subscription Status */}
@@ -775,7 +812,7 @@ export default function ContactDetailPage() {
               <div>
                 <p className="text-xs sm:text-sm text-gray-600 mb-1">{t('customers.customerSince')}</p>
                 <p className="text-sm sm:text-base text-gray-900 font-medium">
-                  {formatNYDateDisplay(contact.created_at, { 
+                  {formatLocalizedDate(contact.created_at, { 
                     year: 'numeric', 
                     month: 'long', 
                     day: 'numeric' 
@@ -795,11 +832,11 @@ export default function ContactDetailPage() {
               <div className="space-y-2 sm:space-y-3">
                 {unpaidFees.map(fee => {
                   const receivedDate = fee.mail_items?.received_date 
-                    ? formatNYDateDisplay(fee.mail_items.received_date, {
+                    ? formatLocalizedDate(fee.mail_items.received_date, {
                         month: 'short',
                         day: 'numeric'
                       })
-                    : 'Unknown';
+                    : t('common.unknown');
                   
                   return (
                     <div 
@@ -813,14 +850,14 @@ export default function ContactDetailPage() {
                       <div className="flex justify-between items-center gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                            📦 Package from {receivedDate}
+                            📦 {t('fees.packageFrom', { date: receivedDate })}
                           </p>
                           <p className="text-xs text-gray-600">
-                            {fee.days_charged} days • {fee.mail_items?.status || 'Pending'}
+                            {t('fees.nDays', { count: fee.days_charged })} • {translateMailStatus(fee.mail_items?.status || 'Pending')}
                           </p>
                           {fee.isDebt && (
                             <p className="text-xs text-red-600 font-medium mt-1">
-                              ⚠️ Picked up without paying
+                              ⚠️ {t('fees.pickedUpWithoutPaying')}
                             </p>
                           )}
                         </div>
@@ -955,7 +992,7 @@ export default function ContactDetailPage() {
                             ) : (
                               <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
                             )}
-                            <span className="truncate">{group.itemType}</span>
+                            <span className="truncate">{translateItemType(group.itemType)}</span>
                           </div>
                         </td>
                         <td className="py-3 sm:py-4 px-3 sm:px-6">
@@ -974,7 +1011,7 @@ export default function ContactDetailPage() {
                             group.latestStatus === 'Abandoned Package' ? 'bg-red-100 text-red-700' :
                             'bg-gray-200 text-gray-700'
                           }`}>
-                            {group.latestStatus}
+                            {translateMailStatus(group.latestStatus)}
                           </span>
                         </td>
                         <td className="py-3 sm:py-4 px-3 sm:px-6 text-right" onClick={(e) => e.stopPropagation()}>
@@ -1004,7 +1041,7 @@ export default function ContactDetailPage() {
                                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3"
                             >
                                       <Send className="w-4 h-4 text-blue-600" />
-                                      Send Email
+                                      {t('contacts.sendEmail')}
                             </button>
                           )}
 
@@ -1014,7 +1051,7 @@ export default function ContactDetailPage() {
                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
                                   >
                                     <Pencil className="w-4 h-4" />
-                                    Edit
+                                    {t('common.edit')}
                                   </button>
 
                                   {/* Status change actions - only for non-terminal statuses */}
@@ -1026,28 +1063,28 @@ export default function ContactDetailPage() {
                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cyan-50 flex items-center gap-3"
                                       >
                                         <FileText className="w-4 h-4 text-cyan-600" />
-                                        {group.items.length > 1 ? 'Mark All as Scanned' : 'Mark as Scanned'}
+                                        {group.items.length > 1 ? t('common.markAllAsScanned') : t('common.markAsScanned')}
                                       </button>
                                       <button
                                         onClick={() => openActionModal('picked_up', group.items[0], group.items)}
                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-green-50 flex items-center gap-3"
                                       >
                                         <CircleCheckBig className="w-4 h-4 text-green-600" />
-                                        {group.items.length > 1 ? 'Mark All as Picked Up' : 'Mark as Picked Up'}
+                                        {group.items.length > 1 ? t('common.markAllAsPickedUp') : t('common.markAsPickedUp')}
                                       </button>
                                       <button
                                         onClick={() => openActionModal('forward', group.items[0], group.items)}
                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3"
                                       >
                                         <Send className="w-4 h-4 text-orange-600" />
-                                        {group.items.length > 1 ? 'Mark All as Forward' : 'Mark as Forward'}
+                                        {group.items.length > 1 ? t('common.markAllAsForward') : t('common.markAsForward')}
                                       </button>
                                       <button
                                         onClick={() => openActionModal('abandoned', group.items[0], group.items)}
                                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3"
                                       >
                                         <TriangleAlert className="w-4 h-4 text-red-600" />
-                                        {group.items.length > 1 ? 'Mark All as Abandoned' : 'Mark as Abandoned'}
+                                        {group.items.length > 1 ? t('common.markAllAsAbandoned') : t('common.markAsAbandoned')}
                                       </button>
                                     </>
                                   )}
@@ -1064,7 +1101,7 @@ export default function ContactDetailPage() {
                                     ) : (
                                       <Trash2 className="w-4 h-4" />
                                     )}
-                                    {group.items.length > 1 ? `Delete All (${group.items.length} entries)` : 'Delete'}
+                                    {group.items.length > 1 ? t('common.deleteAll', { count: group.items.length }) : t('common.delete')}
                                   </button>
                                 </div>
                               )}

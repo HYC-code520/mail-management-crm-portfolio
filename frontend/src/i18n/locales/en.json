@@ -55,7 +55,23 @@
     "email": "Email",
     "error": "An error occurred",
     "comingSoon": "Coming soon...",
-    "pleaseWait": "Please wait while we fetch your data"
+    "pleaseWait": "Please wait while we fetch your data",
+    "moreActions": "More Actions",
+    "viewDetails": "View Details",
+    "markAsScanned": "Mark as Scanned",
+    "markAllAsScanned": "Mark All as Scanned",
+    "markAsPickedUp": "Mark as Picked Up",
+    "markAllAsPickedUp": "Mark All as Picked Up",
+    "markAsForward": "Mark as Forward",
+    "markAllAsForward": "Mark All as Forward",
+    "markAsAbandoned": "Mark as Abandoned",
+    "markAllAsAbandoned": "Mark All as Abandoned",
+    "deleteAll": "Delete All ({{count}} entries)",
+    "noResultsFound": "No Results Found",
+    "tryAdjustingSearch": "Try adjusting your search terms.",
+    "allCaughtUp": "All Caught Up!",
+    "noOutstandingFees": "No outstanding fees to collect at this time.",
+    "unknown": "Unknown"
   },
 
   "auth": {
@@ -204,7 +220,15 @@
     "statusChangingFrom": "Status is being changed from \"{{from}}\" to \"{{to}}\"",
     "quantityChangingFrom": "Quantity is being changed from {{from}} to {{to}}",
     "addNotesAboutChange": "Add any notes about this change...",
-    "unit": "Unit"
+    "unit": "Unit",
+    "letter": "Letter",
+    "package": "Package",
+    "sendEmail": "Send Email",
+    "viewCustomerProfile": "View Customer Profile"
+  },
+
+  "contacts": {
+    "sendEmail": "Send Email"
   },
 
   "mailTypes": {
@@ -286,7 +310,10 @@
     "nPackagesPlural": "{{count}} packages",
     "searchPlaceholder": "Search for customer, mailbox number...",
     "filters": "Filters",
-    "nCustomers": "{{count}} 客户"
+    "nCustomers": "{{count}} customers",
+    "packageFrom": "Package from {{date}}",
+    "nDays": "{{count}} days",
+    "pickedUpWithoutPaying": "Picked up without paying"
   },
 
   "followUps": {
@@ -309,6 +336,13 @@
     "letters": "letters",
     "notifiedAgo": "Notified {{days}}d ago",
     "storageFees": "storage fees",
+    "noFees": "No fees",
+    "colorLegend": "Card urgency",
+    "legend30Days": "30+ days (abandoned)",
+    "legendFees": "Has storage fees",
+    "legend14Days": "14+ days",
+    "legend7Days": "7+ days",
+    "legendRecent": "Recent",
     "clickToCollapse": "Click to collapse",
     "clickForDetails": "Click for details",
     "clickToExpand": "Click to expand",
@@ -380,6 +414,9 @@
     "noTasks": "No tasks",
     "completed": "Completed",
     "tasksCompleted": "tasks completed",
+    "nTaskPending": "{{count}} task pending",
+    "nTasksPending": "{{count}} tasks pending",
+    "assignedTo": "Assigned",
     "failedToLoad": "Failed to load tasks",
     "enterTask": "Please enter a task",
     "taskAdded": "Task added!",
@@ -402,6 +439,11 @@
     "showingAllIncomplete": "Showing all incomplete tasks across all dates, grouped by date with oldest first.",
     "noIncompleteTasks": "No incomplete tasks",
     "allTasksCompleted": "Great job! All tasks are completed.",
+    "allCompletedTasks": "All Completed Tasks",
+    "showingAllCompleted": "Showing all completed tasks across all dates, grouped by date with newest first.",
+    "byDate": "By Date",
+    "viewAll": "View All",
+    "noCompletedTasksForDay": "No completed tasks for this day",
     "nTasks": "{{count}} task",
     "nTasksPlural": "{{count}} tasks",
     "daysOverdue": "{{count}} day overdue",
@@ -441,6 +483,7 @@
     "enterEnglishFirst": "Please enter English text first",
     "translationCompleted": "Translation completed successfully!",
     "translationFailed": "Translation failed. Please try again.",
+    "editTemplate": "Edit template",
     "nameAndEnglishRequired": "Template name and English text are required",
     "templateUpdated": "Template updated successfully!",
     "templateCreated": "Template created successfully!",
@@ -496,11 +539,61 @@
     "connectGmail": "Connect Gmail Account",
     "disconnectGmail": "Disconnect Gmail",
     "gmailConnected": "Gmail Connected",
+    "gmailDisconnectedClickToConnect": "Gmail disconnected - Click to connect",
+    "gmailReadyToSend": "Your Gmail account is connected and ready to send emails.",
+    "connectedAccount": "Connected Account",
+    "troubleshootingTitle": "Emails Not Sending? Troubleshooting Help",
+    "troubleshootingSubtitle": "Click to see common issues and how to fix them",
     "changePassword": "Change Password",
+    "updatePassword": "Update your account password",
     "newPassword": "New Password",
     "confirmPassword": "Confirm New Password",
     "passwordMinLength": "Enter new password (min 6 characters)",
-    "reenterPassword": "Re-enter new password"
+    "reenterPassword": "Re-enter new password",
+    "passwordRequirements": "Password Requirements:",
+    "passwordReq1": "At least 6 characters long",
+    "passwordReq2": "Use a strong, unique password",
+    "passwordReq3": "Don't reuse passwords from other sites",
+    "connectGmailDesc": "Connect your Gmail account to send email notifications",
+    "tooltipSecureOAuth": "Secure OAuth2 Connection",
+    "tooltipSecureOAuthDesc": "We use Google's secure OAuth2 protocol. Your Gmail password is never shared with our app.",
+    "tooltipPermissions": "Permissions",
+    "tooltipPermissionsDesc": "We only request permission to send emails on your behalf. We cannot read your existing emails.",
+    "tooltipDisconnect": "Disconnect Anytime",
+    "tooltipDisconnectDesc": "You can disconnect your Gmail account at any time from this page.",
+    "troubleCommonIssue": "Common Issue: Permission Not Granted",
+    "troubleCommonIssueDesc": "If you see \"Gmail Connected\" but emails won't send, you may have forgotten to grant the \"Send email on your behalf\" permission during setup.",
+    "troubleHowToFix": "How to Fix:",
+    "troubleStep1Fix": "Click \"Disconnect Gmail\" below",
+    "troubleStep2Fix": "Click \"Connect Gmail Account\" again",
+    "troubleStep3Fix": "When you see the permission screen, make sure to check the box for \"Send email on your behalf\"",
+    "troubleStep4Fix": "Click \"Continue\" to complete setup",
+    "troubleWhatToExpect": "What to Expect During Setup:",
+    "troubleSetupStep1": "Step 1: Choose Your Gmail Account",
+    "troubleSetupStep1Desc": "Select which Gmail account you want to use.",
+    "troubleSetupStep2": "Step 2: Security Warning (Normal!)",
+    "troubleSetupStep2Desc": "You'll see \"Google hasn't verified this app.\" Click \"Continue\" or \"Advanced\" → \"Go to MeiWay Mail System (unsafe)\".",
+    "troubleSetupStep3": "Step 3: Grant Permission - IMPORTANT",
+    "troubleSetupStep3Desc": "Make sure the \"Send email on your behalf\" checkbox is checked, then click \"Continue\".",
+    "troubleSetupStep4": "Step 4: All Done!",
+    "troubleSetupStep4Desc": "You'll be redirected back and Gmail will be connected.",
+    "gmailNotConnected": "Gmail Not Connected",
+    "gmailNotConnectedDesc": "Connect your Gmail account to enable email notifications. This is a secure OAuth2 connection - we never store your password.",
+    "whatYouCanDo": "What you'll be able to do:",
+    "whyConnect": "Why Connect Gmail?",
+    "benefit1": "Send email notifications to customers directly from the app",
+    "benefit2": "Use pre-built templates with automatic customer info",
+    "benefit3": "Track which emails have been sent",
+    "benefit4": "No more copy-pasting into Gmail manually",
+    "setupStep1": "Step 1: Choose Your Gmail Account",
+    "setupStep1Desc": "Select which Gmail account you want to use for sending emails.",
+    "setupStep2": "Step 2: Security Warning (Normal!)",
+    "setupStep2Desc": "You'll see a warning that \"Google hasn't verified this app.\" This is expected. Click \"Continue\" or \"Advanced\" → \"Go to MeiWay Mail System (unsafe)\" to proceed.",
+    "setupStep3": "Step 3: Grant Permission - IMPORTANT!",
+    "setupStep3Desc": "You'll see a permission screen. Make sure to check the box for \"Send email on your behalf\" - this is required for the app to work!",
+    "setupStep3Desc2": "After checking the box, click \"Continue\".",
+    "setupStep4": "Step 4: All Done!",
+    "setupStep4Desc": "You'll be redirected back here and Gmail will be connected."
   },
 
   "dashboard": {
@@ -542,6 +635,16 @@
     "tier2": "Tier 2"
   },
 
+  "payment": {
+    "cash": "Cash",
+    "card": "Card",
+    "check": "Check",
+    "zelle": "Zelle",
+    "venmo": "Venmo",
+    "paypal": "PayPal",
+    "other": "Other"
+  },
+
   "ageRanges": {
     "0to3days": "0-3 days",
     "4to7days": "4-7 days",
@@ -565,6 +668,8 @@
     "couldNotReadText": "Could not read any text from photo. Please try again with better lighting.",
     "itemRemoved": "Item removed",
     "itemUpdated": "Item updated",
+    "clickToPreview": "Click to preview",
+    "clickToViewFullSize": "Click to view full size",
     "noItemsToReview": "No items to review",
     "selectScanner": "Please select who is scanning",
     "failedToSubmit": "Failed to submit items. Please try again.",
@@ -576,6 +681,7 @@
     "savings": "10x Savings",
     "batchModeTooltip": "Collect 10 photos, then process all at once. Uses 1 API call instead of 10 - saves cost AND avoids rate limits!",
     "scanned": "Scanned",
+    "processing": "Processing",
     "contacts": "Contacts",
     "batchQueue": "Batch Queue",
     "takePhotosToAdd": "Take photos to add to the batch. Photos will be processed together when you click \"Process\".",
@@ -862,6 +968,29 @@
     "text": "Text Message",
     "wechat": "WeChat",
     "inPerson": "In-Person"
+  },
+
+  "actionHistory": {
+    "title": "Action History",
+    "loading": "Loading history...",
+    "noHistory": "No action history yet",
+    "sentNotification": "sent a notification",
+    "markedAsPickedUp": "marked as picked up",
+    "scannedItem": "scanned the item",
+    "waivedFee": "waived the fee",
+    "collectedFee": "collected fee payment",
+    "markedAsAbandoned": "marked as abandoned",
+    "forwardedItem": "forwarded the item",
+    "updatedRecord": "updated the record",
+    "createdRecord": "created the record",
+    "performedAction": "performed an action",
+    "addedItems": "added {{count}} {{type}}"
+  },
+
+  "email": {
+    "subjectPlaceholder": "Subject",
+    "composePlaceholder": "Compose email...",
+    "searchCustomers": "Search customers..."
   },
 
   "collectFeeModal": {

@@ -476,7 +476,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItem
                   onChange={(e) => setSubject(e.target.value)}
                   className="w-full text-sm border-none focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-400"
                   disabled={loading}
-                  placeholder="Subject"
+                  placeholder={t('email.subjectPlaceholder')}
                 />
               </div>
 
@@ -523,7 +523,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItem
                   onChange={(e) => setMessage(e.target.value)}
                   className="w-full h-[280px] text-sm border-none focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-400 resize-none"
                   disabled={loading}
-                  placeholder="Compose email..."
+                  placeholder={t('email.composePlaceholder')}
                 />
               </div>
 

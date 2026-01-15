@@ -144,7 +144,8 @@ describe('Contacts Page', () => {
     render(<Contacts />);
     
     await waitFor(() => {
-      const statusBadges = screen.getAllByText('ACTIVE');
+      // Status is translated - 'ACTIVE' becomes 'Active' via i18n
+      const statusBadges = screen.getAllByText('Active');
       expect(statusBadges.length).toBeGreaterThan(0);
     });
   });

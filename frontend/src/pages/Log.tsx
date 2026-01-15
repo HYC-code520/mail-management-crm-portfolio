@@ -1522,7 +1522,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
             disabled={addingMail || !selectedContact || !loggedBy}
             className="w-full px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {addingMail ? 'Saving...' : 'Add Mail Item'}
+            {addingMail ? t('common.saving') : t('mail.addMailItem')}
           </button>
         </form>
       )}
@@ -1972,7 +1972,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                               navigate(`/dashboard/contacts/${group.contactId}`);
                             }}
                             className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View Customer Profile"
+                            title={t('mail.viewCustomerProfile')}
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -2036,7 +2036,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                           <button
                           onClick={() => openEditModal(group.items[0], group.items, group.totalQuantity)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit"
+                            title={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
@@ -2049,7 +2049,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                               setOpenDropdownId(openDropdownId === group.groupKey ? null : group.groupKey);
                             }}
                             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="More Actions"
+                            title={t('common.moreActions')}
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
@@ -2085,7 +2085,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3"
                                 >
                                   <Send className="w-4 h-4 text-blue-600" />
-                                  Send Email
+                                  {t('mail.sendEmail')}
                                 </button>
                                 
                                 {/* Mark as Scanned */}
@@ -2100,7 +2100,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cyan-50 flex items-center gap-3"
                                 >
                                   <FileText className="w-4 h-4 text-cyan-600" />
-                                  {group.items.length > 1 ? 'Mark All as Scanned' : 'Mark as Scanned'}
+                                  {group.items.length > 1 ? t('common.markAllAsScanned') : t('common.markAsScanned')}
                                 </button>
 
                                 {/* Mark as Picked Up */}
@@ -2115,7 +2115,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-green-50 flex items-center gap-3"
                                 >
                                   <CheckCircle className="w-4 h-4 text-green-600" />
-                                  {group.items.length > 1 ? 'Mark All as Picked Up' : 'Mark as Picked Up'}
+                                  {group.items.length > 1 ? t('common.markAllAsPickedUp') : t('common.markAsPickedUp')}
                                 </button>
 
                                 {/* Mark as Forward */}
@@ -2130,7 +2130,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3"
                                 >
                                   <Send className="w-4 h-4 text-orange-600" />
-                                  {group.items.length > 1 ? 'Mark All as Forward' : 'Mark as Forward'}
+                                  {group.items.length > 1 ? t('common.markAllAsForward') : t('common.markAsForward')}
                                 </button>
 
                                 {/* Mark as Abandoned */}
@@ -2145,7 +2145,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3"
                                 >
                                   <AlertTriangle className="w-4 h-4 text-red-600" />
-                                  {group.items.length > 1 ? 'Mark All as Abandoned' : 'Mark as Abandoned'}
+                                  {group.items.length > 1 ? t('common.markAllAsAbandoned') : t('common.markAsAbandoned')}
                                 </button>
                                 
                                 <div className="border-t border-gray-200 my-1"></div>
@@ -2159,7 +2159,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
                                   >
                                     <Eye className="w-4 h-4 text-gray-600" />
-                                    View Customer Profile
+                                    {t('mail.viewCustomerProfile')}
                                   </button>
                                 )}
                                 
@@ -2179,7 +2179,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   ) : (
                                     <Trash2 className="w-4 h-4" />
                                   )}
-                                  {group.items.length > 1 ? `Delete All (${group.items.length} entries)` : 'Delete'}
+                                  {group.items.length > 1 ? t('common.deleteAll', { count: group.items.length }) : t('common.delete')}
                                 </button>
                               </div>
                             </>

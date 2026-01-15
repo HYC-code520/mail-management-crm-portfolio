@@ -52,6 +52,13 @@ interface Contact {
 export default function ContactsPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  
+  // Helper to translate contact status
+  const translateStatus = (status: string | undefined) => {
+    const statusKey = (status || 'Active').toLowerCase();
+    return t(`customerStatus.${statusKey}`) || status || t('customerStatus.active');
+  };
+  
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [allContacts, setAllContacts] = useState<Contact[]>([]); // Store all contacts including archived
   const [loading, setLoading] = useState(true);
@@ -540,7 +547,7 @@ export default function ContactsPage() {
                         contact.status === 'Pending' ? 'bg-gray-200 text-gray-700' :
                         'bg-gray-200 text-gray-700'
                       }`}>
-                        {contact.status || 'Active'}
+                        {translateStatus(contact.status)}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -560,7 +567,7 @@ export default function ContactsPage() {
                             <button
                               onClick={() => openEditModal(contact)}
                               className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors group relative"
-                              title="Edit"
+                              title={t('common.edit')}
                             >
                               <Edit className="w-4 h-4" />
                               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">

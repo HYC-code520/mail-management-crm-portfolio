@@ -44,6 +44,41 @@ interface AnalyticsSectionProps {
 export default function AnalyticsSection({ analytics, loading }: AnalyticsSectionProps) {
   const { t } = useLanguage();
   
+  // Helper to translate mail status
+  const translateStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'Received': 'received',
+      'Notified': 'notified',
+      'Pending': 'pending',
+      'Picked Up': 'pickedUp',
+      'Scanned': 'scanned',
+      'Scanned Document': 'scannedDocument',
+      'Forward': 'forward',
+      'Abandoned': 'abandoned',
+      'Abandoned Package': 'abandonedPackage',
+      'Resolved': 'resolved',
+      'Ready for Pickup': 'readyForPickup'
+    };
+    const key = statusMap[status];
+    return key ? t(`mailStatus.${key}`) : status;
+  };
+  
+  // Helper to translate payment method
+  const translatePayment = (method: string) => {
+    const paymentMap: Record<string, string> = {
+      'Cash': 'cash',
+      'Card': 'card',
+      'card': 'card',
+      'Check': 'check',
+      'Zelle': 'zelle',
+      'Venmo': 'venmo',
+      'PayPal': 'paypal',
+      'Other': 'other'
+    };
+    const key = paymentMap[method];
+    return key ? t(`payment.${key}`) : method;
+  };
+  
   if (loading) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
@@ -81,24 +116,25 @@ export default function AnalyticsSection({ analytics, loading }: AnalyticsSectio
       else if (name === 'Picked Up') color = COLORS.purple;
       else if (name === 'Abandoned' || name === 'Abandoned Package') color = COLORS.yellow;
       else if (name === 'Forward') color = COLORS.teal;
-      return { name, value, color };
+      return { name: translateStatus(name), value, color };
     })
     .filter(item => item.value > 0);
 
   // Define preferred payment method order
-  const paymentOrder = ['cash', 'check', 'zelle', 'paypal', 'venmo', 'other'];
+  const paymentOrder = ['cash', 'card', 'check', 'zelle', 'paypal', 'venmo', 'other'];
   
   const paymentData = Object.entries(analytics.paymentDistribution)
     .map(([name, value]) => {
       let color = COLORS.blue;
       const lowerName = name.toLowerCase();
       if (lowerName === 'cash') color = COLORS.green;
+      else if (lowerName === 'card') color = COLORS.indigo;
       else if (lowerName === 'check') color = COLORS.blue;
       else if (lowerName === 'zelle') color = COLORS.purple;
       else if (lowerName === 'venmo') color = COLORS.pink;
       else if (lowerName === 'paypal') color = COLORS.yellow;
       else if (lowerName === 'other') color = COLORS.orange;
-      return { name, value, color, lowerName };
+      return { name: translatePayment(name), value, color, lowerName };
     })
     .filter(item => item.value > 0)
     .sort((a, b) => {

@@ -159,16 +159,16 @@ export default function SettingsPage() {
                   <div className="absolute left-0 top-full mt-2 px-4 py-3 bg-gray-200 text-gray-900 text-[11px] text-left leading-relaxed shadow-lg border border-gray-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-75 w-80 z-50 pointer-events-none">
                     <div className="space-y-2.5">
                       <div>
-                        <p className="font-semibold text-gray-900 mb-1">🔒 Secure OAuth2 Connection</p>
-                        <p>We use Google's secure OAuth2 protocol. Your Gmail password is never shared with our app.</p>
+                        <p className="font-semibold text-gray-900 mb-1">🔒 {t('settings.tooltipSecureOAuth')}</p>
+                        <p>{t('settings.tooltipSecureOAuthDesc')}</p>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 mb-1">✓ Permissions</p>
-                        <p>We only request permission to send emails on your behalf. We cannot read your existing emails.</p>
+                        <p className="font-semibold text-gray-900 mb-1">✓ {t('settings.tooltipPermissions')}</p>
+                        <p>{t('settings.tooltipPermissionsDesc')}</p>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 mb-1">→ Disconnect Anytime</p>
-                        <p>You can disconnect your Gmail account at any time from this page.</p>
+                        <p className="font-semibold text-gray-900 mb-1">→ {t('settings.tooltipDisconnect')}</p>
+                        <p>{t('settings.tooltipDisconnectDesc')}</p>
                       </div>
                     </div>
                     <div className="absolute bottom-full left-6 border-4 border-transparent border-b-gray-200"></div>
@@ -176,7 +176,7 @@ export default function SettingsPage() {
                 </div>
               </h2>
               <p className="text-sm text-gray-600 mt-0.5">
-                Connect your Gmail account to send email notifications
+                {t('settings.connectGmailDesc')}
               </p>
             </div>
           </div>
@@ -201,11 +201,11 @@ export default function SettingsPage() {
                     {t('settings.gmailConnected')}
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    Your Gmail account is connected and ready to send emails.
+                    {t('settings.gmailReadyToSend')}
                   </p>
                   {gmailStatus.gmailAddress && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                      <p className="text-sm font-semibold text-green-900 mb-1">Connected Account</p>
+                      <p className="text-sm font-semibold text-green-900 mb-1">{t('settings.connectedAccount')}</p>
                       <p className="text-green-700 font-mono text-sm">{gmailStatus.gmailAddress}</p>
                     </div>
                   )}
@@ -220,10 +220,10 @@ export default function SettingsPage() {
                         <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
                         <div>
                           <h4 className="font-semibold text-amber-900 text-sm">
-                            Emails Not Sending? Troubleshooting Help
+                            {t('settings.troubleshootingTitle')}
                           </h4>
                           <p className="text-xs text-amber-700 mt-0.5">
-                            Click to see common issues and how to fix them
+                            {t('settings.troubleshootingSubtitle')}
                           </p>
                         </div>
                       </div>
@@ -235,37 +235,37 @@ export default function SettingsPage() {
                     {showInstructions && (
                       <div className="px-5 pb-4 text-sm text-amber-800 space-y-4 border-t border-amber-200 pt-4">
                         <div>
-                          <p className="font-semibold text-amber-900 mb-2">❌ Common Issue: Permission Not Granted</p>
+                          <p className="font-semibold text-amber-900 mb-2">❌ {t('settings.troubleCommonIssue')}</p>
                           <p className="text-amber-800 mb-2">
-                            If you see "Gmail Connected" but emails won't send, you may have forgotten to grant the <strong>"Send email on your behalf"</strong> permission during setup.
+                            {t('settings.troubleCommonIssueDesc')}
                           </p>
-                          <p className="text-amber-900 font-medium mb-2">🔧 How to Fix:</p>
+                          <p className="text-amber-900 font-medium mb-2">🔧 {t('settings.troubleHowToFix')}</p>
                           <ol className="list-decimal list-inside space-y-1 text-amber-800 ml-2">
-                            <li>Click <strong>"Disconnect Gmail"</strong> below</li>
-                            <li>Click <strong>"Connect Gmail Account"</strong> again</li>
-                            <li>When you see the permission screen, make sure to <strong>check the box</strong> for "Send email on your behalf"</li>
-                            <li>Click <strong>"Continue"</strong> to complete setup</li>
+                            <li>{t('settings.troubleStep1Fix')}</li>
+                            <li>{t('settings.troubleStep2Fix')}</li>
+                            <li>{t('settings.troubleStep3Fix')}</li>
+                            <li>{t('settings.troubleStep4Fix')}</li>
                           </ol>
                         </div>
 
                         <div className="pt-3 border-t border-amber-200">
-                          <p className="font-semibold text-amber-900 mb-2">📋 What to Expect During Setup:</p>
+                          <p className="font-semibold text-amber-900 mb-2">📋 {t('settings.troubleWhatToExpect')}</p>
                           <div className="space-y-2">
                             <div>
-                              <p className="font-medium">Step 1: Choose Your Gmail Account</p>
-                              <p className="text-amber-700 text-xs">Select which Gmail account you want to use.</p>
+                              <p className="font-medium">{t('settings.troubleSetupStep1')}</p>
+                              <p className="text-amber-700 text-xs">{t('settings.troubleSetupStep1Desc')}</p>
                             </div>
                             <div>
-                              <p className="font-medium">Step 2: Security Warning (Normal!)</p>
-                              <p className="text-amber-700 text-xs">You'll see "Google hasn't verified this app." Click <strong>"Continue"</strong> or <strong>"Advanced" → "Go to MeiWay Mail System (unsafe)"</strong>.</p>
+                              <p className="font-medium">{t('settings.troubleSetupStep2')}</p>
+                              <p className="text-amber-700 text-xs">{t('settings.troubleSetupStep2Desc')}</p>
                             </div>
                             <div>
-                              <p className="font-medium">Step 3: Grant Permission ⚠️ IMPORTANT</p>
-                              <p className="text-amber-700 text-xs">Make sure the <strong>"Send email on your behalf"</strong> checkbox is checked, then click <strong>"Continue"</strong>.</p>
+                              <p className="font-medium">⚠️ {t('settings.troubleSetupStep3')}</p>
+                              <p className="text-amber-700 text-xs">{t('settings.troubleSetupStep3Desc')}</p>
                             </div>
                             <div>
-                              <p className="font-medium">Step 4: All Done!</p>
-                              <p className="text-amber-700 text-xs">You'll be redirected back and Gmail will be connected.</p>
+                              <p className="font-medium">{t('settings.troubleSetupStep4')}</p>
+                              <p className="text-amber-700 text-xs">{t('settings.troubleSetupStep4Desc')}</p>
                             </div>
                           </div>
                         </div>
@@ -284,29 +284,29 @@ export default function SettingsPage() {
               ) : (
                 <>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    Gmail Not Connected
+                    {t('settings.gmailNotConnected')}
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    Connect your Gmail account to enable email notifications. This is a secure OAuth2 connection - we never store your password.
+                    {t('settings.gmailNotConnectedDesc')}
                   </p>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
-                    <h4 className="font-semibold text-blue-900 mb-3 text-sm">What you'll be able to do:</h4>
+                    <h4 className="font-semibold text-blue-900 mb-3 text-sm">{t('settings.whatYouCanDo')}</h4>
                     <ul className="text-sm text-blue-800 space-y-2">
                       <li className="flex items-start gap-2">
                         <span className="text-blue-600 mt-0.5">•</span>
-                        <span>Send email notifications to customers directly from the app</span>
+                        <span>{t('settings.benefit1')}</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-blue-600 mt-0.5">•</span>
-                        <span>Use pre-built templates with automatic customer info</span>
+                        <span>{t('settings.benefit2')}</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-blue-600 mt-0.5">•</span>
-                        <span>Track which emails have been sent</span>
+                        <span>{t('settings.benefit3')}</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-blue-600 mt-0.5">•</span>
-                        <span>No more copy-pasting into Gmail manually</span>
+                        <span>{t('settings.benefit4')}</span>
                       </li>
                     </ul>
                   </div>
@@ -316,24 +316,24 @@ export default function SettingsPage() {
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-amber-900 mb-3 text-sm">What to Expect During Setup:</h4>
+                        <h4 className="font-semibold text-amber-900 mb-3 text-sm">{t('settings.troubleWhatToExpect')}</h4>
                         <div className="text-sm text-amber-800 space-y-3">
                           <div>
-                            <p className="font-medium mb-1">📋 Step 1: Choose Your Gmail Account</p>
-                            <p className="text-amber-700">Select which Gmail account you want to use for sending emails.</p>
+                            <p className="font-medium mb-1">📋 {t('settings.setupStep1')}</p>
+                            <p className="text-amber-700">{t('settings.setupStep1Desc')}</p>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">⚠️ Step 2: Security Warning (Normal!)</p>
-                            <p className="text-amber-700">You'll see a warning that "Google hasn't verified this app." This is expected. Click <strong>"Continue"</strong> or <strong>"Advanced"</strong> → <strong>"Go to MeiWay Mail System (unsafe)"</strong> to proceed.</p>
+                            <p className="font-medium mb-1">⚠️ {t('settings.setupStep2')}</p>
+                            <p className="text-amber-700">{t('settings.setupStep2Desc')}</p>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">✓ Step 3: Grant Permission ⚠️ <strong className="text-red-700">IMPORTANT!</strong></p>
-                            <p className="text-amber-700 mb-2">You'll see a permission screen. <strong className="text-red-700">Make sure to check the box</strong> for <strong>"Send email on your behalf"</strong> - this is required for the app to work!</p>
-                            <p className="text-amber-700">After checking the box, click <strong>"Continue"</strong>.</p>
+                            <p className="font-medium mb-1">✓ {t('settings.setupStep3')}</p>
+                            <p className="text-amber-700 mb-2">{t('settings.setupStep3Desc')}</p>
+                            <p className="text-amber-700">{t('settings.setupStep3Desc2')}</p>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">🎉 Step 4: All Done!</p>
-                            <p className="text-amber-700">You'll be redirected back here and Gmail will be connected.</p>
+                            <p className="font-medium mb-1">🎉 {t('settings.setupStep4')}</p>
+                            <p className="text-amber-700">{t('settings.setupStep4Desc')}</p>
                           </div>
                         </div>
                       </div>
@@ -368,7 +368,7 @@ export default function SettingsPage() {
                 {t('settings.changePassword')}
               </h2>
               <p className="text-sm text-gray-600 mt-0.5">
-                Update your account password
+                {t('settings.updatePassword')}
               </p>
             </div>
           </div>
@@ -441,19 +441,19 @@ export default function SettingsPage() {
 
             {/* Password Requirements */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
-              <p className="text-sm font-semibold text-gray-900 mb-2">Password Requirements:</p>
+              <p className="text-sm font-semibold text-gray-900 mb-2">{t('settings.passwordRequirements')}</p>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li className="flex items-start gap-2">
                   <span className="text-gray-500 mt-0.5">•</span>
-                  <span>At least 6 characters long</span>
+                  <span>{t('settings.passwordReq1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-500 mt-0.5">•</span>
-                  <span>Use a strong, unique password</span>
+                  <span>{t('settings.passwordReq2')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-500 mt-0.5">•</span>
-                  <span>Don't reuse passwords from other sites</span>
+                  <span>{t('settings.passwordReq3')}</span>
                 </li>
               </ul>
             </div>

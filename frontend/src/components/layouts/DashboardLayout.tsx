@@ -674,7 +674,7 @@ export default function DashboardLayout() {
                       ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
                       : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 animate-pulse'
               }`}
-                  title={sidebarCollapsed ? (gmailConnected ? `Gmail: ${gmailAddress}` : 'Connect Gmail') : (gmailConnected ? `Gmail connected: ${gmailAddress}` : 'Gmail disconnected - Click to connect')}
+                  title={sidebarCollapsed ? (gmailConnected ? `Gmail: ${gmailAddress}` : t('settings.connectGmail')) : (gmailConnected ? `${t('settings.gmailConnected')}: ${gmailAddress}` : t('settings.gmailDisconnectedClickToConnect'))}
                 >
                   {gmailConnected ? (
                     <>

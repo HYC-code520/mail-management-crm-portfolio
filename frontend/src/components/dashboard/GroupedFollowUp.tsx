@@ -13,9 +13,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { AlertCircle, Package, Mail, ChevronDown, Send, DollarSign, Clock, MapPin } from 'lucide-react';
+import { AlertCircle, Package, Mail, ChevronDown, Send, DollarSign, Clock, CheckCircle, User } from 'lucide-react';
 import { getCustomerDisplayName } from '../../utils/customerDisplay';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { formatNYDate } from '../../utils/timezone';
 
 interface PackageFee {
   fee_id: string;
@@ -191,7 +192,7 @@ export default function GroupedFollowUpSection({
           const oldestDate = new Date(oldest.received_date);
           return itemDate < oldestDate ? item : oldest;
         }, allItems[0]);
-        const oldestDateStr = format(new Date(oldestItem.received_date), 'MMM d, yyyy');
+        const oldestDateStr = formatNYDate(new Date(oldestItem.received_date), { month: 'short', day: 'numeric', year: 'numeric' });
         
         return (
           <div
@@ -206,7 +207,7 @@ export default function GroupedFollowUpSection({
               </span>
               <div
                 className={`p-1.5 rounded-lg transition-all duration-200 ${isPersonExpanded ? 'bg-gray-900 rotate-180' : 'bg-white/50'}`}
-                title={isPersonExpanded ? "Click to collapse" : "Click to expand"}
+                title={isPersonExpanded ? t('followUps.clickToCollapse') : t('followUps.clickToExpand')}
               >
                 <ChevronDown className={`w-4 h-4 transition-colors ${isPersonExpanded ? 'text-white' : 'text-gray-500'}`} />
               </div>
@@ -241,22 +242,18 @@ export default function GroupedFollowUpSection({
               
               {/* Package/Letter breakdown */}
               {group.packages.length > 0 && (
-                <span className="px-3 py-1 bg-white/70 border border-gray-200 rounded-full text-xs font-medium text-gray-700">
-                  📦 {group.packages.reduce((sum, pkg) => sum + (pkg.quantity || 1), 0)}
+                <span className="px-3 py-1 bg-white/70 border border-amber-200 rounded-full text-xs font-medium text-amber-700 flex items-center gap-1">
+                  <Package className="w-3 h-3 text-amber-600" />
+                  {group.packages.reduce((sum, pkg) => sum + (pkg.quantity || 1), 0)}
                 </span>
               )}
               {group.letters.length > 0 && (
-                <span className="px-3 py-1 bg-white/70 border border-gray-200 rounded-full text-xs font-medium text-gray-700">
-                  ✉️ {group.letters.reduce((sum, letter) => sum + (letter.quantity || 1), 0)}
+                <span className="px-3 py-1 bg-white/70 border border-blue-200 rounded-full text-xs font-medium text-blue-700 flex items-center gap-1">
+                  <Mail className="w-3 h-3 text-blue-500" />
+                  {group.letters.reduce((sum, letter) => sum + (letter.quantity || 1), 0)}
                 </span>
               )}
               
-              {/* Status tags */}
-              {isAbandoned && (
-                <span className="px-3 py-1 bg-red-100 border border-red-300 rounded-full text-xs font-medium text-red-700">
-                  ⚠️ {t('followUps.daysPlus', { count: 30 })}
-                </span>
-              )}
             </div>
 
             {/* Expandable details - Table View */}
@@ -295,7 +292,7 @@ export default function GroupedFollowUpSection({
                   return sortedDates.map(dateKey => {
                     const data = packagesByDate[dateKey];
                     const days = getDaysSince(data.items[0].received_date);
-                    const receivedDateStr = format(new Date(dateKey), 'MMM d');
+                    const receivedDateStr = formatNYDate(new Date(dateKey), { month: 'short', day: 'numeric' });
 
                     return (
                       <div
@@ -308,7 +305,7 @@ export default function GroupedFollowUpSection({
                         </div>
                         <div className="col-span-2 text-center text-gray-600">{data.totalQty}</div>
                         <div className="col-span-2 text-center text-gray-600">
-                          {days}d
+                          {t('followUps.nDays', { count: days })}
                         </div>
                         <div className="col-span-3 text-right">
                           {data.totalFee > 0 ? (
@@ -357,7 +354,7 @@ export default function GroupedFollowUpSection({
                   return sortedDates.map(dateKey => {
                     const data = lettersByDate[dateKey];
                     const days = getDaysSince(data.items[0].received_date);
-                    const receivedDateStr = format(new Date(dateKey), 'MMM d');
+                    const receivedDateStr = formatNYDate(new Date(dateKey), { month: 'short', day: 'numeric' });
 
                     return (
                       <div
@@ -370,7 +367,7 @@ export default function GroupedFollowUpSection({
                         </div>
                         <div className="col-span-2 text-center text-gray-600">{data.totalQty}</div>
                         <div className="col-span-2 text-center text-gray-600">
-                          {days}d
+                          {t('followUps.nDays', { count: days })}
                         </div>
                         <div className="col-span-3 text-right text-gray-300">—</div>
                         <div className="col-span-2 text-right opacity-0 group-hover/row:opacity-100 transition-opacity">
@@ -395,14 +392,14 @@ export default function GroupedFollowUpSection({
                 <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2">
                   <div className="flex items-center gap-3">
                     {group.packages.length > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Package className="w-3 h-3" />
+                      <span className="flex items-center gap-1 text-amber-700">
+                        <Package className="w-3 h-3 text-amber-600" />
                         {group.packages.reduce((sum, pkg) => sum + (pkg.quantity || 1), 0)} {t('followUps.pkg')}
                       </span>
                     )}
                     {group.letters.length > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3" />
+                      <span className="flex items-center gap-1 text-blue-700">
+                        <Mail className="w-3 h-3 text-blue-500" />
                         {group.letters.reduce((sum, letter) => sum + (letter.quantity || 1), 0)} {t('followUps.letters')}
                       </span>
                     )}
@@ -428,17 +425,17 @@ export default function GroupedFollowUpSection({
                     <p className="text-xs text-gray-500">{t('followUps.storageFees')}</p>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">Box {group.contact.mailbox_number}</span>
+                  <div className="flex items-center gap-1.5 text-gray-500">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-600 font-medium">{t('followUps.noFees')}</span>
                   </div>
                 )}
               </div>
               
-              <div className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              <div className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 isPersonExpanded 
-                  ? 'bg-gray-200 text-gray-700' 
-                  : 'bg-gray-900 text-white'
+                  ? 'bg-gray-200 text-gray-600' 
+                  : 'bg-gray-800 text-white'
               }`}>
                 {isPersonExpanded ? t('followUps.clickToCollapse') : t('followUps.clickForDetails')}
               </div>
@@ -499,8 +496,9 @@ export default function GroupedFollowUpSection({
                     e.stopPropagation();
                     navigate(`/dashboard/contacts/${group.contact.contact_id}`);
                   }}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors border border-gray-200"
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors border border-gray-200 flex items-center gap-1.5"
                 >
+                  <User className="w-3.5 h-3.5" />
                   {t('followUps.profile')}
                 </button>
 
