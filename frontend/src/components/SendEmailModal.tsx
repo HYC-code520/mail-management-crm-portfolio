@@ -573,7 +573,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItem
             <div className="flex items-center gap-3 text-xs text-gray-500">
               {(mailItem.notification_count ?? 0) > 0 && (
                 <span>
-                  {mailItem.notification_count === 1 ? 'Reminder' : mailItem.notification_count === 2 ? 'Final Notice' : 'Follow-up'}
+                  {mailItem.notification_count === 1 ? t('notificationTypes.reminder') : mailItem.notification_count === 2 ? t('notificationTypes.finalNotice') : t('notificationTypes.followUp')}
                 </span>
               )}
             </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Package, Search, ChevronRight, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Edit, Trash2, CheckCircle, FileText, Send, AlertTriangle, Eye, MoreVertical, Loader2 } from 'lucide-react';
+import { Mail, Package, Search, ChevronRight, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Edit, Trash2, CheckCircle, FileText, Send, AlertTriangle, Eye, MoreVertical, Loader2, HelpCircle } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
@@ -8,6 +8,7 @@ import QuickNotifyModal from '../components/QuickNotifyModal.tsx';
 import ActionModal from '../components/ActionModal.tsx';
 import SendEmailModal from '../components/SendEmailModal.tsx';
 import ActionHistorySection from '../components/ActionHistorySection.tsx';
+import StatusSelect from '../components/StatusSelect.tsx';
 import { getTodayNY, extractNYDate, formatNYDateDisplay } from '../utils/timezone.ts';
 import { getCustomerDisplayName } from '../utils/customerDisplay';
 import { useLanguage } from '../contexts/LanguageContext.tsx';
@@ -136,8 +137,54 @@ interface LogPageProps {
   showAddForm?: boolean;
 }
 
+// Helper to translate item types to translation keys
+const getItemTypeKey = (itemType: string): string => {
+  const typeMap: Record<string, string> = {
+    'Letter': 'letter',
+    'Package': 'package',
+    'Large Package': 'largePackage',
+    'Certified Mail': 'certifiedMail'
+  };
+  return typeMap[itemType] || 'letter';
+};
+
+// Helper to translate status values to translation keys
+const getStatusKey = (status: string): string => {
+  const statusMap: Record<string, string> = {
+    'Received': 'received',
+    'Pending': 'pending',
+    'Notified': 'notified',
+    'Picked Up': 'pickedUp',
+    'Scanned Document': 'scannedDocument',
+    'Scanned': 'scanned',
+    'Forward': 'forward',
+    'Abandoned Package': 'abandonedPackage',
+    'Abandoned': 'abandoned',
+    'Ready for Pickup': 'readyForPickup',
+    'Resolved': 'resolved'
+  };
+  return statusMap[status] || 'received';
+};
+
+// Helper to get tooltip key for status
+const getStatusTooltipKey = (status: string): string => {
+  const tooltipMap: Record<string, string> = {
+    'Received': 'received',
+    'Pending': 'pending',
+    'Notified': 'notified',
+    'Picked Up': 'pickedUp',
+    'Scanned Document': 'scannedDocument',
+    'Scanned': 'scanned',
+    'Forward': 'forward',
+    'Abandoned Package': 'abandonedPackage',
+    'Abandoned': 'abandoned',
+    'Resolved': 'resolved'
+  };
+  return tooltipMap[status] || 'received';
+};
+
 export default function LogPage({ embedded = false, showAddForm = false }: LogPageProps) {
-  const { t } = useLanguage();
+  const { t, formatDate } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [mailItems, setMailItems] = useState<MailItem[]>([]);
@@ -162,6 +209,9 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // Status legend tooltip state
+  const [showStatusLegend, setShowStatusLegend] = useState(false);
   
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -1478,11 +1528,13 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       )}
 
       {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg mb-6 shadow-sm">
+      <div className="bg-gray-50/80 border border-gray-200 rounded-lg mb-6 shadow-sm relative">
+        {/* Left accent line */}
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-l-lg" />
         {/* Filter Header - Always Visible */}
         <button
           onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-          className="w-full flex items-center gap-2 p-4 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center gap-2 p-4 pl-5 hover:bg-gray-100 transition-colors rounded-t-lg"
         >
           <Filter className="w-5 h-5 text-gray-600" />
           <h3 className="font-semibold text-gray-900">{t('filters.filters')}</h3>
@@ -1514,23 +1566,78 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
             {/* Filter Row 1 */}
             <div className="grid grid-cols-4 gap-4 mb-4 mt-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.status')}</label>
-                <select
+                <div className="flex items-center gap-1.5 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">{t('common.status')}</label>
+                  {/* Status Legend Icon */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowStatusLegend(!showStatusLegend);
+                      }}
+                      className="p-0.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                      title={t('mail.statusLegend')}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Status Legend Popover */}
+                    {showStatusLegend && (
+                      <div 
+                        className="absolute top-6 left-0 z-[60] bg-white rounded-xl shadow-xl border border-gray-200 p-4 w-80"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-gray-900">{t('mail.statusLegend')}</h4>
+                          <button
+                            onClick={() => setShowStatusLegend(false)}
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 whitespace-nowrap">{t('mailStatus.received')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.received')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700 whitespace-nowrap">{t('mailStatus.pending')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.pending')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 whitespace-nowrap">{t('mailStatus.notified')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.notified')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 whitespace-nowrap">{t('mailStatus.pickedUp')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.pickedUp')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 whitespace-nowrap">{t('mailStatus.scanned')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.scanned')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 whitespace-nowrap">{t('mailStatus.forward')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.forward')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 whitespace-nowrap">{t('mailStatus.abandonedPackage')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.abandonedPackage')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 whitespace-nowrap">{t('mailStatus.resolved')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.resolved')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <StatusSelect
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="All Status">{t('filters.allStatus')}</option>
-                  <option value="Received">{t('mailStatus.received')}</option>
-                  <option value="Pending">{t('mailStatus.pending')}</option>
-                  <option value="Notified">{t('mailStatus.notified')}</option>
-                  <option value="Picked Up">{t('mailStatus.pickedUp')}</option>
-                  <option value="Scanned">{t('mailStatus.scanned')}</option>
-                  <option value="Scanned Document">{t('mailStatus.scannedDocument')}</option>
-                  <option value="Forward">{t('mailStatus.forward')}</option>
-                  <option value="Abandoned">{t('mailStatus.abandoned')}</option>
-                  <option value="Abandoned Package">{t('mailStatus.abandonedPackage')}</option>
-                </select>
+                  onChange={setStatusFilter}
+                />
               </div>
 
               <div>
@@ -1836,7 +1943,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                       </span>
                       {group.items.length > 1 && (
                         <span className="ml-2 text-xs text-gray-500">
-                          ({group.items.length} entries)
+                          ({group.items.length} {t('plurals.entries')})
                         </span>
                       )}
                     </td>
@@ -1847,7 +1954,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                         ) : (
                           <Mail className="w-4 h-4 text-gray-500" />
                         )}
-                        <span>{group.itemType}</span>
+                        <span>{t(`mailTypes.${getItemTypeKey(group.itemType)}`)}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-gray-900 font-semibold">
@@ -1874,7 +1981,8 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                     </td>
                     <td className="py-3 px-4">
                       {group.statuses.length === 1 ? (
-                      <span className={`px-3 py-1 rounded text-xs font-medium ${
+                      <span 
+                        className={`px-3 py-1 rounded text-xs font-medium cursor-help ${
                           group.displayStatus === 'Received' ? 'bg-blue-100 text-blue-700' :
                           group.displayStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                           group.displayStatus === 'Notified' ? 'bg-purple-100 text-purple-700' :
@@ -1884,15 +1992,21 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                           group.displayStatus === 'Forward' ? 'bg-orange-100 text-orange-700' :
                           group.displayStatus === 'Abandoned Package' ? 'bg-red-100 text-red-700' :
                           group.displayStatus === 'Abandoned' ? 'bg-red-100 text-red-700' :
+                          group.displayStatus === 'Resolved' ? 'bg-slate-100 text-slate-600' :
                         'bg-gray-200 text-gray-700'
-                      }`}>
-                          {group.displayStatus === 'Scanned Document' ? 'Scanned' : 
-                           group.displayStatus === 'Abandoned Package' ? 'Abandoned' : 
-                           group.displayStatus}
+                      }`}
+                        title={t(`statusTooltips.${getStatusTooltipKey(group.displayStatus)}`)}
+                      >
+                          {group.displayStatus === 'Scanned Document' ? t('mailStatus.scanned') :
+                           group.displayStatus === 'Abandoned Package' ? t('mailStatus.abandoned') :
+                           t(`mailStatus.${getStatusKey(group.displayStatus)}`)}
                       </span>
                       ) : (
-                        <span className="px-3 py-1 rounded text-xs font-medium bg-gray-200 text-gray-700">
-                          Mixed
+                        <span 
+                          className="px-3 py-1 rounded text-xs font-medium bg-gray-200 text-gray-700 cursor-help"
+                          title={t('statusTooltips.mixed')}
+                        >
+                          {t('labels.mixed')}
                         </span>
                       )}
                     </td>
@@ -1902,15 +2016,13 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                         const lastNotified = group.items
                           .filter(item => item.last_notified)
                           .sort((a, b) => new Date(b.last_notified!).getTime() - new Date(a.last_notified!).getTime())[0]?.last_notified;
-                        return lastNotified ? (
-                          new Date(lastNotified).toLocaleString('en-US', {
+                        return lastNotified ? formatDate(lastNotified, {
                           month: 'short',
                           day: 'numeric',
                           hour: 'numeric',
                           minute: '2-digit',
                           hour12: true
-                        })
-                        ) : '—';
+                        }) : '—';
                       })()}
                     </td>
                     <td className="py-3 px-4 text-gray-700">
@@ -2127,7 +2239,11 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       {sortedGroups.length > 0 && (
         <div className="mt-4 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing {Math.min((currentPage - 1) * rowsPerPage + 1, sortedGroups.length)} to {Math.min(currentPage * rowsPerPage, sortedGroups.length)} of {sortedGroups.length} groups
+            {t('pagination.showing', {
+              from: Math.min((currentPage - 1) * rowsPerPage + 1, sortedGroups.length),
+              to: Math.min(currentPage * rowsPerPage, sortedGroups.length),
+              total: sortedGroups.length
+            })}
           </div>
           <div className="flex items-center gap-2">
             {/* First Page Button */}
@@ -2135,18 +2251,18 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="First page"
+              title={t('pagination.firstPage')}
             >
               ⟪
             </button>
-            
+
             {/* Previous Page Button */}
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Previous
+              {t('pagination.previous')}
             </button>
             
             {/* Page Numbers */}
@@ -2184,25 +2300,25 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
             {/* Show total pages indicator */}
             {Math.ceil(sortedGroups.length / rowsPerPage) > 5 && (
               <span className="text-sm text-gray-500">
-                of {Math.ceil(sortedGroups.length / rowsPerPage)}
+                {t('pagination.of', { total: Math.ceil(sortedGroups.length / rowsPerPage) })}
               </span>
             )}
-            
+
             {/* Next Page Button */}
             <button
               onClick={() => setCurrentPage(prev => Math.min(Math.ceil(sortedGroups.length / rowsPerPage), prev + 1))}
               disabled={currentPage >= Math.ceil(sortedGroups.length / rowsPerPage)}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Next
+              {t('pagination.next')}
             </button>
-            
+
             {/* Last Page Button */}
             <button
               onClick={() => setCurrentPage(Math.ceil(sortedGroups.length / rowsPerPage))}
               disabled={currentPage >= Math.ceil(sortedGroups.length / rowsPerPage)}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="Last page"
+              title={t('pagination.lastPage')}
             >
               ⟫
             </button>
@@ -2211,10 +2327,10 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       )}
 
       {/* Edit Mail Item Modal */}
-      <Modal 
-        isOpen={isEditModalOpen} 
+      <Modal
+        isOpen={isEditModalOpen}
         onClose={closeModal}
-        title="Edit Mail Item"
+        title={t('mail.editMailItem')}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Customer Selection */}

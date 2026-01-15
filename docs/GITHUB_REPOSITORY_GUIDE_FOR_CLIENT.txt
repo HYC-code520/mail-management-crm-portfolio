@@ -1,0 +1,672 @@
+GITHUB REPOSITORY GUIDE FOR MEI WAY MAIL PLUS
+
+=============================================================================
+IMPORTANT: YOUR CODE IS STORED ON GITHUB
+=============================================================================
+
+What is GitHub?
+GitHub is like "Google Drive for code." It stores all the source code for your Mail Management System, tracks every change ever made, and allows developers to collaborate safely.
+
+Your Repository (Code Storage):
+https://github.com/mwmailplus-boop/mail-management-system
+
+Owner: mwmailplus-boop (your account)
+Collaborators: HYC-code520 (Ariel Chen - your developer)
+
+=============================================================================
+⚠️ CRITICAL SECURITY WARNINGS
+=============================================================================
+
+WARNING #1: PROTECT YOUR API KEYS
+
+🚨 NEVER commit API keys, passwords, or secrets to GitHub 🚨
+
+What are API keys?
+- Secret passwords that let your app talk to other services
+- Examples: Supabase keys, Google API keys, Gemini AI keys
+
+Why this matters:
+If someone finds these keys on GitHub, they can:
+- Use your services without permission
+- Rack up charges on your account
+- Access your customer data
+- Potentially cost you $100 to $100,000+ in unexpected bills
+
+✅ How to stay safe:
+- API keys should ONLY be stored in:
+  * Vercel Environment Variables (frontend)
+  * Render Environment Variables (backend)
+  * Your secure backup (password manager or encrypted drive)
+  
+- API keys should NEVER appear in:
+  * GitHub code files
+  * README files
+  * Comments in code
+  * Public repositories
+
+Current Status: ✅ Your keys are safely stored in environment variables, NOT in GitHub.
+
+
+---
+
+WARNING #2: KEEP REPOSITORY PRIVATE
+
+Your repository should be set to PRIVATE, not PUBLIC.
+
+Why?
+- Protects your business logic
+- Prevents competitors from copying your features
+- Keeps your code secure
+- Reduces risk of someone finding vulnerabilities
+
+✅ How to check:
+1. Go to: https://github.com/mwmailplus-boop/mail-management-system
+2. Click "Settings" tab
+3. Scroll to bottom → "Danger Zone"
+4. Look for "Change repository visibility"
+5. Should say: "This repository is currently private"
+
+If it says PUBLIC:
+1. Click "Change visibility"
+2. Select "Make private"
+3. Type the repository name to confirm
+4. Click "I understand, make this repository private"
+
+Current Status: ✅ Your repository is currently set to PRIVATE.
+
+
+---
+
+WARNING #3: ENABLE TWO-FACTOR AUTHENTICATION (2FA)
+
+2FA adds extra security to your GitHub account.
+
+What is 2FA?
+When you log in, GitHub asks for:
+1. Your password (something you know)
+2. A code from your phone (something you have)
+
+Why this matters:
+- Prevents hackers from accessing your code even if they steal your password
+- Required by many businesses and insurance policies
+- Industry standard for protecting valuable assets
+
+✅ How to enable 2FA:
+
+Step 1: Download an authenticator app on your phone
+- Google Authenticator (free)
+- Microsoft Authenticator (free)
+- Authy (free)
+- 1Password (if you use it)
+
+Step 2: Enable 2FA on GitHub
+1. Go to: https://github.com/settings/security
+2. Click "Enable two-factor authentication"
+3. Choose "Set up using an app"
+4. Scan the QR code with your authenticator app
+5. Enter the 6-digit code from your phone
+6. Save your backup codes in a safe place (more on this below)
+
+Step 3: Save backup codes
+- GitHub gives you 16 backup codes (like: 12345-67890)
+- Print them and store in a safe place
+- Or save in your password manager
+- You'll need these if you lose your phone!
+
+⚠️ IMPORTANT: Without backup codes and without your phone, you could lose access to your account permanently.
+
+Current Status: ⚠️ 2FA needs to be enabled on your account (mwmailplus-boop).
+
+
+=============================================================================
+REPOSITORY ACCESS MANAGEMENT
+=============================================================================
+
+Who has access to your code?
+
+OWNER (you):
+- Username: mwmailplus-boop
+- Access Level: Owner (full control)
+- Can: Everything - view code, edit, delete, transfer
+
+COLLABORATORS:
+- Username: HYC-code520 (Ariel Chen)
+- Access Level: Collaborator (write access)
+- Can: View code, make changes, push updates
+- Cannot: Delete repository, change settings, transfer ownership
+
+---
+
+✅ RECOMMENDED: Review access quarterly
+
+Every 3 months, check who has access:
+
+1. Go to: https://github.com/mwmailplus-boop/mail-management-system/settings/access
+2. Review the list of collaborators
+3. Remove anyone who:
+   - No longer works with you
+   - Doesn't need access anymore
+   - You don't recognize
+
+How to remove someone:
+1. Go to Settings → Collaborators
+2. Find their name
+3. Click "Remove" button
+4. Confirm removal
+
+---
+
+✅ Access Levels Explained:
+
+If you need to add future developers, choose the right level:
+
+READ ACCESS:
+- Can view code only
+- Cannot make changes
+- Good for: Consultants reviewing your code
+
+WRITE ACCESS:
+- Can view and edit code
+- Can push changes
+- Good for: Active developers
+
+ADMIN ACCESS:
+- Full control except ownership transfer
+- Can change settings
+- Can add/remove team members
+- Good for: Lead developer or technical manager
+
+OWNER:
+- Complete control
+- Can delete or transfer repository
+- Should be: You (the business owner)
+
+
+=============================================================================
+BRANCH PROTECTION (PREVENTING ACCIDENTAL CHANGES)
+=============================================================================
+
+What are branches?
+Think of branches like "versions" of your code:
+- main branch = The official, working version (what's live on your website)
+- develop branch = Where new features are tested before going live
+- Other branches = Individual features being worked on
+
+Your current setup:
+- Default branch: main
+- Deployment branch: main (Vercel and Render both deploy from here)
+- Protection: ✅ Enabled (requires pull requests, blocks direct changes)
+
+---
+
+Why branch protection matters:
+
+WITHOUT protection:
+- Anyone with access can accidentally break the live website
+- No review process before changes go live
+- Hard to undo mistakes
+
+WITH protection (your current setup):
+- Changes must go through a "Pull Request" (PR)
+- Someone must review and approve changes
+- Can't accidentally push broken code to production
+- Easy to rollback if something goes wrong
+
+---
+
+✅ Your current protection rules:
+
+On the "main" branch:
+- ✅ Require pull requests before merging
+- ✅ Block direct pushes (must go through PR)
+- ✅ Block force pushes (can't overwrite history)
+- ✅ Block branch deletion (can't accidentally delete main)
+
+This means:
+- You or your developer cannot accidentally break the live site
+- All changes are reviewed and documented
+- You have a clear history of what changed and when
+
+Status: ✅ Branch protection is enabled and working correctly.
+
+
+=============================================================================
+REPOSITORY DOCUMENTATION
+=============================================================================
+
+Your repository includes helpful documentation files:
+
+README.md (Main documentation file)
+Location: https://github.com/mwmailplus-boop/mail-management-system/blob/main/README.md
+
+What it contains:
+- Project overview
+- How to install and run locally
+- Tech stack (React, Node.js, Supabase, etc.)
+- Deployment instructions
+- Links to other documentation
+
+/docs folder (Detailed guides)
+Location: https://github.com/mwmailplus-boop/mail-management-system/tree/main/docs
+
+Contains 100+ technical documents:
+- Setup guides
+- API documentation
+- OAuth2 setup
+- Troubleshooting
+- Feature explanations
+- Database schema
+- And much more!
+
+---
+
+✅ How to view documentation:
+
+Method 1: On GitHub website
+1. Go to your repository
+2. Click on "README.md" or "/docs" folder
+3. Read directly on GitHub
+
+Method 2: Download and read offline
+1. Click green "Code" button
+2. Click "Download ZIP"
+3. Extract and open files in any text editor
+
+Method 3: Share with developers
+- Just send them the GitHub repository link
+- They can read all documentation directly
+
+
+=============================================================================
+GITHUB ACTIONS & AUTOMATION (IF APPLICABLE)
+=============================================================================
+
+What are GitHub Actions?
+Automated tasks that run when you push code to GitHub.
+
+Your project uses:
+- Automated testing (runs tests to check code quality)
+- Deployment triggers (tells Vercel/Render to deploy new code)
+
+Secrets in GitHub Actions:
+Some automations need API keys or passwords.
+
+✅ How to check GitHub Actions secrets:
+
+1. Go to: https://github.com/mwmailplus-boop/mail-management-system/settings/secrets/actions
+2. You'll see a list of secret names (not the actual values)
+3. Only repository admins can view or edit these
+
+⚠️ Important:
+- These secrets are separate from Vercel/Render environment variables
+- If you change API keys, update them here too
+- Never share these secrets publicly
+
+Current Status: Check with your developer if any Actions secrets need updating.
+
+
+=============================================================================
+BACKUP & DISASTER RECOVERY
+=============================================================================
+
+Good news: GitHub IS your backup!
+
+Every change ever made to your code is stored permanently in GitHub's version history.
+
+But here's what you should know:
+
+✅ GitHub automatically backs up:
+- All code changes
+- Complete version history
+- All branches and tags
+- Pull requests and issues
+
+✅ You can manually backup:
+
+Method 1: Download ZIP (quick snapshot)
+1. Go to your repository
+2. Click green "Code" button
+3. Click "Download ZIP"
+4. Save to external drive or cloud storage
+
+Method 2: Git clone (full backup with history)
+Ask your developer to:
+1. Clone the repository to their computer
+2. Create a backup archive
+3. Store securely
+
+Recommended backup schedule:
+- Monthly: Download ZIP and store offline
+- Before major changes: Create a git tag (v1.1.0, v1.2.0, etc.)
+- Annually: Full clone backup to external drive
+
+---
+
+⚠️ What GitHub does NOT backup:
+- Environment variables (Vercel/Render)
+- Database content (Supabase)
+- User uploads or files stored elsewhere
+
+Make sure to backup those separately (see main handoff document).
+
+
+=============================================================================
+GITHUB ISSUES & PROJECT BOARD (OPTIONAL)
+=============================================================================
+
+GitHub Issues = Bug tracking and feature requests
+
+Think of Issues like a "to-do list" for your code.
+
+How to use:
+
+Create an issue when:
+- You find a bug ("Email notifications not sending")
+- You want a new feature ("Add Spanish language support")
+- You have a question for the developer
+
+✅ How to create an issue:
+
+1. Go to: https://github.com/mwmailplus-boop/mail-management-system/issues
+2. Click green "New issue" button
+3. Give it a clear title: "Bug: Customer can't reset password"
+4. Describe the problem:
+   - What happened?
+   - What should happen?
+   - Steps to reproduce
+   - Screenshots (if helpful)
+5. Assign to your developer (HYC-code520)
+6. Click "Submit new issue"
+
+Your developer will:
+- Review the issue
+- Ask clarifying questions
+- Fix the problem
+- Close the issue when done
+
+---
+
+GitHub Projects (Project Board)
+
+Visual board to track work in progress.
+
+Columns:
+- To Do (planned features/fixes)
+- In Progress (actively being worked on)
+- Done (completed)
+
+✅ How to create a project board:
+
+1. Go to: https://github.com/mwmailplus-boop/mail-management-system/projects
+2. Click "New project"
+3. Choose "Board" template
+4. Drag issues between columns as work progresses
+
+Benefits:
+- See what's being worked on at a glance
+- Track progress on new features
+- Great for planning with your developer
+
+Current Status: Optional - set up if you plan ongoing development.
+
+
+=============================================================================
+LICENSE FILE
+=============================================================================
+
+What is a LICENSE file?
+A legal document that says who can use your code and how.
+
+Why it matters:
+- Clarifies ownership (this is YOUR proprietary code)
+- Protects you legally
+- Prevents others from stealing your work
+
+✅ Recommended for you:
+
+Since this is a private business application, you should add:
+
+File name: LICENSE or LICENSE.md
+Content:
+```
+Copyright (c) 2026 Mei Way Mail Plus
+
+All rights reserved.
+
+This software and associated documentation files (the "Software") are 
+proprietary and confidential. Unauthorized copying, distribution, 
+modification, or use of this Software is strictly prohibited.
+
+This Software is licensed for internal use by Mei Way Mail Plus only.
+```
+
+✅ How to add a LICENSE file:
+
+Ask your developer to:
+1. Create a file called "LICENSE" in the root directory
+2. Add the copyright text above
+3. Commit and push to GitHub
+
+Or you can add it yourself:
+1. Go to your repository on GitHub
+2. Click "Add file" → "Create new file"
+3. Name it "LICENSE"
+4. Paste the copyright text
+5. Click "Commit new file"
+
+
+=============================================================================
+VIDEO OVERVIEW (LOOM)
+=============================================================================
+
+For a visual walkthrough of your GitHub repository, watch this Loom video:
+
+[INSERT YOUR LOOM VIDEO LINK HERE]
+
+The video covers:
+- How to navigate your repository
+- Where to find important files
+- How to view code changes
+- How to create issues
+- How to download backups
+
+Duration: [X minutes]
+
+
+=============================================================================
+QUICK REFERENCE CHECKLIST
+=============================================================================
+
+✅ SECURITY CHECKLIST
+
+Monthly:
+[ ] Review collaborator access (remove anyone who left)
+[ ] Check for any unusual activity in commit history
+[ ] Verify repository is still set to PRIVATE
+
+Quarterly:
+[ ] Update your GitHub password
+[ ] Review 2FA backup codes (make sure you still have them)
+[ ] Download a ZIP backup of the code
+
+Annually:
+[ ] Full git clone backup to external drive
+[ ] Review and update documentation (README.md)
+[ ] Check if any GitHub Actions secrets need rotation
+
+When team changes:
+[ ] Remove departing team members immediately
+[ ] Update all passwords and secrets they had access to
+[ ] Document the change in your records
+
+---
+
+✅ BEFORE MAKING CHANGES CHECKLIST
+
+Before your developer makes changes:
+[ ] Create a GitHub Issue describing what needs to change
+[ ] Agree on timeline and cost
+[ ] Developer creates a branch for the changes
+[ ] Developer submits a Pull Request when done
+[ ] Review the changes (or have someone technical review)
+[ ] Approve and merge the Pull Request
+[ ] Verify the change deployed correctly to production
+[ ] Close the GitHub Issue
+
+
+=============================================================================
+COMMON QUESTIONS
+=============================================================================
+
+Q: What if I lose access to my GitHub account?
+
+A: If you have 2FA backup codes:
+   - Use one of the backup codes to log in
+   - Reset your password
+   - Set up 2FA again with a new device
+
+   If you DON'T have backup codes:
+   - Contact GitHub Support: support@github.com
+   - Prove your identity (may take several days)
+   - This is why saving backup codes is SO important!
+
+---
+
+Q: Can I give access to someone temporarily?
+
+A: Yes!
+   1. Add them as a collaborator with "Read" access only
+   2. Set a calendar reminder to remove them after X days
+   3. When done, remove their access immediately
+
+---
+
+Q: What if my developer pushes broken code?
+
+A: Don't panic! You can rollback:
+   1. Go to the previous working deployment in Vercel/Render
+   2. Click "Rollback" or "Promote to Production"
+   3. Ask your developer to fix the issue
+   4. Redeploy when fixed
+
+   This is why branch protection is important!
+
+---
+
+Q: Should I learn to code to manage this better?
+
+A: Not necessary! You should:
+   - Understand what GitHub does (stores your code)
+   - Know how to manage access (add/remove people)
+   - Know basic security practices (2FA, private repos)
+   
+   But you DON'T need to:
+   - Learn to code
+   - Understand the technical details
+   - Make code changes yourself
+
+   Leave coding to the developers, you focus on the business!
+
+---
+
+Q: What happens if GitHub goes down?
+
+A: Very rare, but:
+   - Your website keeps running (it's deployed to Vercel/Render)
+   - You just can't push new code changes temporarily
+   - GitHub has 99.99% uptime
+   - Check status at: https://www.githubstatus.com
+
+---
+
+Q: Can I move my code to a different platform?
+
+A: Yes! GitHub uses Git, which is an open standard.
+   You can export your code and move to:
+   - GitLab
+   - Bitbucket
+   - Self-hosted Git server
+   
+   But GitHub is the industry standard and has the best tools.
+
+---
+
+Q: How much does GitHub cost?
+
+A: Your current usage:
+   - Plan: Free
+   - Cost: $0/month
+   - Includes: Unlimited private repositories, unlimited collaborators
+   
+   You might need to upgrade if:
+   - You need advanced security features ($4/month per user)
+   - You need more storage for large files ($5/month per 50GB)
+   
+   For your use case, free plan is perfect!
+
+
+=============================================================================
+WHO TO CONTACT
+=============================================================================
+
+For GitHub access issues:
+Contact: GitHub Support
+Website: https://support.github.com
+Email: support@github.com
+
+For questions about YOUR repository:
+Contact: Ariel Chen (your developer)
+Email: ariel.chen@pursuit.org
+Response time: 1-2 business days
+
+For account security concerns:
+1. Change your password immediately
+2. Review access logs: https://github.com/settings/security-log
+3. Remove suspicious collaborators
+4. Contact your developer AND GitHub support
+
+For business/billing questions:
+GitHub Billing: https://github.com/settings/billing
+Payment method, invoices, plan changes
+
+
+=============================================================================
+FINAL NOTES
+=============================================================================
+
+✅ Your GitHub repository is set up correctly and securely!
+
+Key takeaways:
+- GitHub stores all your source code safely
+- Repository is PRIVATE (good!)
+- Branch protection is enabled (prevents accidents)
+- Your developer (Ariel) has appropriate access
+- All secrets are stored safely (not in GitHub)
+
+Next steps:
+1. Enable 2FA on your account (if not already done)
+2. Save your backup codes in a safe place
+3. Bookmark your repository: https://github.com/mwmailplus-boop/mail-management-system
+4. Set calendar reminders to review access quarterly
+5. Take a backup ZIP file today (just in case)
+
+Questions?
+Don't hesitate to reach out to Ariel at ariel.chen@pursuit.org
+
+Your code is safe, secure, and ready for the future! 🎉
+
+
+=============================================================================
+DOCUMENT INFO
+=============================================================================
+
+Document: GitHub Repository Guide for Client
+Prepared for: Mei Way Mail Plus
+Prepared by: Ariel Chen
+Date: January 12, 2026
+Repository: https://github.com/mwmailplus-boop/mail-management-system
+Version: 1.0
+
+Last updated: January 12, 2026
+
+=============================================================================

@@ -195,6 +195,7 @@
     "addRelevantNotes": "Add any relevant notes...",
     "linkToCustomer": "Link to Customer",
     "searchByNameCompanyMailbox": "Search by Name / Company / Mailbox #...",
+    "statusLegend": "Status Guide",
     "selectWhoLogging": "Please select who is logging this mail",
     "dateReceivedHelp": "Select the date the mail was received",
     "mailType": "Mail Type",
@@ -223,7 +224,22 @@
     "abandoned": "Abandoned",
     "pending": "Pending",
     "scannedDocument": "Scanned Document",
-    "abandonedPackage": "Abandoned Package"
+    "abandonedPackage": "Abandoned Package",
+    "resolved": "Resolved"
+  },
+
+  "statusTooltips": {
+    "received": "Mail has been logged and is waiting at the facility",
+    "pending": "Mail is being processed",
+    "notified": "Customer has been notified about this mail",
+    "pickedUp": "Customer has picked up this mail",
+    "scanned": "Document has been scanned and sent to customer",
+    "scannedDocument": "Document has been scanned and sent to customer",
+    "forward": "Mail has been forwarded to another address",
+    "abandoned": "Mail was unclaimed for 30+ days and disposed of",
+    "abandonedPackage": "Package was unclaimed for 30+ days and disposed of",
+    "resolved": "No further action needed - item closed without formal process",
+    "mixed": "This group contains items with different statuses"
   },
 
   "mailActions": {
@@ -320,7 +336,42 @@
     "markedAbandoned": "Marked {{count}} item(s) as abandoned for {{name}}",
     "summaryEmailSent": "Summary email sent to {{name}} ({{count}} items)",
     "emailSentTo": "Email sent to {{name}}",
-    "viewInLog": "View in Log →"
+    "viewInLog": "View in Log →",
+    "dismissAll": "Dismiss All",
+    "dismissAllTooltip": "Hide this customer from follow-ups",
+    "dismissItem": "Dismiss this item",
+    "viewDismissed": "View Dismissed",
+    "showActive": "Show Active",
+    "dismissedContacts": "Dismissed Customers",
+    "noDismissedContacts": "No dismissed customers",
+    "customer": "Customer",
+    "pendingItems": "Pending Items",
+    "dismissedBy": "Dismissed By",
+    "actions": "Actions",
+    "restore": "Restore",
+    "noPendingItems": "No pending items",
+    "whoDismissing": "Who is dismissing this customer?",
+    "whoRestoring": "Who is restoring this customer?",
+    "enterStaffName": "Enter staff name (e.g., Merlin or Madison):",
+    "contactDismissed": "{{name}} dismissed from follow-ups",
+    "itemDismissed": "Item dismissed from follow-ups",
+    "contactRestored": "{{name}} restored to follow-ups",
+    "failedToDismiss": "Failed to dismiss",
+    "failedToRestore": "Failed to restore",
+    "failedToLoadDismissed": "Failed to load dismissed contacts",
+    "dismissedItems": "Dismissed Items",
+    "itemRestored": "Item restored to follow-ups",
+    "noDismissed": "No dismissed items or customers",
+    "selectStaff": "Select Staff",
+    "dismissItemTitle": "Dismiss Item",
+    "dismissItemDesc": "This item will be hidden from follow-ups until restored.",
+    "dismissCustomer": "Dismiss Customer",
+    "dismissCustomerDesc": "All items for {{name}} will be hidden from follow-ups.",
+    "restoreCustomer": "Restore Customer",
+    "restoreCustomerDesc": "{{name}} will reappear in follow-ups.",
+    "markResolved": "Mark Resolved",
+    "markResolvedDesc": "This item will be marked as resolved and removed from the dismissed list.",
+    "itemResolved": "Item marked as resolved"
   },
 
   "todos": {
@@ -460,6 +511,7 @@
     "staffPerformance": "Staff Performance",
     "thisWeek": "This Week",
     "thisMonth": "This Month",
+    "thisMonthMail": "This Month Mail",
     "newCustomers": "New Customers",
     "vsLastMonth": "vs {{count}} last month",
     "loadingData": "Loading dashboard data...",
@@ -541,9 +593,13 @@
     "scanMail": "Scan Mail",
     "startNewScan": "Start a new scan session",
     "logMail": "Log Mail",
+    "logNewMail": "Log New Mail",
     "manuallyAdd": "Manually add mail items",
     "addCustomer": "Add Customer",
-    "createProfile": "Create a new customer profile"
+    "createProfile": "Create a new customer profile",
+    "needsFollowUp": "Needs Follow-up",
+    "customerNeedsAttention": "{{count}} customer needs attention",
+    "customersNeedAttention": "{{count}} customers need attention"
   },
 
   "modals": {
@@ -703,6 +759,71 @@
     "packageFeeReminder": "Package Fee Reminder",
     "generalReminder": "General Reminder",
     "mailNotification": "Mail Notification"
+  },
+
+  "pagination": {
+    "showing": "Showing {{from}} to {{to}} of {{total}} groups",
+    "previous": "Previous",
+    "next": "Next",
+    "of": "of {{total}}",
+    "firstPage": "First page",
+    "lastPage": "Last page"
+  },
+
+  "daysOfWeek": {
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday"
+  },
+
+  "months": {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mar",
+    "apr": "Apr",
+    "may": "May",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Oct",
+    "nov": "Nov",
+    "dec": "Dec",
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "mayFull": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+
+  "dateTime": {
+    "am": "AM",
+    "pm": "PM",
+    "at": "at"
+  },
+
+  "notificationTypes": {
+    "reminder": "Reminder",
+    "finalNotice": "Final Notice",
+    "followUp": "Follow-up"
   },
 
   "plurals": {

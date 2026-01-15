@@ -24,6 +24,12 @@ interface Todo {
   updated_at?: string;
 }
 
+// Helper to get translated day of week abbreviation
+const getDayOfWeekKey = (dayIndex: number): string => {
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  return days[dayIndex] || 'sun';
+};
+
 export default function TodoList() {
   const { t } = useLanguage();
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -39,6 +45,7 @@ export default function TodoList() {
   
   // Add modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -79,16 +86,20 @@ export default function TodoList() {
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newTodoTitle.trim()) {
       toast.error(t('todos.enterTask'));
       return;
     }
 
+    // Prevent duplicate submissions
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
       // Use selected date if no date is explicitly set
       const dateToUse = newTodoDate || formatDateKey(selectedDate);
-      
+
       await api.todos.create({
         title: newTodoTitle.trim(),
         notes: newTodoNotes.trim() || undefined,
@@ -97,7 +108,7 @@ export default function TodoList() {
         priority: newTodoPriority,
         staff_member: newTodoStaff,
       });
-      
+
       setNewTodoTitle('');
       setNewTodoNotes('');
       setNewTodoDate('');
@@ -105,12 +116,14 @@ export default function TodoList() {
       setNewTodoPriority(0);
       setNewTodoStaff('Merlin');
       setIsAddModalOpen(false); // Close modal after adding
-      
+
       await loadTodos();
       toast.success(t('todos.taskAdded'));
     } catch (error: any) {
       console.error('Failed to add todo:', error);
       toast.error(t('todos.failedToAdd'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -498,7 +511,7 @@ export default function TodoList() {
                   <span className={`text-xs font-semibold uppercase mb-1 ${
                     isSelected ? 'text-amber-800' : 'text-gray-500'
                   }`}>
-                    {formatNYDate(date, { weekday: 'short' })}
+                    {t(`daysOfWeek.${getDayOfWeekKey(date.getDay())}`)}
                   </span>
                   <span className={`text-xl md:text-2xl font-bold ${
                     isSelected ? 'text-gray-900' : isTodayDate ? 'text-blue-600' : 'text-gray-700'
@@ -970,10 +983,23 @@ export default function TodoList() {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-5 h-5" />
-              {t('todos.addTask')}
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {t('common.adding') || 'Adding...'}
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5" />
+                  {t('todos.addTask')}
+                </>
+              )}
             </button>
           </div>
         </form>

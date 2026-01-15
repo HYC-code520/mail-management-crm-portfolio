@@ -56,7 +56,23 @@ export function getDaysAgoNY(daysAgo: number): string {
  */
 export function formatNYDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString('en-US', { 
+  return d.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    ...options
+  });
+}
+
+/**
+ * Format a date for display in New York timezone with locale support
+ * @param date - Date object or ISO string
+ * @param locale - 'en' for English, 'zh' for Chinese
+ * @param options - Intl.DateTimeFormatOptions
+ */
+export function formatNYDateLocale(date: Date | string, locale: 'en' | 'zh' | 'EN' | 'CN' | 'BOTH', options?: Intl.DateTimeFormatOptions): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  // Map locale to Intl locale code
+  const localeCode = locale === 'zh' || locale === 'CN' ? 'zh-CN' : 'en-US';
+  return d.toLocaleString(localeCode, {
     timeZone: 'America/New_York',
     ...options
   });

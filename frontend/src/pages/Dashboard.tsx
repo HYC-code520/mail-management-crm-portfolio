@@ -652,7 +652,7 @@ export default function DashboardPage() {
                 <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Package className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs text-green-700 font-semibold uppercase">{t('dashboard.thisMonth')} Mail</p>
+                <p className="text-xs text-green-700 font-semibold uppercase">{t('dashboard.thisMonthMail')}</p>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-baseline gap-2">

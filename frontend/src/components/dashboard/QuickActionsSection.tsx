@@ -1,11 +1,12 @@
 /**
  * Quick Actions Section Component
- * 
+ *
  * Displays quick action buttons for common tasks on the dashboard.
  */
 
 import React from 'react';
 import { Camera, UserPlus, Mail } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext.tsx';
 
 interface QuickActionsSectionProps {
   onScanMail: () => void;
@@ -22,6 +23,7 @@ export default function QuickActionsSection({
   followUpCount = 0,
   onNavigateToFollowUps
 }: QuickActionsSectionProps) {
+  const { t } = useLanguage();
   return (
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-4">
@@ -43,7 +45,7 @@ export default function QuickActionsSection({
         >
           <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
           <UserPlus className="w-5 h-5 relative z-10" />
-          <span className="relative z-10">Add Customer</span>
+          <span className="relative z-10">{t('quickActions.addCustomer')}</span>
         </button>
         <button
           onClick={onLogMail}
@@ -51,7 +53,7 @@ export default function QuickActionsSection({
         >
           <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
           <Mail className="w-5 h-5 relative z-10" />
-          <span className="relative z-10">Log New Mail</span>
+          <span className="relative z-10">{t('quickActions.logNewMail')}</span>
         </button>
       </div>
 
@@ -70,9 +72,11 @@ export default function QuickActionsSection({
                   </svg>
                 </div>
                 <div className="text-left">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">Needs Follow-up</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">{t('quickActions.needsFollowUp')}</h3>
                   <p className="text-gray-600">
-                    {followUpCount} {followUpCount === 1 ? 'customer needs' : 'customers need'} attention
+                    {followUpCount === 1
+                      ? t('quickActions.customerNeedsAttention', { count: followUpCount })
+                      : t('quickActions.customersNeedAttention', { count: followUpCount })}
                   </p>
                 </div>
               </div>

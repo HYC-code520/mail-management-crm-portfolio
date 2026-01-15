@@ -61,6 +61,8 @@ interface GroupedFollowUpProps {
   groups: GroupedFollowUp[];
   onSendEmail: (group: GroupedFollowUp) => void;
   onMarkAbandoned: (group: GroupedFollowUp) => void;
+  onDismissContact: (group: GroupedFollowUp) => void;
+  onDismissItem: (itemId: string, group: GroupedFollowUp) => void;
   getDaysSince: (date: string) => number;
   loading?: boolean;
 }
@@ -107,12 +109,14 @@ const getCardColors = (isAbandoned: boolean, hasFees: boolean, oldestDays: numbe
   };
 };
 
-export default function GroupedFollowUpSection({ 
-  groups, 
-  onSendEmail, 
+export default function GroupedFollowUpSection({
+  groups,
+  onSendEmail,
   onMarkAbandoned,
-  getDaysSince, 
-  loading 
+  onDismissContact,
+  onDismissItem,
+  getDaysSince,
+  loading
 }: GroupedFollowUpProps) {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -260,10 +264,11 @@ export default function GroupedFollowUpSection({
               <div className="mb-4 animate-fadeIn">
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-2 px-2 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                  <div className="col-span-4">{t('followUps.item')}</div>
-                  <div className="col-span-3 text-center">{t('followUps.qty')}</div>
+                  <div className="col-span-3">{t('followUps.item')}</div>
+                  <div className="col-span-2 text-center">{t('followUps.qty')}</div>
                   <div className="col-span-2 text-center">{t('followUps.age')}</div>
                   <div className="col-span-3 text-right">{t('followUps.fee')}</div>
+                  <div className="col-span-2 text-right"></div>
                 </div>
 
                 {/* Aggregate packages by date */}
@@ -295,13 +300,13 @@ export default function GroupedFollowUpSection({
                     return (
                       <div
                         key={`pkg-${dateKey}`}
-                        className="grid grid-cols-12 gap-2 px-2 py-1.5 text-sm items-center"
+                        className="grid grid-cols-12 gap-2 px-2 py-1.5 text-sm items-center group/row hover:bg-gray-50 rounded"
                       >
-                        <div className="col-span-4 flex items-center gap-2">
+                        <div className="col-span-3 flex items-center gap-2">
                           <Package className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
                           <span className="text-gray-700 truncate">{receivedDateStr}</span>
                         </div>
-                        <div className="col-span-3 text-center text-gray-600">{data.totalQty}</div>
+                        <div className="col-span-2 text-center text-gray-600">{data.totalQty}</div>
                         <div className="col-span-2 text-center text-gray-600">
                           {days}d
                         </div>
@@ -314,6 +319,19 @@ export default function GroupedFollowUpSection({
                           ) : (
                             <span className="text-gray-300">—</span>
                           )}
+                        </div>
+                        <div className="col-span-2 text-right opacity-0 group-hover/row:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Dismiss all items in this date group
+                              data.items.forEach(item => onDismissItem(item.mail_item_id, group));
+                            }}
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                            title={t('followUps.dismissItem')}
+                          >
+                            <span className="text-xs">✕</span>
+                          </button>
                         </div>
                       </div>
                     );
@@ -344,17 +362,30 @@ export default function GroupedFollowUpSection({
                     return (
                       <div
                         key={`letter-${dateKey}`}
-                        className="grid grid-cols-12 gap-2 px-2 py-1.5 text-sm items-center"
+                        className="grid grid-cols-12 gap-2 px-2 py-1.5 text-sm items-center group/row hover:bg-gray-50 rounded"
                       >
-                        <div className="col-span-4 flex items-center gap-2">
+                        <div className="col-span-3 flex items-center gap-2">
                           <Mail className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                           <span className="text-gray-700 truncate">{receivedDateStr}</span>
                         </div>
-                        <div className="col-span-3 text-center text-gray-600">{data.totalQty}</div>
+                        <div className="col-span-2 text-center text-gray-600">{data.totalQty}</div>
                         <div className="col-span-2 text-center text-gray-600">
                           {days}d
                         </div>
                         <div className="col-span-3 text-right text-gray-300">—</div>
+                        <div className="col-span-2 text-right opacity-0 group-hover/row:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Dismiss all items in this date group
+                              data.items.forEach(item => onDismissItem(item.mail_item_id, group));
+                            }}
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                            title={t('followUps.dismissItem')}
+                          >
+                            <span className="text-xs">✕</span>
+                          </button>
+                        </div>
                       </div>
                     );
                   });
@@ -471,6 +502,18 @@ export default function GroupedFollowUpSection({
                   className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors border border-gray-200"
                 >
                   {t('followUps.profile')}
+                </button>
+
+                {/* Dismiss All button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDismissContact(group);
+                  }}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full text-xs font-medium transition-colors border border-gray-200"
+                  title={t('followUps.dismissAllTooltip')}
+                >
+                  {t('followUps.dismissAll')}
                 </button>
               </div>
             )}

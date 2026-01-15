@@ -1,0 +1,1410 @@
+MEI WAY MAIL PLUS - USER TUTORIALS & HOW-TO GUIDES
+
+=============================================================================
+TABLE OF CONTENTS
+=============================================================================
+
+0. YOUR FIRST DAY USING THE SYSTEM (START HERE!)
+
+1. How to Log In
+2. How to Add a New Customer
+3. How to Scan and Log New Mail (Using Camera)
+4. How to Manually Log New Mail (Without Scanning)
+5. How to Send Customer Notifications
+6. How to Mark Mail as Picked Up
+7. How to Calculate and Record Storage Fees
+8. How to View Customer History and Details
+9. How to Use the Dashboard and Reports
+10. How to Search for Mail or Customers
+11. How to Handle Follow-Ups (Unclaimed Mail)
+12. How to Update Your Password
+13. Troubleshooting Common Issues
+
+
+=============================================================================
+TUTORIAL 0: YOUR FIRST DAY USING THE SYSTEM (START HERE!)
+=============================================================================
+
+Welcome to your Mail Management System!
+
+This guide will help you understand what you're looking at and get comfortable with the system on your first day.
+
+Don't worry - you don't need any technical knowledge. We'll walk you through everything step by step.
+
+---
+
+WHAT IS THIS SYSTEM?
+
+Your Mail Management System helps you:
+- Track all incoming mail (packages and letters) for your customers
+- Send automatic notifications when mail arrives
+- Calculate storage fees for unclaimed mail
+- Keep organized records of pickups and payments
+- See business statistics and reports
+
+Think of it like a digital logbook that replaces pen-and-paper tracking, with added benefits like automatic customer emails and fee calculations.
+
+---
+
+WHERE TO ACCESS IT
+
+Your website: https://mail-management-system-taupe.vercel.app
+
+Bookmark this! You'll use it every day.
+
+Works on:
+- Desktop computers (recommended)
+- Laptops
+- Tablets (iPad, etc.)
+- Phones (works but smaller screen)
+
+Best experience: Use Chrome, Safari, or Firefox on a desktop/laptop
+
+---
+
+YOUR FIRST LOGIN
+
+Step 1: Go to the website
+Step 2: Enter your email and password (provided by your manager)
+Step 3: Click "Sign In"
+
+What you'll see: The Dashboard (home screen with charts and numbers)
+
+IMPORTANT: If the page takes 30-60 seconds to load the first time, that's normal! The system "wakes up" after being idle. After that first load, it's fast.
+
+---
+
+UNDERSTANDING THE MAIN SCREEN (DASHBOARD)
+
+After logging in, you'll see the Dashboard. Here's what everything means:
+
+TOP OF SCREEN:
+- Your name or email (top right corner)
+- Settings icon (to change password)
+- Language toggle (English / 中文)
+
+LEFT SIDEBAR (Navigation Menu):
+This is how you move around the system. Each item takes you to a different page.
+
+📊 Dashboard
+- Home screen
+- Shows statistics and charts
+- Quick overview of your business
+
+📋 Intake
+- Log new mail that arrives
+- Use camera to scan labels
+- Or enter information manually
+
+📬 Mail
+- See all mail items you've logged
+- Search for specific packages or letters
+- Filter by status (awaiting pickup, picked up, etc.)
+
+👥 Contacts
+- List of all your customers
+- Add new customers
+- View customer history and fees
+
+💰 Fees
+- See all storage fees (paid and unpaid)
+- Track payments
+- Generate reports
+
+📧 Outreach
+- View notification emails sent to customers
+- See email history
+- Check if emails were delivered
+
+📋 Templates
+- Email templates for notifications
+- Customize message content
+
+📅 Follow-Ups
+- Mail that's been waiting 30+ days
+- Reminders to contact customers
+- Storage fee alerts
+
+⚙️ Settings
+- Change your password
+- Update preferences
+- System settings
+
+---
+
+MAIN SCREEN SECTIONS (What the Dashboard Shows)
+
+QUICK STATS (Top Row):
+Four boxes with numbers:
+- Total Mail Received: How many items logged today
+- Awaiting Pickup: How many packages/letters waiting for customers
+- Outstanding Fees: Total money owed for storage
+- Active Customers: How many customers have mail right now
+
+CHARTS (Middle Section):
+- Mail Received Over Time: Shows busy days/weeks
+- Revenue Analytics: Storage fees collected
+- Mail Type Breakdown: Packages vs Letters
+
+FOLLOW-UPS SECTION (Bottom):
+- Shows mail that needs attention
+- Items waiting 30+ days
+- Click to send reminder emails
+
+RECENT ACTIVITY (Bottom):
+- Last 10 items logged
+- Recent pickups
+- Recent emails sent
+
+---
+
+YOUR TYPICAL DAILY WORKFLOW
+
+Here's what a normal day looks like using this system:
+
+MORNING:
+1. Log into the system
+2. Check Dashboard for overnight notifications
+3. Review "Awaiting Pickup" count
+
+WHEN MAIL ARRIVES:
+1. Click "Intake" in left menu
+2. Scan mail label with camera (or enter manually)
+3. Check "Send notification" box
+4. Click "Submit"
+5. Customer receives automatic email!
+
+WHEN CUSTOMER PICKS UP:
+1. Click "Mail" in left menu
+2. Find the item (search by name or tracking number)
+3. Click "Mark as Picked Up"
+4. Confirm pickup details
+
+WHEN CUSTOMER PAYS STORAGE FEE:
+1. Click "Contacts" in left menu
+2. Find customer name
+3. Go to "Outstanding Fees" section
+4. Click "Record Payment"
+5. Enter amount and payment method
+
+END OF DAY:
+1. Check Dashboard for any unclaimed mail
+2. Review "Follow-Ups" for items needing attention
+3. Send reminder emails if needed
+
+---
+
+QUICK START: LOG YOUR FIRST MAIL IN 5 STEPS
+
+Let's walk through logging a package right now!
+
+Step 1: Click "Intake" in the left menu
+
+Step 2: Choose your method:
+- "Scan Mail" (use camera)
+- OR "Manual Entry" (type it in)
+
+Step 3: If scanning:
+- Point camera at mail label
+- Take photo
+- Wait 3-5 seconds for AI to read it
+
+Step 4: Fill in or verify:
+- Customer Name (dropdown list)
+- Type: Package or Letter
+- Tracking Number
+- Any notes
+
+Step 5: Check box "Send notification to customer"
+Click "Submit"
+
+Done! Customer gets an email within 2-3 minutes.
+
+---
+
+WHAT EACH BUTTON DOES (Common Actions)
+
+"+ Add Contact"
+- Creates new customer profile
+- Use when new customer signs up
+
+"Send Notification"
+- Emails customer about their mail
+- Usually done automatically when logging mail
+
+"Mark as Picked Up"
+- Records that customer got their mail
+- Moves item out of "Awaiting Pickup"
+
+"Record Payment"
+- Logs that customer paid storage fee
+- Updates their balance
+
+"Export"
+- Downloads data as spreadsheet
+- Good for reports or accounting
+
+"Filter"
+- Narrow down long lists
+- Find specific items faster
+
+"Search"
+- Look up customers or tracking numbers
+- Faster than scrolling
+
+---
+
+UNDERSTANDING STATUS LABELS
+
+You'll see these status labels on mail items:
+
+🟢 "Received"
+- Mail just arrived and logged
+- Has not been notified to customer yet
+- This is the initial state for new mail
+- You can mark as "Notified" from here
+
+🔵 "Notified"
+- Customer has been emailed about their mail
+- Waiting for customer to collect
+- This is the normal state after notification is sent
+
+⚫ "Picked Up"
+- Customer already collected it
+- Archived for records
+- No action needed
+
+🟡 "Scanned"
+- Mail has been scanned/photographed
+- Images sent to customer (virtual mailbox service)
+- Customer may or may not pick up physical mail
+
+🔴 "Abandoned"
+- Mail waiting 30+ days unclaimed
+- Customer not responding
+- May need to be returned to sender
+- Storage fees still owed
+
+---
+
+COMMON ICONS & WHAT THEY MEAN
+
+📬 Mail icon = Mail items
+👤 Person icon = Customers/Contacts
+💰 Dollar sign = Fees/Payments
+📊 Chart icon = Reports/Analytics
+📧 Envelope icon = Email notifications
+⚙️ Gear icon = Settings
+🔍 Magnifying glass = Search
+📁 Folder icon = Archive/History
+⋮ Three dots = More options/actions menu
+
+---
+
+COLORS & VISUAL CUES
+
+GREEN = Good/Complete
+- Payment received
+- Mail picked up
+- Action successful
+
+YELLOW = Warning/Attention Needed
+- Fee approaching due date
+- Mail waiting 30+ days
+- Needs follow-up
+
+RED = Urgent/Error
+- Fee overdue
+- Error message
+- Critical issue
+
+BLUE = Information
+- Neutral status
+- Clickable links
+- Navigation items
+
+GRAY = Inactive/Archived
+- Past records
+- Disabled buttons
+- No action needed
+
+---
+
+HELPFUL KEYBOARD SHORTCUTS (Optional)
+
+These can speed you up once you're comfortable:
+
+Cmd/Ctrl + K = Quick search
+Cmd/Ctrl + S = Save (when editing)
+Cmd/Ctrl + F = Find on page
+Escape = Close popup/modal
+Tab = Move to next field
+Enter = Submit form
+
+(Don't worry if you don't use these - clicking with mouse works perfectly!)
+
+---
+
+WHAT'S SAFE TO CLICK?
+
+You might worry about "breaking something." Here's what's safe:
+
+✅ SAFE TO CLICK ANYTIME:
+- Dashboard, Mail, Contacts, etc. (left menu)
+- Any "View" or "Details" button
+- Search and Filter options
+- Refresh button
+- Your profile/settings
+
+✅ SAFE BUT REVERSIBLE:
+- "Mark as Picked Up" (can undo if mistake)
+- "Record Payment" (can edit later)
+- "Send Notification" (just sends an email)
+- Adding new contacts
+
+⚠️ USE WITH CARE:
+- "Delete" buttons (ask manager first)
+- Editing customer email addresses (notifications go here)
+- Changing system settings
+
+🛑 NEVER DO (you probably don't have access anyway):
+- Deleting the database
+- Changing hosting settings
+- Sharing password with others
+
+---
+
+WHAT IF I MAKE A MISTAKE?
+
+Don't panic! Most actions can be fixed:
+
+Logged wrong customer?
+- Click "Edit" on the mail item
+- Change customer in dropdown
+- Save
+
+Marked as picked up by accident?
+- Click "Edit" on the item
+- Change status back to "Awaiting Pickup"
+- Save
+
+Sent notification to wrong person?
+- Can't unsend (already emailed)
+- Send correction email if needed
+- Double-check customer before clicking next time
+
+Recorded wrong payment amount?
+- Click "Edit" on the payment
+- Update amount
+- Save
+
+Deleted something by accident?
+- Contact your manager
+- May need developer help to restore
+- This is why we have backups!
+
+---
+
+GETTING HELP
+
+QUICK QUESTIONS:
+- Check Tutorial 13 (Troubleshooting)
+- Ask a coworker who knows the system
+- Review this guide
+
+TECHNICAL ISSUES:
+- Write down what happened
+- Take screenshots of any errors
+- Note what you were trying to do
+- Contact: ariel.chen@pursuit.org
+
+BUSINESS QUESTIONS:
+- Ask your manager
+- Review your company's policies
+- Check with other staff
+
+---
+
+PRACTICE EXERCISE (DO THIS NOW!)
+
+Before you start using the system for real, practice with these safe actions:
+
+Exercise 1: Navigate Around
+- Click each menu item on the left
+- Look at what each page shows
+- Click "Dashboard" to return home
+- (You're just looking, not changing anything)
+
+Exercise 2: Search for Something
+- Click "Contacts"
+- Type a customer name in search box
+- Click on their name
+- View their history
+
+Exercise 3: View Reports
+- Click "Dashboard"
+- Look at the charts
+- Try changing the date filter (top right)
+- See how numbers change
+
+Exercise 4: Check Your Settings
+- Click your name (top right)
+- Click "Settings"
+- Look at your account info
+- Don't change anything yet
+- Click back to Dashboard
+
+Completed all 4? Great! You're ready to start using the system!
+
+---
+
+NEXT STEPS
+
+Now that you understand the interface, continue with:
+
+TUTORIAL 1: HOW TO LOG IN (detailed login guide)
+TUTORIAL 2: HOW TO ADD A NEW CUSTOMER
+TUTORIAL 3: HOW TO SCAN AND LOG NEW MAIL
+
+Take your time! Learn one feature at a time. Within a week, this will feel natural.
+
+---
+
+REMEMBER:
+
+✅ You can't break anything by clicking around
+✅ Most mistakes are easy to fix
+✅ The system saves everything automatically
+✅ Backups exist if something goes really wrong
+✅ Help is available when you need it
+
+Welcome to your new mail management system! You've got this! 🎉
+
+
+=============================================================================
+TUTORIAL 1: HOW TO LOG IN
+=============================================================================
+
+Step 1: Open your web browser
+- Chrome, Safari, Firefox, or Edge
+
+Step 2: Go to the website
+- Type in: https://mail-management-system-taupe.vercel.app
+- Press Enter
+
+Step 3: Enter your login information
+- Email: Your work email address
+- Password: The password you were given
+
+Step 4: Click "Sign In"
+
+Step 5: You should see the Dashboard
+- If you see charts and numbers, you're logged in successfully!
+
+TROUBLESHOOTING:
+- If you get "Invalid credentials": Check your email and password spelling
+- If you forgot your password: Click "Forgot Password" and follow instructions
+- If the page won't load: Check your internet connection
+
+
+=============================================================================
+TUTORIAL 2: HOW TO ADD A NEW CUSTOMER
+=============================================================================
+
+When to use this: When a new customer signs up for mail forwarding services
+
+Step 1: Click "Contacts" in the left menu
+
+Step 2: Click the "+ Add Contact" button (top right corner)
+
+Step 3: Fill in the customer information:
+
+REQUIRED FIELDS (must fill in):
+- First Name: Customer's first name
+- Last Name: Customer's last name
+- Email: Customer's email address (where notifications go)
+
+OPTIONAL FIELDS (can fill in later):
+- Phone: Customer's phone number
+- Address: Customer's mailing address
+- Company: If they have a business name
+- Notes: Any special instructions or information
+
+Step 4: Click "Save" or "Create Contact"
+
+Step 5: Success! The customer now appears in your Contacts list
+
+TIPS:
+- Double-check the email address - this is where notifications will be sent
+- You can always edit customer information later by clicking on their name
+- Use the Notes field for important details like "Always text instead of email"
+
+
+=============================================================================
+TUTORIAL 3: HOW TO SCAN AND LOG NEW MAIL (USING CAMERA)
+=============================================================================
+
+When to use this: When new mail arrives and you want to quickly log it using your phone or computer camera
+
+Step 1: Click "Intake" in the left menu
+
+Step 2: Click "Scan Mail" button
+
+Step 3: Allow camera access
+- Your browser will ask "Allow camera access?" 
+- Click "Allow" or "Yes"
+
+Step 4: Point your camera at the mail label
+- Hold steady
+- Make sure the label is clearly visible
+- Good lighting helps!
+
+Step 5: Click "Capture" or "Take Photo"
+
+Step 6: Wait for AI to process (3-5 seconds)
+- The system will try to:
+  * Read the recipient name
+  * Find matching customer
+  * Read tracking number (if visible)
+
+Step 7: Review the auto-filled information
+- Customer Name: Check if it matched correctly
+- Type: Select "Package" or "Letter"
+- Tracking Number: Add if not detected
+- Notes: Add any special details
+
+Step 8: If customer name is WRONG:
+- Click the dropdown
+- Select the correct customer manually
+- Or click "Add New Contact" if they're not in the system
+
+Step 9: Click "Submit" to save
+
+Step 10: Success! The mail is now logged in the system
+
+TIPS:
+- If the camera won't open, try a different browser (Chrome works best)
+- Make sure you have good lighting - hold the mail near a window or lamp
+- If AI can't read the label, you can always enter information manually
+- You can take multiple photos if the first one isn't clear
+
+
+=============================================================================
+TUTORIAL 4: HOW TO MANUALLY LOG NEW MAIL (WITHOUT SCANNING)
+=============================================================================
+
+When to use this: When you don't have a camera available, or prefer typing
+
+Step 1: Click "Intake" in the left menu
+
+Step 2: Click "Manual Entry" button (or skip the scan step)
+
+Step 3: Fill in the form:
+
+REQUIRED FIELDS:
+- Customer: Click dropdown and select customer name
+  * If customer is new, click "Add New Contact" first
+- Type: Select "Package" or "Letter"
+- Received Date: Usually today's date (auto-filled)
+
+OPTIONAL BUT RECOMMENDED:
+- Tracking Number: USPS, UPS, FedEx tracking number
+- Carrier: USPS, UPS, FedEx, DHL, etc.
+- Weight: Package weight (letters can be left blank)
+- Dimensions: Length x Width x Height
+- Notes: "Fragile", "Perishable", "Hold for pickup", etc.
+
+Step 4: Click "Submit" or "Log Mail"
+
+Step 5: Success! The mail is now in the system
+
+WHEN TO USE MANUAL ENTRY:
+- Camera isn't working
+- Label is damaged or unreadable
+- You're logging multiple items quickly
+- You prefer typing over scanning
+
+
+=============================================================================
+TUTORIAL 5: HOW TO SEND CUSTOMER NOTIFICATIONS
+=============================================================================
+
+When to use this: To notify customers that their mail has arrived
+
+METHOD 1: SEND NOTIFICATION WHEN LOGGING MAIL (RECOMMENDED)
+
+Step 1: After you log the mail (scan or manual)
+- You'll see a checkbox: "Send notification to customer"
+
+Step 2: Check the box if you want to notify them immediately
+
+Step 3: Click "Submit"
+- The customer will receive an email automatically!
+
+---
+
+METHOD 2: SEND NOTIFICATION FROM MAIL LIST
+
+Step 1: Click "Mail" in the left menu
+
+Step 2: Find the mail item you want to notify about
+
+Step 3: Click the three-dot menu (⋮) or "Actions" button
+
+Step 4: Click "Send Notification"
+
+Step 5: Review the email preview
+- Subject: Usually "You have mail!"
+- Message: Shows what arrived and when
+
+Step 6: Click "Send"
+
+Step 7: Success! Customer receives an email
+
+---
+
+METHOD 3: SEND BULK NOTIFICATIONS
+
+Step 1: Click "Mail" in the left menu
+
+Step 2: Filter to show only "Awaiting Pickup" items
+
+Step 3: Check the boxes next to multiple mail items
+
+Step 4: Click "Send Notifications" at the top
+
+Step 5: Confirm you want to send to all selected customers
+
+Step 6: Success! All selected customers get notified
+
+WHAT THE CUSTOMER EMAIL LOOKS LIKE:
+Subject: "Mail Notification from Mei Way Mail Plus"
+Body:
+- "You have received mail"
+- Type: Package or Letter
+- Tracking number (if available)
+- Date received
+- Instructions for pickup
+
+TIPS:
+- Customers usually get notified within 1-2 minutes
+- Check the "Sent" status to confirm notification went out
+- If email bounces, check customer's email address is correct
+
+
+=============================================================================
+TUTORIAL 6: HOW TO MARK MAIL AS PICKED UP
+=============================================================================
+
+When to use this: When a customer picks up their mail
+
+Step 1: Click "Mail" in the left menu
+
+Step 2: Find the mail item that was picked up
+- Use search or scroll through the list
+- Look for customer name or tracking number
+
+Step 3: Click on the mail item to open details
+
+Step 4: Click "Mark as Picked Up" button
+
+Step 5: Enter pickup details:
+- Pickup Date: Usually today (auto-filled)
+- Picked up by: Customer's name or "Self"
+- ID Verified: Check if you verified their ID
+- Notes: Optional (e.g., "Signature required")
+
+Step 6: Click "Confirm" or "Mark Picked Up"
+
+Step 7: Success! The mail is now marked as "Picked Up"
+
+WHAT HAPPENS NEXT:
+- Mail item status changes to "Picked Up"
+- Item moves out of "Awaiting Pickup" list
+- History is recorded for audit purposes
+- If storage fees were owed, they should be paid before pickup
+
+ALTERNATE METHOD (QUICK PICKUP):
+Step 1: Click "Mail" in the left menu
+Step 2: Find the item
+Step 3: Click the checkbox next to it
+Step 4: Click "Mark as Picked Up" button at the top
+Step 5: Confirm
+(This is faster for multiple items)
+
+TIPS:
+- Always verify the customer's identity before handing over mail
+- If someone else picks up, note their name in "Picked up by" field
+- You can mark multiple items as picked up at once using checkboxes
+
+
+=============================================================================
+TUTORIAL 7: HOW TO CALCULATE AND RECORD STORAGE FEES
+=============================================================================
+
+When to use this: When mail has been stored for 30+ days and fees are owed
+
+HOW STORAGE FEES WORK:
+- First 30 days: FREE
+- After 30 days: $2/day for packages, $1/day for letters
+- Fees calculate automatically
+
+---
+
+METHOD 1: VIEW FEES FROM DASHBOARD
+
+Step 1: Go to Dashboard (click "Dashboard" in left menu)
+
+Step 2: Look at the "Outstanding Storage Fees" section
+- Shows total fees owed by all customers
+- Click to see breakdown by customer
+
+---
+
+METHOD 2: VIEW FEES FOR SPECIFIC CUSTOMER
+
+Step 1: Click "Contacts" in left menu
+
+Step 2: Click on customer's name
+
+Step 3: Scroll to "Outstanding Fees" section
+- Shows all unpaid storage fees
+- Lists which mail items have fees
+
+---
+
+METHOD 3: RECORD FEE PAYMENT
+
+When customer pays their storage fees:
+
+Step 1: Click "Contacts" in left menu
+
+Step 2: Click on customer's name
+
+Step 3: Find the "Outstanding Fees" section
+
+Step 4: Click "Record Payment" next to the fee
+
+Step 5: Enter payment details:
+- Amount Paid: How much they paid
+- Payment Method: Cash, Check, Credit Card, etc.
+- Payment Date: Usually today
+- Notes: Check number, receipt number, etc.
+
+Step 6: Click "Save Payment"
+
+Step 7: Success! Fee is marked as paid
+
+WHAT HAPPENS:
+- Fee status changes from "Unpaid" to "Paid"
+- Total outstanding balance updates
+- Payment is recorded in customer history
+- You can print a receipt if needed
+
+TIPS:
+- Always give customer a receipt when they pay
+- Record partial payments if they can't pay full amount
+- Check fees weekly to follow up with customers
+- You can waive fees in special cases (talk to manager first)
+
+
+=============================================================================
+TUTORIAL 8: HOW TO VIEW CUSTOMER HISTORY AND DETAILS
+=============================================================================
+
+When to use this: To see all mail and transactions for a specific customer
+
+Step 1: Click "Contacts" in the left menu
+
+Step 2: Find the customer
+- Scroll through the list, or
+- Use the search box at the top
+
+Step 3: Click on the customer's name
+
+YOU'LL SEE:
+
+CUSTOMER INFO (top section):
+- Name, email, phone, address
+- Join date
+- Total mail received
+- Outstanding fees
+
+TABS:
+
+1. MAIL HISTORY TAB:
+   - All packages and letters received
+   - Status: Awaiting Pickup, Picked Up, or Returned
+   - Dates received and picked up
+   - Tracking numbers
+
+2. STORAGE FEES TAB:
+   - All fees (paid and unpaid)
+   - Fee amounts and dates
+   - Payment history
+
+3. NOTIFICATIONS TAB:
+   - All emails sent to this customer
+   - Date and time sent
+   - Email content
+
+4. NOTES TAB:
+   - Internal notes about the customer
+   - Special instructions
+   - History of changes
+
+ACTIONS YOU CAN TAKE:
+- Edit customer information (click "Edit" button)
+- Send a custom email (click "Send Email")
+- Add a note (click "Add Note")
+- View or print receipt history
+
+TIPS:
+- Use this page to answer customer questions about their mail
+- Check notification history if customer says they didn't receive email
+- Review notes before contacting customer
+
+
+=============================================================================
+TUTORIAL 9: HOW TO USE THE DASHBOARD AND REPORTS
+=============================================================================
+
+When to use this: To see business overview, statistics, and analytics
+
+Step 1: Click "Dashboard" in the left menu
+
+WHAT YOU'LL SEE:
+
+TOP SECTION - QUICK STATS:
+- Total Mail Received Today
+- Awaiting Pickup (how many items waiting)
+- Outstanding Fees (total money owed)
+- Active Customers
+
+CHARTS:
+1. Mail Received Over Time
+   - Shows daily/weekly/monthly mail volume
+   - Helps identify busy periods
+
+2. Revenue Analytics
+   - Storage fee income
+   - Trends over time
+
+3. Mail Type Breakdown
+   - Packages vs. Letters
+   - Pie chart or bar chart
+
+FOLLOW-UPS SECTION:
+- Shows mail that's been waiting 30+ days
+- Reminds you to contact customers
+- Click item to send reminder
+
+RECENT ACTIVITY:
+- Last 10 mail items logged
+- Recent pickups
+- Recent notifications sent
+
+---
+
+HOW TO USE FILTERS:
+
+Step 1: Look for "Date Range" dropdown at top
+
+Step 2: Select time period:
+- Today
+- Last 7 days
+- Last 30 days
+- Custom date range
+
+Step 3: Dashboard updates to show only that period
+
+---
+
+EXPORT REPORTS:
+
+Step 1: Click "Reports" in the menu (if available)
+
+Step 2: Select report type:
+- Mail Activity Report
+- Storage Fee Report
+- Customer Report
+
+Step 3: Choose date range
+
+Step 4: Click "Export to CSV" or "Download"
+
+Step 5: Open in Excel or Google Sheets
+
+TIPS:
+- Check dashboard daily to see if any mail needs follow-up
+- Use date filters to see monthly trends
+- Export reports for accounting or business analysis
+
+
+=============================================================================
+TUTORIAL 10: HOW TO SEARCH FOR MAIL OR CUSTOMERS
+=============================================================================
+
+When to use this: To quickly find specific mail items or customers
+
+---
+
+SEARCH FOR CUSTOMERS:
+
+Step 1: Click "Contacts" in left menu
+
+Step 2: Use the search box at the top
+
+Step 3: Type:
+- Customer name (first or last)
+- Email address
+- Phone number
+- Company name
+
+Step 4: Results appear as you type
+
+Step 5: Click on customer to view details
+
+---
+
+SEARCH FOR MAIL:
+
+Step 1: Click "Mail" in left menu
+
+Step 2: Use the search box at the top
+
+Step 3: Type:
+- Tracking number
+- Customer name
+- Date received
+
+Step 4: Results filter automatically
+
+Step 5: Click on mail item to view details
+
+---
+
+ADVANCED FILTERS:
+
+Step 1: Click "Filter" button (funnel icon)
+
+Step 2: Select filter options:
+
+STATUS FILTERS:
+- All Mail
+- Awaiting Pickup
+- Picked Up
+- Returned to Sender
+
+TYPE FILTERS:
+- All Types
+- Packages Only
+- Letters Only
+
+DATE FILTERS:
+- Today
+- Last 7 days
+- Last 30 days
+- Custom date range
+
+CARRIER FILTERS:
+- All Carriers
+- USPS
+- UPS
+- FedEx
+- DHL
+
+Step 3: Click "Apply Filters"
+
+Step 4: Results update to match your filters
+
+Step 5: Click "Clear Filters" to reset
+
+---
+
+QUICK SEARCH TIPS:
+
+SEARCH BY TRACKING NUMBER:
+- Copy and paste tracking number for accuracy
+- Works with USPS, UPS, FedEx formats
+
+SEARCH BY CUSTOMER:
+- Type just the last name if you're not sure of spelling
+- Or type just the first name
+
+SEARCH BY DATE:
+- Use format: MM/DD/YYYY or YYYY-MM-DD
+- Or use the date picker
+
+SORT RESULTS:
+- Click column headers to sort
+- Click again to reverse order
+- Example: Click "Date" to sort by oldest/newest
+
+
+=============================================================================
+TUTORIAL 11: HOW TO HANDLE FOLLOW-UPS (UNCLAIMED MAIL)
+=============================================================================
+
+When to use this: When mail has been sitting unclaimed for a long time
+
+WHAT ARE FOLLOW-UPS?
+Mail that has been at your facility for 30+ days without being picked up.
+
+---
+
+VIEW FOLLOW-UPS:
+
+Step 1: Click "Follow-Ups" in the left menu
+(Or see the "Follow-Ups" section on Dashboard)
+
+Step 2: You'll see a list of all unclaimed mail
+
+COLUMNS SHOWN:
+- Customer Name
+- Mail Type (Package or Letter)
+- Days Waiting (how long it's been)
+- Storage Fees Owed
+- Last Contacted (when you last sent reminder)
+
+---
+
+SEND REMINDER TO CUSTOMER:
+
+Step 1: Find the mail item in Follow-Ups list
+
+Step 2: Click "Send Reminder" button
+
+Step 3: Review the email message
+- Subject: "Reminder: Unclaimed Mail"
+- Body: Mentions storage fees and pickup instructions
+
+Step 4: Click "Send"
+
+Step 5: Customer receives reminder email
+
+---
+
+SEND BULK REMINDERS:
+
+Step 1: Go to Follow-Ups page
+
+Step 2: Check boxes next to multiple items
+
+Step 3: Click "Send Reminders" at the top
+
+Step 4: Confirm you want to send to all selected
+
+Step 5: Success! All selected customers get reminders
+
+---
+
+RETURN MAIL TO SENDER:
+
+If customer never picks up after multiple reminders:
+
+Step 1: Find mail item in Follow-Ups
+
+Step 2: Click "Actions" → "Return to Sender"
+
+Step 3: Confirm you want to return it
+
+Step 4: Fill in return details:
+- Return Date: Today
+- Carrier: USPS, UPS, etc.
+- Return Tracking: If available
+- Notes: Reason for return
+
+Step 5: Click "Confirm Return"
+
+Step 6: Mail status changes to "Returned"
+
+WHAT HAPPENS:
+- Mail item removed from "Awaiting Pickup"
+- Customer receives notification (optional)
+- Any owed fees are still recorded
+- Item appears in "Returned" history
+
+TIPS:
+- Follow your business policy (e.g., return after 90 days)
+- Send at least 2-3 reminders before returning
+- Document everything in notes
+- Check with manager before returning valuable items
+
+
+=============================================================================
+TUTORIAL 12: HOW TO UPDATE YOUR PASSWORD
+=============================================================================
+
+When to use this: To change your login password for security
+
+METHOD 1: CHANGE PASSWORD WHILE LOGGED IN
+
+Step 1: Log into the app
+
+Step 2: Click your name or profile icon (top right corner)
+
+Step 3: Click "Settings"
+
+Step 4: Find "Change Password" section
+
+Step 5: Fill in:
+- Current Password: Your old password
+- New Password: Your new password (make it strong!)
+- Confirm New Password: Type new password again
+
+Step 6: Click "Update Password"
+
+Step 7: Success! Use your new password next time you log in
+
+---
+
+METHOD 2: RESET PASSWORD (IF YOU FORGOT IT)
+
+Step 1: Go to login page
+
+Step 2: Click "Forgot Password?" link
+
+Step 3: Enter your email address
+
+Step 4: Click "Send Reset Link"
+
+Step 5: Check your email inbox
+- Look for email from "Mei Way Mail Plus" or "Supabase"
+- Check spam folder if you don't see it
+
+Step 6: Click the link in the email
+
+Step 7: Enter your new password (twice)
+
+Step 8: Click "Reset Password"
+
+Step 9: Success! You can now log in with your new password
+
+---
+
+PASSWORD REQUIREMENTS:
+- At least 8 characters long
+- Should include:
+  * Uppercase letters (A-Z)
+  * Lowercase letters (a-z)
+  * Numbers (0-9)
+  * Special characters (!@#$%^&*)
+
+GOOD PASSWORD EXAMPLES:
+- MailForward2024!
+- MySecurePass#99
+- BlueOcean$2026
+
+BAD PASSWORD EXAMPLES (don't use these):
+- password
+- 123456
+- myname
+- qwerty
+
+TIPS:
+- Change your password every 3-6 months
+- Don't share your password with anyone
+- Don't write it down where others can see it
+- Use a password manager if you have trouble remembering
+
+
+=============================================================================
+TUTORIAL 13: TROUBLESHOOTING COMMON ISSUES
+=============================================================================
+
+ISSUE 1: CAN'T LOG IN
+
+PROBLEM: "Invalid credentials" error
+SOLUTION:
+1. Check your email is spelled correctly
+2. Check Caps Lock is OFF
+3. Try "Forgot Password" to reset
+4. Contact admin if still can't log in
+
+---
+
+ISSUE 2: CAMERA WON'T OPEN FOR SCANNING
+
+PROBLEM: Black screen or "Camera access denied"
+SOLUTION:
+1. Click "Allow" when browser asks for camera permission
+2. Check your computer/phone camera isn't being used by another app
+3. Try a different browser (Chrome works best)
+4. On iPhone: Settings → Safari → Camera → Allow
+5. On Android: Settings → Apps → Browser → Permissions → Camera
+6. If still doesn't work, use Manual Entry instead
+
+---
+
+ISSUE 3: CUSTOMER SAYS THEY DIDN'T GET EMAIL NOTIFICATION
+
+PROBLEM: Notification was sent but customer didn't receive it
+SOLUTION:
+1. Go to customer's profile
+2. Check "Notifications" tab to see if it was sent
+3. Verify customer's email address is correct
+4. Ask customer to check spam/junk folder
+5. Resend the notification
+6. Update email address if it's wrong
+
+---
+
+ISSUE 4: CAN'T FIND A MAIL ITEM
+
+PROBLEM: Mail is logged but can't find it in the list
+SOLUTION:
+1. Check search spelling (use tracking number)
+2. Clear all filters (click "Clear Filters")
+3. Change date range to "All Time"
+4. Check if it was marked as "Picked Up" by mistake
+5. Search by customer name instead of tracking number
+
+---
+
+ISSUE 5: STORAGE FEES CALCULATING WRONG
+
+PROBLEM: Fee amount doesn't look right
+SOLUTION:
+1. Check the "Received Date" is correct
+2. Fees start after 30 days
+3. Rate: $2/day for packages, $1/day for letters
+4. Math: (Days waiting - 30) × Daily rate
+5. If still wrong, contact technical support
+
+---
+
+ISSUE 6: PAGE WON'T LOAD / "ERROR" MESSAGE
+
+PROBLEM: White screen or error message
+SOLUTION:
+1. Refresh the page (press F5 or Cmd+R)
+2. Clear your browser cache:
+   - Chrome: Settings → Privacy → Clear browsing data
+   - Safari: Settings → Clear History
+3. Try a different browser
+4. Check your internet connection
+5. Try again in 5-10 minutes (server might be updating)
+6. Contact support if issue persists
+
+---
+
+ISSUE 7: SLOW PERFORMANCE / PAGE LOADING FOREVER
+
+PROBLEM: App is very slow or stuck loading
+SOLUTION:
+1. Check your internet speed (run a speed test)
+2. Close other browser tabs
+3. Restart your browser
+4. Clear browser cache
+5. The free server "sleeps" after 15 minutes - first load takes 30-60 seconds
+6. After that, it should be fast
+
+---
+
+ISSUE 8: CAN'T SEND NOTIFICATIONS / EMAILS FAILING
+
+PROBLEM: "Failed to send notification" error
+SOLUTION:
+1. Check you're connected to the internet
+2. Verify customer email address is valid
+3. Check if Gmail has hit 500 emails/day limit
+4. Wait 5 minutes and try again
+5. Contact technical support if problem continues
+
+---
+
+ISSUE 9: CUSTOMER INFO WON'T UPDATE
+
+PROBLEM: Changes to customer profile won't save
+SOLUTION:
+1. Fill in all required fields (marked with *)
+2. Check email format is correct (must have @)
+3. Click "Save" button
+4. Refresh page to see if changes saved
+5. Try editing again
+
+---
+
+ISSUE 10: DASHBOARD NUMBERS LOOK WRONG
+
+PROBLEM: Statistics don't match reality
+SOLUTION:
+1. Refresh the page (press F5)
+2. Check date filter - make sure it's set correctly
+3. Dashboard updates every hour - might be delayed
+4. Count manually and compare
+5. Report to technical support if numbers are way off
+
+---
+
+WHO TO CONTACT FOR HELP:
+
+TECHNICAL ISSUES (bugs, errors, crashes):
+Contact: Ariel Chen
+Email: ariel.chen@pursuit.org
+Response time: 1-2 business days
+
+BILLING / ACCOUNT ISSUES:
+Contact: [Your business manager]
+Email: [Manager email]
+
+TRAINING / HOW-TO QUESTIONS:
+Refer back to these tutorials
+Or contact: [Trainer name/email]
+
+---
+
+BEFORE CONTACTING SUPPORT, GATHER:
+1. What were you trying to do?
+2. What happened instead?
+3. Any error messages (take screenshot)
+4. What browser are you using?
+5. When did it start happening?
+6. Have you tried the troubleshooting steps above?
+
+
+=============================================================================
+END OF TUTORIALS
+=============================================================================
+
+TIPS FOR SUCCESS:
+
+1. PRACTICE MAKES PERFECT
+   - Try each tutorial a few times
+   - Get comfortable with the basic features first
+   - Advanced features will become easier with time
+
+2. USE NOTES FIELDS
+   - Always add helpful notes when logging mail
+   - Future you will thank present you!
+
+3. DOUBLE-CHECK CUSTOMER EMAILS
+   - Wrong email = customer doesn't get notified
+   - Verify spelling before saving
+
+4. FOLLOW YOUR BUSINESS POLICIES
+   - Storage fee schedules
+   - Return policies
+   - ID verification requirements
+
+5. KEEP SYSTEM UPDATED
+   - Browser should be up-to-date
+   - Clear cache monthly
+   - Update passwords regularly
+
+6. ASK FOR HELP
+   - Don't struggle alone
+   - Reach out to technical support
+   - Train other team members
+
+=============================================================================
+
+Document created: January 12, 2026
+For: Mei Way Mail Plus
+System: Mail Management Application
+Version: 1.0.0
+
+Questions? Contact ariel.chen@pursuit.org
+
+=============================================================================

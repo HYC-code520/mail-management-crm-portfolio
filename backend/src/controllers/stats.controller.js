@@ -178,7 +178,8 @@ exports.getDashboardStats = async (req, res, next) => {
       { data: mailItems, error: mailItemsError },
       { data: notifications, error: notificationsError },
       { data: packageFees, error: feesError },
-      { data: todos }
+      { data: todos },
+      { data: followupDismissals }
     ] = await Promise.all([
       supabase
         .from('contacts')
@@ -210,7 +211,12 @@ exports.getDashboardStats = async (req, res, next) => {
         .select('is_completed, last_edited_by_name, completed_at')
         .eq('is_completed', true)
         .not('completed_at', 'is', null)
-        .gte('completed_at', sevenDaysAgoTimestamp)
+        .gte('completed_at', sevenDaysAgoTimestamp),
+      // Fetch active follow-up dismissals (contacts dismissed from follow-up view)
+      supabase
+        .from('followup_dismissals')
+        .select('contact_id, dismissed_at')
+        .is('undone_at', null)
     ]);
 
     if (contactsError) {
@@ -294,13 +300,23 @@ exports.getDashboardStats = async (req, res, next) => {
       }
     });
     
+    // Build a Set of dismissed contact IDs (per-contact dismissals)
+    const dismissedContactIds = new Set(
+      (followupDismissals || []).map(d => d.contact_id)
+    );
+
     // Get ALL non-completed mail items (we'll filter by contact later)
+    // Also exclude individually dismissed items (per-item dismissals)
     const allActiveItems = enrichedMailItems.filter(item => {
       // Exclude completed/handled statuses
       if (item.status === 'Picked Up' ||
           item.status === 'Forwarded' ||
           item.status === 'Scanned' ||
           item.status.includes('Abandoned')) {
+        return false;
+      }
+      // Exclude individually dismissed items
+      if (item.dismissed_at) {
         return false;
       }
       return true;
@@ -346,6 +362,11 @@ exports.getDashboardStats = async (req, res, next) => {
 
     // Now decide which contacts to show based on cooldown period
     Object.entries(contactNotificationMap).forEach(([contactId, info]) => {
+      // Skip contacts that have been dismissed from follow-up
+      if (dismissedContactIds.has(contactId)) {
+        return;
+      }
+
       // If contact has unnotified items, always show them
       if (info.hasUnnotifiedItems) {
         contactIdsToShow.add(contactId);

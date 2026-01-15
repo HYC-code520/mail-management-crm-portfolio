@@ -18,5 +18,24 @@ router.put('/:id', mailItemsController.updateMailItemStatus);
 // DELETE /api/mail-items/:id - Delete mail item
 router.delete('/:id', mailItemsController.deleteMailItem);
 
+// ============================================
+// Follow-up Dismissal Routes
+// ============================================
+
+// POST /api/mail-items/dismiss-contact - Dismiss all items for a contact from follow-up
+router.post('/dismiss-contact', mailItemsController.dismissContactFromFollowUp);
+
+// POST /api/mail-items/restore-contact - Restore a dismissed contact to follow-up
+router.post('/restore-contact', mailItemsController.restoreContactToFollowUp);
+
+// GET /api/mail-items/dismissed-contacts - Get all dismissed contacts
+router.get('/dismissed-contacts', mailItemsController.getDismissedContacts);
+
+// POST /api/mail-items/dismiss-item/:id - Dismiss a single item from follow-up
+router.post('/dismiss-item/:id', mailItemsController.dismissItemFromFollowUp);
+
+// POST /api/mail-items/restore-item/:id - Restore a dismissed item to follow-up
+router.post('/restore-item/:id', mailItemsController.restoreItemToFollowUp);
+
 module.exports = router;
 

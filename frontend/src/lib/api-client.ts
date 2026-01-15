@@ -182,6 +182,16 @@ export const api = {
     update: (id: string, data: Record<string, unknown>) => apiClient.put(`/mail-items/${id}`, data),
     updateStatus: (id: string, status: string) => apiClient.put(`/mail-items/${id}`, { status }),
     delete: (id: string) => apiClient.delete(`/mail-items/${id}`),
+    // Follow-up dismissal methods
+    dismissContact: (contactId: string, dismissedBy: string, notes?: string) =>
+      apiClient.post('/mail-items/dismiss-contact', { contact_id: contactId, dismissed_by: dismissedBy, notes }),
+    restoreContact: (contactId: string, undoneBy: string) =>
+      apiClient.post('/mail-items/restore-contact', { contact_id: contactId, undone_by: undoneBy }),
+    getDismissedContacts: () => apiClient.get('/mail-items/dismissed-contacts'),
+    dismissItem: (itemId: string, dismissedBy: string) =>
+      apiClient.post(`/mail-items/dismiss-item/${itemId}`, { dismissed_by: dismissedBy }),
+    restoreItem: (itemId: string) =>
+      apiClient.post(`/mail-items/restore-item/${itemId}`, {}),
   },
   outreachMessages: {
     getAll: (contactId?: string, mailItemId?: string) => {

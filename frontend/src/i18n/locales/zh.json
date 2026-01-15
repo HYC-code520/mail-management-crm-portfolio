@@ -195,6 +195,7 @@
     "addRelevantNotes": "添加相关备注...",
     "linkToCustomer": "关联客户",
     "searchByNameCompanyMailbox": "按姓名/公司/信箱号搜索...",
+    "statusLegend": "状态说明",
     "selectWhoLogging": "请选择记录人员",
     "dateReceivedHelp": "选择邮件收到的日期",
     "mailType": "邮件类型",
@@ -223,7 +224,22 @@
     "abandoned": "已放弃",
     "pending": "待处理",
     "scannedDocument": "已扫描文件",
-    "abandonedPackage": "已放弃包裹"
+    "abandonedPackage": "已放弃包裹",
+    "resolved": "已解决"
+  },
+
+  "statusTooltips": {
+    "received": "邮件已登记，正在设施等待",
+    "pending": "邮件正在处理中",
+    "notified": "已通知客户有此邮件",
+    "pickedUp": "客户已取走此邮件",
+    "scanned": "文件已扫描并发送给客户",
+    "scannedDocument": "文件已扫描并发送给客户",
+    "forward": "邮件已转寄到其他地址",
+    "abandoned": "邮件超过30天无人认领，已处理",
+    "abandonedPackage": "包裹超过30天无人认领，已处理",
+    "resolved": "无需进一步处理 - 项目已关闭",
+    "mixed": "此组包含不同状态的项目"
   },
 
   "mailActions": {
@@ -320,7 +336,42 @@
     "markedAbandoned": "已将 {{name}} 的 {{count}} 项邮件标记为放弃",
     "summaryEmailSent": "已向 {{name}} 发送汇总邮件（{{count}} 项）",
     "emailSentTo": "已向 {{name}} 发送邮件",
-    "viewInLog": "在日志中查看 →"
+    "viewInLog": "在日志中查看 →",
+    "dismissAll": "全部隐藏",
+    "dismissAllTooltip": "从跟进列表中隐藏此客户",
+    "dismissItem": "隐藏此项",
+    "viewDismissed": "查看已隐藏",
+    "showActive": "显示活跃",
+    "dismissedContacts": "已隐藏的客户",
+    "noDismissedContacts": "没有已隐藏的客户",
+    "customer": "客户",
+    "pendingItems": "待处理项目",
+    "dismissedBy": "隐藏者",
+    "actions": "操作",
+    "restore": "恢复",
+    "noPendingItems": "无待处理项目",
+    "whoDismissing": "谁在隐藏此客户？",
+    "whoRestoring": "谁在恢复此客户？",
+    "enterStaffName": "请输入员工姓名（如 Merlin 或 Madison）：",
+    "contactDismissed": "{{name}} 已从跟进列表隐藏",
+    "itemDismissed": "项目已从跟进列表隐藏",
+    "contactRestored": "{{name}} 已恢复到跟进列表",
+    "failedToDismiss": "隐藏失败",
+    "failedToRestore": "恢复失败",
+    "failedToLoadDismissed": "加载已隐藏客户失败",
+    "dismissedItems": "已隐藏的项目",
+    "itemRestored": "项目已恢复到跟进列表",
+    "noDismissed": "没有已隐藏的项目或客户",
+    "selectStaff": "选择员工",
+    "dismissItemTitle": "隐藏项目",
+    "dismissItemDesc": "此项目将从跟进列表中隐藏，直到恢复。",
+    "dismissCustomer": "隐藏客户",
+    "dismissCustomerDesc": "{{name}} 的所有项目将从跟进列表中隐藏。",
+    "restoreCustomer": "恢复客户",
+    "restoreCustomerDesc": "{{name}} 将重新出现在跟进列表中。",
+    "markResolved": "标记已解决",
+    "markResolvedDesc": "此项目将被标记为已解决，并从已隐藏列表中移除。",
+    "itemResolved": "项目已标记为已解决"
   },
 
   "todos": {
@@ -460,6 +511,7 @@
     "staffPerformance": "员工绩效",
     "thisWeek": "本周",
     "thisMonth": "本月",
+    "thisMonthMail": "本月邮件",
     "newCustomers": "新客户",
     "vsLastMonth": "对比上月 {{count}}",
     "loadingData": "加载仪表板数据中...",
@@ -541,9 +593,13 @@
     "scanMail": "扫描邮件",
     "startNewScan": "开始新的扫描",
     "logMail": "记录邮件",
+    "logNewMail": "记录新邮件",
     "manuallyAdd": "手动添加邮件",
     "addCustomer": "添加客户",
-    "createProfile": "创建新客户资料"
+    "createProfile": "创建新客户资料",
+    "needsFollowUp": "需要跟进",
+    "customerNeedsAttention": "{{count}} 位客户需要关注",
+    "customersNeedAttention": "{{count}} 位客户需要关注"
   },
 
   "modals": {
@@ -703,6 +759,71 @@
     "packageFeeReminder": "包裹费用提醒",
     "generalReminder": "一般提醒",
     "mailNotification": "邮件通知"
+  },
+
+  "pagination": {
+    "showing": "显示第 {{from}} 至 {{to}} 项，共 {{total}} 组",
+    "previous": "上一页",
+    "next": "下一页",
+    "of": "共 {{total}} 页",
+    "firstPage": "第一页",
+    "lastPage": "最后一页"
+  },
+
+  "daysOfWeek": {
+    "sun": "日",
+    "mon": "一",
+    "tue": "二",
+    "wed": "三",
+    "thu": "四",
+    "fri": "五",
+    "sat": "六",
+    "sunday": "星期日",
+    "monday": "星期一",
+    "tuesday": "星期二",
+    "wednesday": "星期三",
+    "thursday": "星期四",
+    "friday": "星期五",
+    "saturday": "星期六"
+  },
+
+  "months": {
+    "jan": "1月",
+    "feb": "2月",
+    "mar": "3月",
+    "apr": "4月",
+    "may": "5月",
+    "jun": "6月",
+    "jul": "7月",
+    "aug": "8月",
+    "sep": "9月",
+    "oct": "10月",
+    "nov": "11月",
+    "dec": "12月",
+    "january": "一月",
+    "february": "二月",
+    "march": "三月",
+    "april": "四月",
+    "mayFull": "五月",
+    "june": "六月",
+    "july": "七月",
+    "august": "八月",
+    "september": "九月",
+    "october": "十月",
+    "november": "十一月",
+    "december": "十二月"
+  },
+
+  "dateTime": {
+    "am": "上午",
+    "pm": "下午",
+    "at": ""
+  },
+
+  "notificationTypes": {
+    "reminder": "提醒",
+    "finalNotice": "最后通知",
+    "followUp": "跟进"
   },
 
   "plurals": {

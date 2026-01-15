@@ -4,8 +4,12 @@ import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import GroupedFollowUpSection from '../components/dashboard/GroupedFollowUp.tsx';
 import SendEmailModal from '../components/SendEmailModal.tsx';
+import StaffSelectModal from '../components/StaffSelectModal.tsx';
+import ConfirmModal from '../components/ConfirmModal.tsx';
 import { getTodayNY, toNYDateString, extractNYDate } from '../utils/timezone.ts';
 import { useLanguage } from '../contexts/LanguageContext.tsx';
+import { getCustomerDisplayName } from '../utils/customerDisplay.ts';
+import { RotateCcw, EyeOff, CheckCircle } from 'lucide-react';
 
 interface PackageFee {
   fee_id: string;
@@ -42,6 +46,7 @@ interface GroupedFollowUp {
     contact_person?: string;
     company_name?: string;
     mailbox_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both';
   };
   packages: MailItem[];
   letters: MailItem[];
@@ -50,11 +55,65 @@ interface GroupedFollowUp {
   lastNotified?: string;
 }
 
+interface DismissedContact {
+  dismissal_id: string;
+  contact_id: string;
+  dismissed_at: string;
+  dismissed_by: string;
+  notes?: string;
+  contacts: {
+    contact_id: string;
+    contact_person?: string;
+    company_name?: string;
+    mailbox_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both';
+  };
+  pendingPackages: number;
+  pendingLetters: number;
+  totalPendingItems: number;
+}
+
+interface DismissedItem {
+  mail_item_id: string;
+  item_type: string;
+  quantity: number;
+  received_date: string;
+  dismissed_at: string;
+  dismissed_by: string;
+  contact_id: string;
+  contacts: {
+    contact_id: string;
+    contact_person?: string;
+    company_name?: string;
+    mailbox_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both';
+  };
+}
+
 export default function FollowUpsPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [followUps, setFollowUps] = useState<GroupedFollowUp[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Dismissed contacts and items state
+  const [showDismissed, setShowDismissed] = useState(false);
+  const [dismissedContacts, setDismissedContacts] = useState<DismissedContact[]>([]);
+  const [dismissedItems, setDismissedItems] = useState<DismissedItem[]>([]);
+  const [loadingDismissed, setLoadingDismissed] = useState(false);
+
+  // Staff select modal state
+  const [staffModalOpen, setStaffModalOpen] = useState(false);
+  const [staffModalTitle, setStaffModalTitle] = useState('');
+  const [staffModalDescription, setStaffModalDescription] = useState('');
+  const [pendingAction, setPendingAction] = useState<((staffName: string) => Promise<void>) | null>(null);
+
+  // Confirm modal state (for mark abandoned)
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmModalTitle, setConfirmModalTitle] = useState('');
+  const [confirmModalMessage, setConfirmModalMessage] = useState('');
+  const [confirmModalAction, setConfirmModalAction] = useState<(() => Promise<void>) | null>(null);
+  const [confirmModalLoading, setConfirmModalLoading] = useState(false);
 
   // Send Email Modal states
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
@@ -76,9 +135,130 @@ export default function FollowUpsPage() {
     }
   }, []);
 
+  const loadDismissedContacts = useCallback(async () => {
+    try {
+      setLoadingDismissed(true);
+      const data = await api.mailItems.getDismissedContacts();
+      // Handle new response structure with both contacts and items
+      setDismissedContacts(data?.dismissedContacts || []);
+      setDismissedItems(data?.dismissedItems || []);
+    } catch (err) {
+      console.error('Error loading dismissed contacts:', err);
+      toast.error(t('followUps.failedToLoadDismissed'));
+    } finally {
+      setLoadingDismissed(false);
+    }
+  }, [t]);
+
   useEffect(() => {
     void loadFollowUps();
-  }, [loadFollowUps]);
+    void loadDismissedContacts();
+  }, [loadFollowUps, loadDismissedContacts]);
+
+  // Open staff modal with pending action
+  const openStaffModal = (
+    title: string,
+    description: string,
+    action: (staffName: string) => Promise<void>
+  ) => {
+    setStaffModalTitle(title);
+    setStaffModalDescription(description);
+    setPendingAction(() => action);
+    setStaffModalOpen(true);
+  };
+
+  // Handle staff selection confirmation
+  const handleStaffConfirm = async (staffName: string) => {
+    if (pendingAction) {
+      await pendingAction(staffName);
+    }
+    setPendingAction(null);
+  };
+
+  // Dismiss a contact (all their items) from follow-up
+  const handleDismissContact = (group: GroupedFollowUp) => {
+    const customerName = getCustomerDisplayName(group.contact);
+
+    openStaffModal(
+      t('followUps.dismissCustomer'),
+      t('followUps.dismissCustomerDesc', { name: customerName }),
+      async (staffName: string) => {
+        try {
+          await api.mailItems.dismissContact(group.contact.contact_id, staffName);
+          toast.success(t('followUps.contactDismissed', { name: customerName }));
+          loadFollowUps();
+          loadDismissedContacts();
+        } catch (err) {
+          console.error('Error dismissing contact:', err);
+          toast.error(t('followUps.failedToDismiss'));
+        }
+      }
+    );
+  };
+
+  // Dismiss a single item from follow-up
+  const handleDismissItem = (itemId: string, _group: GroupedFollowUp) => {
+    openStaffModal(
+      t('followUps.dismissItemTitle'),
+      t('followUps.dismissItemDesc'),
+      async (staffName: string) => {
+        try {
+          await api.mailItems.dismissItem(itemId, staffName);
+          toast.success(t('followUps.itemDismissed'));
+          loadFollowUps();
+        } catch (err) {
+          console.error('Error dismissing item:', err);
+          toast.error(t('followUps.failedToDismiss'));
+        }
+      }
+    );
+  };
+
+  // Restore a dismissed contact
+  const handleRestoreContact = (dismissedContact: DismissedContact) => {
+    const customerName = getCustomerDisplayName(dismissedContact.contacts);
+
+    openStaffModal(
+      t('followUps.restoreCustomer'),
+      t('followUps.restoreCustomerDesc', { name: customerName }),
+      async (staffName: string) => {
+        try {
+          await api.mailItems.restoreContact(dismissedContact.contact_id, staffName);
+          toast.success(t('followUps.contactRestored', { name: customerName }));
+          loadFollowUps();
+          loadDismissedContacts();
+        } catch (err) {
+          console.error('Error restoring contact:', err);
+          toast.error(t('followUps.failedToRestore'));
+        }
+      }
+    );
+  };
+
+  // Restore a dismissed item (no staff needed - just restore)
+  const handleRestoreItem = async (item: DismissedItem) => {
+    try {
+      await api.mailItems.restoreItem(item.mail_item_id);
+      toast.success(t('followUps.itemRestored'));
+      loadFollowUps();
+      loadDismissedContacts();
+    } catch (err) {
+      console.error('Error restoring item:', err);
+      toast.error(t('followUps.failedToRestore'));
+    }
+  };
+
+  // Mark a dismissed item as resolved (removes from dismissed list permanently)
+  const handleMarkResolved = async (item: DismissedItem) => {
+    try {
+      await api.mailItems.updateStatus(item.mail_item_id, 'Resolved');
+      toast.success(t('followUps.itemResolved'));
+      loadDismissedContacts();
+    } catch (err) {
+      console.error('Error marking item as resolved:', err);
+      toast.error(t('common.error'));
+    }
+  };
 
   const getDaysSince = (dateStr: string) => {
     const todayNY = getTodayNY();
@@ -193,7 +373,7 @@ export default function FollowUpsPage() {
     setEmailingGroupKey(null);
   };
 
-  const handleMarkAbandoned = async (group: GroupedFollowUp) => {
+  const handleMarkAbandoned = (group: GroupedFollowUp) => {
     const allItems = [...group.packages, ...group.letters];
     const abandonedItems = allItems.filter(item => getDaysSince(item.received_date) >= 30);
     
@@ -204,29 +384,43 @@ export default function FollowUpsPage() {
     
     const customerName = group.contact.contact_person || group.contact.company_name || 'Unknown';
     const confirmMessage = abandonedItems.length === 1
-      ? `Mark 1 item (30+ days old) for ${customerName} as abandoned?`
-      : `Mark ${abandonedItems.length} items (30+ days old) for ${customerName} as abandoned?`;
+      ? t('followUps.confirmAbandonSingle', { name: customerName })
+      : t('followUps.confirmAbandon', { count: abandonedItems.length, name: customerName });
     
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-    
-    try {
-      for (const item of abandonedItems) {
-        await api.mailItems.updateStatus(item.mail_item_id, 'Abandoned Package');
+    // Open confirm modal instead of browser confirm
+    setConfirmModalTitle(t('followUps.markAbandoned'));
+    setConfirmModalMessage(confirmMessage);
+    setConfirmModalAction(() => async () => {
+      setConfirmModalLoading(true);
+      try {
+        for (const item of abandonedItems) {
+          await api.mailItems.updateStatus(item.mail_item_id, 'Abandoned Package');
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        loadFollowUps();
+        
+        toast.success(
+          t('followUps.markedAbandoned', { count: abandonedItems.length, name: customerName })
+        );
+      } catch (err) {
+        console.error('Error marking items as abandoned:', err);
+        toast.error(t('followUps.failedToMarkAbandoned'));
+      } finally {
+        setConfirmModalLoading(false);
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      loadFollowUps();
-      
-      toast.success(
-        `📦 Marked ${abandonedItems.length} item${abandonedItems.length > 1 ? 's' : ''} as abandoned for ${customerName}`
-      );
-    } catch (err) {
-      console.error('Error marking items as abandoned:', err);
-      toast.error(t('followUps.failedToMarkAbandoned'));
+    });
+    setConfirmModalOpen(true);
+  };
+
+  // Handle confirm modal confirmation
+  const handleConfirmModalConfirm = async () => {
+    if (confirmModalAction) {
+      await confirmModalAction();
     }
+    setConfirmModalOpen(false);
+    setConfirmModalAction(null);
   };
 
   // Show loading state while data is being fetched
@@ -299,11 +493,197 @@ export default function FollowUpsPage() {
         )}
       </div>
 
+      {/* View Dismissed Toggle */}
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => setShowDismissed(!showDismissed)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+            showDismissed
+              ? 'bg-gray-800 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <EyeOff className="w-4 h-4" />
+          {showDismissed ? t('followUps.showActive') : t('followUps.viewDismissed')}
+          {(dismissedContacts.length > 0 || dismissedItems.length > 0) && (
+            <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
+              showDismissed ? 'bg-white/20' : 'bg-gray-300'
+            }`}>
+              {dismissedContacts.length + dismissedItems.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Dismissed Section */}
+      {showDismissed && (
+        <div className="mb-8 space-y-6">
+          {/* Dismissed Items (Individual) */}
+          {dismissedItems.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700 mb-4">{t('followUps.dismissedItems')}</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.item')}
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.customer')}
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.dismissedBy')}
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {dismissedItems.map((item) => (
+                      <tr key={item.mail_item_id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span>{item.item_type === 'Package' ? '📦' : '✉️'}</span>
+                            <span className="font-medium text-gray-900">{item.item_type}</span>
+                            {item.quantity > 1 && (
+                              <span className="text-gray-500">x{item.quantity}</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {new Date(item.received_date).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">
+                            {getCustomerDisplayName(item.contacts)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {t('followUps.mailbox')} {item.contacts?.mailbox_number || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.dismissed_by}
+                          <div className="text-xs text-gray-400">
+                            {new Date(item.dismissed_at).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              onClick={() => handleRestoreItem(item)}
+                              className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                              title={t('followUps.restore')}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              {t('followUps.restore')}
+                            </button>
+                            <button
+                              onClick={() => handleMarkResolved(item)}
+                              className="px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                              title={t('followUps.markResolvedDesc')}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              {t('followUps.markResolved')}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Dismissed Contacts (All items for a customer) */}
+          {dismissedContacts.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700 mb-4">{t('followUps.dismissedContacts')}</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.customer')}
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.pendingItems')}
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.dismissedBy')}
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('followUps.actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {dismissedContacts.map((dc) => (
+                      <tr key={dc.dismissal_id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">
+                            {getCustomerDisplayName(dc.contacts)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {t('followUps.mailbox')} {dc.contacts?.mailbox_number || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {dc.totalPendingItems > 0 ? (
+                            <span>
+                              {dc.pendingPackages > 0 && `📦 ${dc.pendingPackages}`}
+                              {dc.pendingPackages > 0 && dc.pendingLetters > 0 && ' / '}
+                              {dc.pendingLetters > 0 && `✉️ ${dc.pendingLetters}`}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">{t('followUps.noPendingItems')}</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {dc.dismissed_by}
+                          <div className="text-xs text-gray-400">
+                            {new Date(dc.dismissed_at).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button
+                            onClick={() => handleRestoreContact(dc)}
+                            className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ml-auto"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            {t('followUps.restore')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* No dismissed items or contacts */}
+          {loadingDismissed ? (
+            <div className="bg-white rounded-xl p-8 text-center text-gray-500">
+              {t('common.loading')}
+            </div>
+          ) : dismissedContacts.length === 0 && dismissedItems.length === 0 && (
+            <div className="bg-white rounded-xl p-8 text-center text-gray-500">
+              {t('followUps.noDismissed')}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Follow-up Cards */}
       <GroupedFollowUpSection
         groups={followUps}
         onSendEmail={openSendEmailForGroup}
         onMarkAbandoned={handleMarkAbandoned}
+        onDismissContact={handleDismissContact}
+        onDismissItem={handleDismissItem}
         getDaysSince={getDaysSince}
         loading={false}
       />
@@ -324,6 +704,34 @@ export default function FollowUpsPage() {
           suggestedTemplateType={suggestedTemplateType}
         />
       )}
+
+      {/* Staff Select Modal (for dismiss/restore actions) */}
+      <StaffSelectModal
+        isOpen={staffModalOpen}
+        onClose={() => {
+          setStaffModalOpen(false);
+          setPendingAction(null);
+        }}
+        onConfirm={handleStaffConfirm}
+        title={staffModalTitle}
+        description={staffModalDescription}
+      />
+
+      {/* Confirm Modal (for mark abandoned) */}
+      <ConfirmModal
+        isOpen={confirmModalOpen}
+        onClose={() => {
+          setConfirmModalOpen(false);
+          setConfirmModalAction(null);
+          setConfirmModalLoading(false);
+        }}
+        onConfirm={handleConfirmModalConfirm}
+        title={confirmModalTitle}
+        message={confirmModalMessage}
+        confirmText={t('common.confirm')}
+        variant="danger"
+        isLoading={confirmModalLoading}
+      />
     </div>
   );
 }

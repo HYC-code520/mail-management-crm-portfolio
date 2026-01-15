@@ -8,6 +8,7 @@ interface LanguageContextType {
   setLanguage: (lang: LanguageMode) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
   tBoth: (key: string) => string;
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -48,6 +49,24 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return i18nT(key, options);
   };
 
+  // Locale-aware date formatting for NY timezone
+  const formatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions): string => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const localeCode = language === 'CN' ? 'zh-CN' : 'en-US';
+    const defaultOptions: Intl.DateTimeFormatOptions = {
+      timeZone: 'America/New_York',
+      ...options
+    };
+
+    if (language === 'BOTH') {
+      const enDate = d.toLocaleString('en-US', defaultOptions);
+      const zhDate = d.toLocaleString('zh-CN', defaultOptions);
+      return `${enDate} / ${zhDate}`;
+    }
+
+    return d.toLocaleString(localeCode, defaultOptions);
+  };
+
   useEffect(() => {
     // Sync i18n on mount based on stored preference
     if (language === 'CN') {
@@ -58,7 +77,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [i18n, language]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t: translate, tBoth }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t: translate, tBoth, formatDate }}>
       {children}
     </LanguageContext.Provider>
   );
