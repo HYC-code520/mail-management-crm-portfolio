@@ -11,6 +11,7 @@ import CameraModal from '../components/scan/CameraModal';
 import BulkScanEmailModal from '../components/scan/BulkScanEmailModal';
 import { getCustomerDisplayName } from '../utils/customerDisplay';
 import { useLanguage } from '../contexts/LanguageContext.tsx';
+import { generatePhotoFingerprint, isDuplicatePhoto } from '../utils/photoFingerprint';
 import type {
   ScannedItem,
   ScanSession,
@@ -60,7 +61,7 @@ export default function ScanSessionPage() {
 
   // Batch mode state (for cost savings - 10 images in 1 API call)
   const [batchMode, setBatchMode] = useState(true); // Default ON for demos and efficiency
-  const [batchQueue, setBatchQueue] = useState<Array<{ blob: Blob; previewUrl: string }>>([]);
+  const [batchQueue, setBatchQueue] = useState<Array<{ blob: Blob; previewUrl: string; fingerprint: string }>>([]);
   const [isProcessingBatch, setIsProcessingBatch] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const BATCH_SIZE = 10;
@@ -181,18 +182,34 @@ export default function ScanSessionPage() {
     }
   };
 
-  // Add photo to batch queue
-  const addToBatchQueue = (photoBlob: Blob) => {
+  // Add photo to batch queue with duplicate detection
+  const addToBatchQueue = async (photoBlob: Blob) => {
     // Check if batch is full before adding
     if (batchQueue.length >= BATCH_SIZE) {
       toast.error(`Batch is full (${BATCH_SIZE} photos). Process current batch first.`);
       return;
     }
 
+    // Generate fingerprint for duplicate detection
+    const fingerprint = await generatePhotoFingerprint(photoBlob);
+
+    // Check for duplicates in current batch queue
+    const isDuplicateInQueue = batchQueue.some(item => item.fingerprint === fingerprint);
+    if (isDuplicateInQueue) {
+      toast.error('This photo is already in the batch queue', { icon: '🔄', duration: 3000 });
+      return;
+    }
+
+    // Check for duplicates in current session
+    if (session && isDuplicatePhoto(fingerprint, session.items)) {
+      toast.error('This photo was already scanned in this session', { icon: '🔄', duration: 3000 });
+      return;
+    }
+
     const previewUrl = URL.createObjectURL(photoBlob);
     const newCount = batchQueue.length + 1;
 
-    setBatchQueue(prev => [...prev, { blob: photoBlob, previewUrl }]);
+    setBatchQueue(prev => [...prev, { blob: photoBlob, previewUrl, fingerprint }]);
 
     // Show toast outside state setter to avoid React StrictMode duplicate
     toast.success(`Added to batch (${newCount}/${BATCH_SIZE})`, { duration: 1500 });
@@ -271,6 +288,7 @@ export default function ScanSessionPage() {
           id: `item-${Date.now()}-${i}`,
           photoBlob: queueItem.blob,
           photoPreviewUrl: queueItem.previewUrl,
+          photoFingerprint: queueItem.fingerprint, // Include fingerprint for deduplication
           extractedText: result.extractedText || '',
           matchedContact: result.matchedContact || null,
           confidence: result.confidence || 0,
@@ -558,7 +576,16 @@ export default function ScanSessionPage() {
       size: (photoBlob.size / 1024).toFixed(2) + ' KB',
       type: photoBlob.type,
     });
-    
+
+    // Generate fingerprint for duplicate detection
+    const fingerprint = await generatePhotoFingerprint(photoBlob);
+
+    // Check for duplicates in current session
+    if (session && isDuplicatePhoto(fingerprint, session.items)) {
+      toast.error('This photo was already scanned in this session', { icon: '🔄', duration: 3000 });
+      return null;
+    }
+
     // DEBUG: Create preview URL so we can see what we're processing
     const previewUrl = URL.createObjectURL(photoBlob);
     console.log('👁️ Preview image:', previewUrl);
@@ -632,11 +659,12 @@ export default function ScanSessionPage() {
       id: `item-${Date.now()}-${Math.random()}`, // Add random to prevent collisions
       photoBlob,
       photoPreviewUrl: URL.createObjectURL(photoBlob),
+      photoFingerprint: fingerprint, // Include fingerprint for deduplication
       extractedText: finalText,
       matchedContact: finalContact,
       confidence: finalConfidence,
       itemType: 'Letter', // Default
-      status: finalContact 
+      status: finalContact
         ? (finalConfidence >= CONFIDENCE_THRESHOLD ? 'matched' : 'uncertain')
         : 'failed',
       scannedAt: new Date().toISOString(),
@@ -677,12 +705,19 @@ export default function ScanSessionPage() {
         console.error('❌ prevSession is null in setState!');
         return prevSession;
       }
-      
+
+      // Check for duplicate photo in session (prevent same photo being added twice)
+      if (item.photoFingerprint && isDuplicatePhoto(item.photoFingerprint, prevSession.items)) {
+        console.warn('⚠️ Duplicate photo detected, skipping:', item.photoFingerprint);
+        toast.error('This photo was already added to the session', { icon: '🔄' });
+        return prevSession; // Don't add duplicate
+      }
+
       const newSession = {
         ...prevSession,
         items: [...prevSession.items, item],
       };
-      
+
       console.log('✅ Session updated! Old count:', prevSession.items.length, 'New count:', newSession.items.length);
       return newSession;
     });

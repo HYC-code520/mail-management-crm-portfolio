@@ -96,6 +96,7 @@ async function smartMatchWithGemini(req, res, next) {
 
     // Smart prompt that asks Gemini to do BOTH extraction AND matching
     // Updated to recognize both personal names AND business/company names
+    // Enhanced to handle handwritten/cursive text more carefully
     const prompt = `You are analyzing a photograph of a mail label or envelope. Your task is to:
 1. Find and extract the RECIPIENT'S NAME OR BUSINESS NAME from the image
 2. Match it to one of the customers in the list below
@@ -120,22 +121,37 @@ INSTRUCTIONS FOR TEXT EXTRACTION:
 - Extract the COMPLETE name, not just initials or partial text
 - Ignore address lines, city names, zip codes, sender information
 
+SPECIAL HANDLING FOR HANDWRITTEN/CURSIVE TEXT:
+- If the text is HANDWRITTEN or in CURSIVE script, be EXTRA CAREFUL
+- Handwritten text is often harder to read - lower your confidence accordingly
+- If you cannot clearly read the handwritten text, set CONFIDENCE to 30 or below
+- Do NOT guess at handwritten names if you're unsure - it's better to return "NONE" than a wrong match
+- Look for any PRINTED text on the envelope that might be clearer than handwriting
+
 INSTRUCTIONS FOR MATCHING:
 - Compare the extracted name to the customer list
 - Match on EITHER the personal name OR the business name
 - If mail says "ACME Corp" and customer is "John Smith / ACME Corp", that's a match!
 - Handle variations like:
   * First name / last name order (e.g., "Chen Houyu" vs "Houyu Chen")
-  * Missing spaces (e.g., "HouYu Chen" vs "Hou Yu Chen")  
+  * Missing spaces (e.g., "HouYu Chen" vs "Hou Yu Chen")
   * Partial names (e.g., "H. Chen" → "Houyu Chen")
   * Abbreviations or nicknames
   * Different capitalization
   * Business name variations (e.g., "ACME" vs "ACME Corp")
 
+CONFIDENCE SCORING GUIDELINES:
+- 90-100: Perfect match, text is clearly printed and easy to read
+- 70-89: Good match, minor variations (name order, abbreviations)
+- 50-69: Possible match, some uncertainty (partial name, similar sounding)
+- 30-49: Low confidence - text is hard to read OR match is uncertain
+- 0-29: Very uncertain - handwritten/illegible text OR no reasonable match
+- If text is HANDWRITTEN and hard to read, cap confidence at 50 maximum
+
 RETURN FORMAT (must be EXACT):
-EXTRACTED: [the complete recipient name or business name you found]
-MATCHED: [customer number from list, or "NONE" if no match]
-CONFIDENCE: [0-100, how confident you are in the match]
+EXTRACTED: [the complete recipient name or business name you found, or "UNREADABLE" if text cannot be read]
+MATCHED: [customer number from list, or "NONE" if no match or uncertain]
+CONFIDENCE: [0-100, following the guidelines above]
 REASON: [brief explanation of your match or why no match]
 
 Example responses:
@@ -148,6 +164,16 @@ EXTRACTED: ACME CONSULTING LLC
 MATCHED: 3
 CONFIDENCE: 90
 REASON: Business name matches customer #3 "John Doe / ACME Consulting LLC"
+
+EXTRACTED: Windsor School (handwritten, difficult to read)
+MATCHED: NONE
+CONFIDENCE: 35
+REASON: Handwritten cursive text appears to say "Windsor School" but no matching customer found
+
+EXTRACTED: UNREADABLE
+MATCHED: NONE
+CONFIDENCE: 0
+REASON: Text is handwritten cursive and cannot be read clearly enough to identify recipient
 
 Now analyze the image and provide your response:`;
 
@@ -669,9 +695,18 @@ CUSTOMER LIST:
 ${contactListStr}
 
 For EACH image (labeled IMAGE_1, IMAGE_2, etc.), provide:
-- EXTRACTED: the recipient name you found
-- MATCHED: customer number from list, or "NONE"
+- EXTRACTED: the recipient name you found (or "UNREADABLE" if text cannot be read)
+- MATCHED: customer number from list, or "NONE" if no match or uncertain
 - CONFIDENCE: 0-100
+
+CONFIDENCE SCORING GUIDELINES:
+- 90-100: Perfect match, text is clearly printed and easy to read
+- 70-89: Good match, minor variations (name order, abbreviations)
+- 50-69: Possible match, some uncertainty
+- 30-49: Low confidence - text is hard to read OR match is uncertain
+- 0-29: Very uncertain - handwritten/illegible text OR no reasonable match
+- IMPORTANT: If text is HANDWRITTEN or in CURSIVE, cap confidence at 50 maximum
+- If you cannot clearly read handwritten text, return "NONE" rather than guessing wrong
 
 RESPONSE FORMAT (one block per image):
 ---IMAGE_1---
@@ -686,7 +721,7 @@ CONFIDENCE: [0-100]
 
 (continue for all ${images.length} images)
 
-IMPORTANT: Analyze each image separately. Handle name variations (order, abbreviations, partial matches).`;
+IMPORTANT: Analyze each image separately. Handle name variations (order, abbreviations, partial matches). Be EXTRA CAREFUL with handwritten/cursive text - it's better to return NONE than a wrong match.`;
 
     // Build image parts array
     const imageParts = images.map((img, idx) => ({
