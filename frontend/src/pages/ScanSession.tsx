@@ -1680,6 +1680,7 @@ interface ConfirmModalProps {
 }
 
 function ConfirmModal({ item, contacts, onConfirm, onCancel, onPhotoClick }: ConfirmModalProps) {
+  const { t } = useLanguage();
   const [editedItem, setEditedItem] = useState(item);
 
   return (
