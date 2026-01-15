@@ -313,7 +313,23 @@
     "nCustomers": "{{count}} customers",
     "packageFrom": "Package from {{date}}",
     "nDays": "{{count}} days",
-    "pickedUpWithoutPaying": "Picked up without paying"
+    "pickedUpWithoutPaying": "Picked up without paying",
+    "waiveModalTitle": "Waive Package Storage Fees",
+    "waivingFeesFor": "Waiving fees for:",
+    "totalFeesToWaive": "Total Fees to Waive:",
+    "packages": "Packages",
+    "day": "Day",
+    "reasonForWaiving": "Reason for waiving fees:",
+    "reasonPlaceholder": "e.g., Goodwill gesture for loyal customer, System error, Customer complaint resolution, First-time courtesy...",
+    "charactersCount": "{{current}}/{{max}} characters (minimum {{min}})",
+    "whoIsWaiving": "Who is waiving this fee?",
+    "selectWhoIsWaiving": "Please select who is waiving the fee",
+    "waiveWarning": "This action cannot be undone.",
+    "waiveWarningDetail": "Waived fees will be marked as forgiven and will not be collected.",
+    "waiveAmount": "Waive {{amount}}",
+    "waivingInProgress": "Waiving...",
+    "waiveSuccess": "Waived {{amount}} in fees for {{customer}} by {{staff}} ({{count}} package)",
+    "waiveSuccessPlural": "Waived {{amount}} in fees for {{customer}} by {{staff}} ({{count}} packages)"
   },
 
   "followUps": {

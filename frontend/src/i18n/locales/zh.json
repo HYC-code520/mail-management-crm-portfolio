@@ -313,7 +313,23 @@
     "nCustomers": "{{count}} 位客户",
     "packageFrom": "{{date}} 收到的包裹",
     "nDays": "{{count}} 天",
-    "pickedUpWithoutPaying": "未付费已取件"
+    "pickedUpWithoutPaying": "未付费已取件",
+    "waiveModalTitle": "豁免包裹存储费",
+    "waivingFeesFor": "豁免费用对象：",
+    "totalFeesToWaive": "豁免费用总计：",
+    "packages": "包裹",
+    "day": "天",
+    "reasonForWaiving": "豁免原因：",
+    "reasonPlaceholder": "例如：忠实客户的善意优惠、系统错误、客户投诉解决、首次豁免优惠...",
+    "charactersCount": "{{current}}/{{max}} 字符（最少 {{min}} 个）",
+    "whoIsWaiving": "谁在豁免此费用？",
+    "selectWhoIsWaiving": "请选择豁免此费用的员工",
+    "waiveWarning": "此操作无法撤销。",
+    "waiveWarningDetail": "豁免的费用将被标记为已免除，不会再收取。",
+    "waiveAmount": "豁免 {{amount}}",
+    "waivingInProgress": "正在豁免...",
+    "waiveSuccess": "已为 {{customer}} 豁免 {{amount}} 费用，由 {{staff}} 操作（{{count}} 个包裹）",
+    "waiveSuccessPlural": "已为 {{customer}} 豁免 {{amount}} 费用，由 {{staff}} 操作（{{count}} 个包裹）"
   },
 
   "followUps": {
