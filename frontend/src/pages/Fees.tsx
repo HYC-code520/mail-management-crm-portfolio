@@ -6,7 +6,7 @@ import WaiveFeeModal from '../components/WaiveFeeModal.tsx';
 import CollectFeeModal from '../components/CollectFeeModal.tsx';
 import { getTodayNY, toNYDateString } from '../utils/timezone.ts';
 import { format } from 'date-fns';
-import { Package, ChevronDown, ChevronUp, Banknote, Search, SlidersHorizontal } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Banknote, Search } from 'lucide-react';
 import { getCustomerDisplayName } from '../utils/customerDisplay';
 import { useLanguage } from '../contexts/LanguageContext.tsx';
 
@@ -296,10 +296,6 @@ export default function FeesPage() {
             className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
-          <SlidersHorizontal className="w-5 h-5" />
-          {t('fees.filters')}
-        </button>
       </div>
 
       {/* Fees List */}
