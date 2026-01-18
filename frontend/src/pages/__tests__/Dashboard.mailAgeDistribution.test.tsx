@@ -139,11 +139,11 @@ describe('Dashboard - Mail Age Distribution', () => {
       render(<Dashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('0-3 days')).toBeInTheDocument();
-        expect(screen.getByText('4-7 days')).toBeInTheDocument();
-        expect(screen.getByText('8-14 days')).toBeInTheDocument();
-        expect(screen.getByText('15-30 days')).toBeInTheDocument();
-        expect(screen.getByText('30+ days')).toBeInTheDocument();
+        expect(screen.getByText('0-3d')).toBeInTheDocument();
+        expect(screen.getByText('4-7d')).toBeInTheDocument();
+        expect(screen.getByText('8-14d')).toBeInTheDocument();
+        expect(screen.getByText('15-30d')).toBeInTheDocument();
+        expect(screen.getByText('30+d')).toBeInTheDocument();
       });
     });
   });

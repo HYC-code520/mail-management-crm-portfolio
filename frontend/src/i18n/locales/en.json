@@ -662,11 +662,11 @@
   },
 
   "ageRanges": {
-    "0to3days": "0-3 days",
-    "4to7days": "4-7 days",
-    "8to14days": "8-14 days",
-    "15to30days": "15-30 days",
-    "over30days": "30+ days"
+    "0to3days": "0-3d",
+    "4to7days": "4-7d",
+    "8to14days": "8-14d",
+    "15to30days": "15-30d",
+    "over30days": "30+d"
   },
 
   "scan": {
