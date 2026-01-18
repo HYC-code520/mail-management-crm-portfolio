@@ -264,8 +264,8 @@ export default function GroupedFollowUpSection({
                   <div className="col-span-3 text-center">{t('followUps.item')}</div>
                   <div className="col-span-2 text-center">{t('followUps.qty')}</div>
                   <div className="col-span-2 text-center">{t('followUps.age')}</div>
-                  <div className="col-span-3 text-center">{t('followUps.fee')}</div>
-                  <div className="col-span-2 text-center"></div>
+                  <div className="col-span-4 text-center">{t('followUps.fee')}</div>
+                  <div className="col-span-1"></div>
                 </div>
 
                 {/* Aggregate packages by date */}
@@ -307,7 +307,7 @@ export default function GroupedFollowUpSection({
                         <div className="col-span-2 text-center text-gray-600">
                           {t('followUps.nDays', { count: days })}
                         </div>
-                        <div className="col-span-3 text-center">
+                        <div className="col-span-4 text-center">
                           {data.totalFee > 0 ? (
                             <span className={data.hasWaived ? 'text-gray-400 line-through' : 'text-gray-600'}>
                               ${data.totalFee.toFixed(2)}
@@ -317,7 +317,7 @@ export default function GroupedFollowUpSection({
                             <span className="text-gray-300">—</span>
                           )}
                         </div>
-                        <div className="col-span-2 text-right opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <div className="col-span-1 text-center opacity-0 group-hover/row:opacity-100 transition-opacity">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -369,8 +369,8 @@ export default function GroupedFollowUpSection({
                         <div className="col-span-2 text-center text-gray-600">
                           {t('followUps.nDays', { count: days })}
                         </div>
-                        <div className="col-span-3 text-center text-gray-300">—</div>
-                        <div className="col-span-2 text-right opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <div className="col-span-4 text-center text-gray-300">—</div>
+                        <div className="col-span-1 text-center opacity-0 group-hover/row:opacity-100 transition-opacity">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
