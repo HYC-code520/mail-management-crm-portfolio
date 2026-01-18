@@ -261,11 +261,11 @@ export default function GroupedFollowUpSection({
               <div className="mb-4 animate-fadeIn">
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-2 px-2 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                  <div className="col-span-3">{t('followUps.item')}</div>
+                  <div className="col-span-3 text-center">{t('followUps.item')}</div>
                   <div className="col-span-2 text-center">{t('followUps.qty')}</div>
                   <div className="col-span-2 text-center">{t('followUps.age')}</div>
-                  <div className="col-span-3 text-right">{t('followUps.fee')}</div>
-                  <div className="col-span-2 text-right"></div>
+                  <div className="col-span-3 text-center">{t('followUps.fee')}</div>
+                  <div className="col-span-2 text-center"></div>
                 </div>
 
                 {/* Aggregate packages by date */}
