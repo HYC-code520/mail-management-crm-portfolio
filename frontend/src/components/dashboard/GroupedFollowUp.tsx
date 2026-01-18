@@ -230,16 +230,6 @@ export default function GroupedFollowUpSection({
                 {totalItems === 1 ? t('followUps.nItem', { count: totalItems }) : t('followUps.nItems', { count: totalItems })}
               </span>
               
-              {/* Age tag */}
-              <span className={`px-3 py-1 bg-white/70 border rounded-full text-xs font-medium ${
-                oldestDays >= 30 ? 'border-red-300 text-red-700' :
-                oldestDays >= 14 ? 'border-orange-300 text-orange-700' :
-                oldestDays >= 7 ? 'border-amber-300 text-amber-700' :
-                'border-gray-200 text-gray-700'
-              }`}>
-                {t('followUps.nDays', { count: oldestDays })}
-              </span>
-              
               {/* Package/Letter breakdown */}
               {group.packages.length > 0 && (
                 <span className="px-3 py-1 bg-white/70 border border-amber-200 rounded-full text-xs font-medium text-amber-700 flex items-center gap-1">
