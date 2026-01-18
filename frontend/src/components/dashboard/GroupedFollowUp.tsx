@@ -307,7 +307,7 @@ export default function GroupedFollowUpSection({
                         <div className="col-span-2 text-center text-gray-600">
                           {t('followUps.nDays', { count: days })}
                         </div>
-                        <div className="col-span-3 text-right">
+                        <div className="col-span-3 text-center">
                           {data.totalFee > 0 ? (
                             <span className={data.hasWaived ? 'text-gray-400 line-through' : 'text-gray-600'}>
                               ${data.totalFee.toFixed(2)}
@@ -369,7 +369,7 @@ export default function GroupedFollowUpSection({
                         <div className="col-span-2 text-center text-gray-600">
                           {t('followUps.nDays', { count: days })}
                         </div>
-                        <div className="col-span-3 text-right text-gray-300">—</div>
+                        <div className="col-span-3 text-center text-gray-300">—</div>
                         <div className="col-span-2 text-right opacity-0 group-hover/row:opacity-100 transition-opacity">
                           <button
                             onClick={(e) => {
