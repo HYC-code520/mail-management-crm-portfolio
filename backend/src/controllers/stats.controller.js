@@ -264,17 +264,18 @@ exports.getDashboardStats = async (req, res, next) => {
     );
     const todaysMail = todaysMailItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
-    // Pending pickups (not picked up, not abandoned) - SUM quantities
+    // Pending pickups (not picked up, not abandoned, not resolved) - SUM quantities
     const pendingItems = enrichedMailItems.filter(item => 
       item.status !== 'Picked Up' && 
       !item.status.includes('Abandoned') && 
-      item.status !== 'Scanned'
+      item.status !== 'Scanned' &&
+      item.status !== 'Resolved'
     );
     const pendingPickups = pendingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
     // Overdue mail (7+ days old, not picked up) - SUM quantities - using NY timezone
     const overdueItems = enrichedMailItems.filter(item => {
-      if (item.status === 'Picked Up' || item.status.includes('Abandoned')) return false;
+      if (item.status === 'Picked Up' || item.status.includes('Abandoned') || item.status === 'Resolved') return false;
       return getDaysSinceNY(item.received_date) >= 7;
     });
     const overdueMail = overdueItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
@@ -312,6 +313,7 @@ exports.getDashboardStats = async (req, res, next) => {
       if (item.status === 'Picked Up' ||
           item.status === 'Forwarded' ||
           item.status === 'Scanned' ||
+          item.status === 'Resolved' ||
           item.status.includes('Abandoned')) {
         return false;
       }

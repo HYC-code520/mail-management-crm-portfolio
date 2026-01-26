@@ -13,12 +13,13 @@ i18n
       en: { translation: en },
       zh: { translation: zh }
     },
+    lng: 'en', // Explicitly set default language to English
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false // React already escapes
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'], // Only check localStorage, ignore browser language
       caches: ['localStorage']
     }
   });

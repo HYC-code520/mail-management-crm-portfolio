@@ -522,7 +522,7 @@ exports.getDismissedContacts = async (req, res, next) => {
         .from('mail_items')
         .select('mail_item_id, item_type, quantity')
         .eq('contact_id', dismissal.contact_id)
-        .not('status', 'in', '("Picked Up","Forwarded","Scanned","Abandoned","Abandoned Package")')
+        .not('status', 'in', '("Picked Up","Forwarded","Scanned","Abandoned","Abandoned Package","Resolved")')
         .is('dismissed_at', null); // Only non-dismissed items
 
       const packageCount = items?.filter(i => i.item_type === 'Package')
@@ -669,6 +669,49 @@ exports.restoreItemToFollowUp = async (req, res, next) => {
 
     console.log(`✅ Mail item ${id} restored to follow-up`);
     res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/mail-items/resolve-contact/:id
+ * Resolve all pending items for a contact (marks them as 'Resolved')
+ */
+exports.resolveAllItemsForContact = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req.user.token);
+    const { id: contactId } = req.params;
+
+    if (!contactId) {
+      return res.status(400).json({ error: 'contact_id is required' });
+    }
+
+    // Update all pending items for this contact to 'Resolved'
+    const { data, error } = await supabase
+      .from('mail_items')
+      .update({ status: 'Resolved' })
+      .eq('contact_id', contactId)
+      .not('status', 'in', '("Picked Up","Forwarded","Scanned","Abandoned","Abandoned Package","Resolved")')
+      .select();
+
+    if (error) {
+      console.error('Error resolving items for contact:', error);
+      return res.status(500).json({ error: 'Failed to resolve items' });
+    }
+
+    // Also clear any contact-level dismissal if exists
+    await supabase
+      .from('followup_dismissals')
+      .update({
+        undone_at: new Date().toISOString(),
+        undone_by: 'system-resolved'
+      })
+      .eq('contact_id', contactId)
+      .is('undone_at', null);
+
+    console.log(`✅ Resolved ${data?.length || 0} items for contact ${contactId}`);
+    res.json({ resolved_count: data?.length || 0, items: data });
   } catch (error) {
     next(error);
   }

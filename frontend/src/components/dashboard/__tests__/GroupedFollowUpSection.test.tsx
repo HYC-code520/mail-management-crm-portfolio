@@ -272,12 +272,13 @@ describe('GroupedFollowUpSection', () => {
     expect(itemTags.length).toBeGreaterThan(0);
   });
 
-  it('should display days tags', () => {
+  it('should display package and letter count badges', () => {
     renderComponent();
 
-    // Cards should show days as tags
-    const daysTags = screen.getAllByText(/days/i);
-    expect(daysTags.length).toBeGreaterThan(0);
+    // Cards should show package/letter count badges (numbers)
+    // John Doe has 1 package, Jane Smith has 1 letter
+    const badges = screen.getAllByText('1');
+    expect(badges.length).toBeGreaterThan(0);
   });
 
   it('should display waived fees correctly when expanded', async () => {
@@ -381,10 +382,13 @@ describe('GroupedFollowUpSection', () => {
       </LanguageProvider>
     );
 
-    // Should show days count tag (e.g., "37 days")
-    expect(screen.getByText(/37 days/i)).toBeInTheDocument();
-    // Should show warning at bottom
-    expect(screen.getByText(/requires immediate attention/i)).toBeInTheDocument();
+    // Should show red styling for abandoned items (red border, red background)
+    const abandonedCard = screen.getByText('Old Items Customer').closest('div[class*="rounded-2xl"]');
+    expect(abandonedCard?.className).toMatch(/red/);
+    
+    // Should show the fee amount in red
+    const feeAmount = screen.getByText('$70.00');
+    expect(feeAmount.className).toMatch(/red/);
   });
 
   it('should navigate to fees page when Collect button is clicked', async () => {
@@ -415,8 +419,12 @@ describe('GroupedFollowUpSection', () => {
     fireEvent.click(johnDoeCard!);
 
     await waitFor(() => {
-      // Should show "Click to collapse" text when expanded
-      expect(screen.getByText(/Click to collapse/i)).toBeInTheDocument();
+      // When expanded, the chevron should rotate and the card should show expanded content
+      // Check for the presence of table headers which only appear when expanded
+      expect(screen.getByText('Item')).toBeInTheDocument();
+      expect(screen.getByText('Qty')).toBeInTheDocument();
+      expect(screen.getByText('Age')).toBeInTheDocument();
+      expect(screen.getByText('Fee')).toBeInTheDocument();
     });
   });
 });

@@ -243,7 +243,14 @@ export default function GroupedFollowUpSection({
                   {group.letters.reduce((sum, letter) => sum + (letter.quantity || 1), 0)}
                 </span>
               )}
-              
+
+              {/* No fees tag */}
+              {!hasFees && (
+                <span className="px-3 py-1 bg-white/70 border border-green-200 rounded-full text-xs font-medium text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  {t('followUps.noFees')}
+                </span>
+              )}
             </div>
 
             {/* Expandable details - Table View */}
@@ -255,7 +262,7 @@ export default function GroupedFollowUpSection({
                   <div className="col-span-2 text-center">{t('followUps.qty')}</div>
                   <div className="col-span-2 text-center">{t('followUps.age')}</div>
                   <div className="col-span-4 text-center">{t('followUps.fee')}</div>
-                  <div className="col-span-1"></div>
+                  <div className="col-span-1 text-center">✕</div>
                 </div>
 
                 {/* Aggregate packages by date */}
@@ -404,32 +411,32 @@ export default function GroupedFollowUpSection({
               </div>
             )}
 
-            {/* Bottom row: Fees and info */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-200/50">
-              <div>
-                {hasFees ? (
-                  <div>
-                    <p className={`text-2xl font-bold ${colors.accent}`}>
-                      ${group.totalFees.toFixed(2)}
+            {/* Bottom row: Fees/Urgency and Click for details - hide when expanded with no fees */}
+            {(!isPersonExpanded || hasFees) && (
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200/50">
+                <div>
+                  {hasFees ? (
+                    <div>
+                      <p className={`text-2xl font-bold ${colors.accent}`}>
+                        ${group.totalFees.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500">{t('followUps.storageFees')}</p>
+                    </div>
+                  ) : isAbandoned ? (
+                    <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {t('followUps.requiresImmediateAttention', { days: oldestDays })}
                     </p>
-                    <p className="text-xs text-gray-500">{t('followUps.storageFees')}</p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-gray-500">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600 font-medium">{t('followUps.noFees')}</span>
+                  ) : null}
+                </div>
+                
+                {!isPersonExpanded && (
+                  <div className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors bg-gray-800 text-white">
+                    {t('followUps.clickForDetails')}
                   </div>
                 )}
               </div>
-              
-              <div className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                isPersonExpanded 
-                  ? 'bg-gray-200 text-gray-600' 
-                  : 'bg-gray-800 text-white'
-              }`}>
-                {isPersonExpanded ? t('followUps.clickToCollapse') : t('followUps.clickForDetails')}
-              </div>
-            </div>
+            )}
 
             {/* Action buttons - shown when expanded */}
             {isPersonExpanded && (
@@ -506,15 +513,6 @@ export default function GroupedFollowUpSection({
               </div>
             )}
 
-            {/* Urgency warning - always visible for abandoned */}
-            {isAbandoned && !isPersonExpanded && (
-              <div className="mt-3 pt-3 border-t border-red-200/50">
-                <p className="text-xs text-red-600 font-medium flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {t('followUps.requiresImmediateAttention', { days: oldestDays })}
-                </p>
-              </div>
-            )}
           </div>
         );
       })}

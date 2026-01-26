@@ -55,23 +55,6 @@ interface GroupedFollowUp {
   lastNotified?: string;
 }
 
-interface DismissedContact {
-  dismissal_id: string;
-  contact_id: string;
-  dismissed_at: string;
-  dismissed_by: string;
-  notes?: string;
-  contacts: {
-    contact_id: string;
-    contact_person?: string;
-    company_name?: string;
-    mailbox_number?: string;
-    display_name_preference?: 'company' | 'person' | 'both';
-  };
-  pendingPackages: number;
-  pendingLetters: number;
-  totalPendingItems: number;
-}
 
 interface DismissedItem {
   mail_item_id: string;
@@ -96,9 +79,8 @@ export default function FollowUpsPage() {
   const [followUps, setFollowUps] = useState<GroupedFollowUp[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Dismissed contacts and items state
+  // Dismissed items state
   const [showDismissed, setShowDismissed] = useState(false);
-  const [dismissedContacts, setDismissedContacts] = useState<DismissedContact[]>([]);
   const [dismissedItems, setDismissedItems] = useState<DismissedItem[]>([]);
   const [loadingDismissed, setLoadingDismissed] = useState(false);
 
@@ -135,15 +117,14 @@ export default function FollowUpsPage() {
     }
   }, []);
 
-  const loadDismissedContacts = useCallback(async () => {
+  const loadDismissedItems = useCallback(async () => {
     try {
       setLoadingDismissed(true);
       const data = await api.mailItems.getDismissedContacts();
-      // Handle new response structure with both contacts and items
-      setDismissedContacts(data?.dismissedContacts || []);
+      // Only use dismissed items (we no longer use contact-level dismissals)
       setDismissedItems(data?.dismissedItems || []);
     } catch (err) {
-      console.error('Error loading dismissed contacts:', err);
+      console.error('Error loading dismissed items:', err);
       toast.error(t('followUps.failedToLoadDismissed'));
     } finally {
       setLoadingDismissed(false);
@@ -152,8 +133,8 @@ export default function FollowUpsPage() {
 
   useEffect(() => {
     void loadFollowUps();
-    void loadDismissedContacts();
-  }, [loadFollowUps, loadDismissedContacts]);
+    void loadDismissedItems();
+  }, [loadFollowUps, loadDismissedItems]);
 
   // Open staff modal with pending action
   const openStaffModal = (
@@ -175,10 +156,11 @@ export default function FollowUpsPage() {
     setPendingAction(null);
   };
 
-  // Dismiss a contact (all their items) from follow-up
+  // Dismiss all items for a contact (dismisses each item individually)
   const handleDismissContact = (group: GroupedFollowUp) => {
     const customerName = getCustomerDisplayName(group.contact);
     const contactId = group.contact.contact_id;
+    const allItems = [...group.packages, ...group.letters];
 
     openStaffModal(
       t('followUps.dismissCustomer'),
@@ -190,13 +172,16 @@ export default function FollowUpsPage() {
         );
 
         try {
-          await api.mailItems.dismissContact(contactId, staffName);
+          // Dismiss each item individually
+          await Promise.all(
+            allItems.map(item => api.mailItems.dismissItem(item.mail_item_id, staffName))
+          );
           toast.success(t('followUps.contactDismissed', { name: customerName }));
           // Reload to ensure data is in sync
           await loadFollowUps();
-          await loadDismissedContacts();
+          await loadDismissedItems();
         } catch (err) {
-          console.error('Error dismissing contact:', err);
+          console.error('Error dismissing contact items:', err);
           toast.error(t('followUps.failedToDismiss'));
           // Reload to restore if API failed
           await loadFollowUps();
@@ -241,33 +226,6 @@ export default function FollowUpsPage() {
     );
   };
 
-  // Restore a dismissed contact
-  const handleRestoreContact = (dismissedContact: DismissedContact) => {
-    const customerName = getCustomerDisplayName(dismissedContact.contacts);
-    const contactId = dismissedContact.contact_id;
-
-    openStaffModal(
-      t('followUps.restoreCustomer'),
-      t('followUps.restoreCustomerDesc', { name: customerName }),
-      async (staffName: string) => {
-        // Optimistic update: immediately remove from dismissed list
-        setDismissedContacts(prev => prev.filter(dc => dc.contact_id !== contactId));
-
-        try {
-          await api.mailItems.restoreContact(contactId, staffName);
-          toast.success(t('followUps.contactRestored', { name: customerName }));
-          await loadFollowUps();
-          await loadDismissedContacts();
-        } catch (err) {
-          console.error('Error restoring contact:', err);
-          toast.error(t('followUps.failedToRestore'));
-          // Reload to restore if API failed
-          await loadDismissedContacts();
-        }
-      }
-    );
-  };
-
   // Restore a dismissed item (no staff needed - just restore)
   const handleRestoreItem = async (item: DismissedItem) => {
     const itemId = item.mail_item_id;
@@ -279,12 +237,12 @@ export default function FollowUpsPage() {
       await api.mailItems.restoreItem(itemId);
       toast.success(t('followUps.itemRestored'));
       await loadFollowUps();
-      await loadDismissedContacts();
+      await loadDismissedItems();
     } catch (err) {
       console.error('Error restoring item:', err);
       toast.error(t('followUps.failedToRestore'));
       // Reload to restore if API failed
-      await loadDismissedContacts();
+      await loadDismissedItems();
     }
   };
 
@@ -298,12 +256,12 @@ export default function FollowUpsPage() {
     try {
       await api.mailItems.updateStatus(itemId, 'Resolved');
       toast.success(t('followUps.itemResolved'));
-      await loadDismissedContacts();
+      await loadDismissedItems();
     } catch (err) {
       console.error('Error marking item as resolved:', err);
       toast.error(t('common.error'));
       // Reload to restore if API failed
-      await loadDismissedContacts();
+      await loadDismissedItems();
     }
   };
 
@@ -552,11 +510,11 @@ export default function FollowUpsPage() {
         >
           <EyeOff className="w-4 h-4" />
           {showDismissed ? t('followUps.showActive') : t('followUps.viewDismissed')}
-          {(dismissedContacts.length > 0 || dismissedItems.length > 0) && (
+          {dismissedItems.length > 0 && (
             <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
               showDismissed ? 'bg-white/20' : 'bg-gray-300'
             }`}>
-              {dismissedContacts.length + dismissedItems.length}
+              {dismissedItems.length}
             </span>
           )}
         </button>
@@ -644,79 +602,12 @@ export default function FollowUpsPage() {
             </div>
           )}
 
-          {/* Dismissed Contacts (All items for a customer) */}
-          {dismissedContacts.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-700 mb-4">{t('followUps.dismissedContacts')}</h2>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('followUps.customer')}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('followUps.pendingItems')}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('followUps.dismissedBy')}
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('followUps.actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {dismissedContacts.map((dc) => (
-                      <tr key={dc.dismissal_id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-medium text-gray-900">
-                            {getCustomerDisplayName(dc.contacts)}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {t('followUps.mailbox')} {dc.contacts?.mailbox_number || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {dc.totalPendingItems > 0 ? (
-                            <span>
-                              {dc.pendingPackages > 0 && `📦 ${dc.pendingPackages}`}
-                              {dc.pendingPackages > 0 && dc.pendingLetters > 0 && ' / '}
-                              {dc.pendingLetters > 0 && `✉️ ${dc.pendingLetters}`}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">{t('followUps.noPendingItems')}</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {dc.dismissed_by}
-                          <div className="text-xs text-gray-400">
-                            {new Date(dc.dismissed_at).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <button
-                            onClick={() => handleRestoreContact(dc)}
-                            className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ml-auto"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            {t('followUps.restore')}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* No dismissed items or contacts */}
+          {/* No dismissed items */}
           {loadingDismissed ? (
             <div className="bg-white rounded-xl p-8 text-center text-gray-500">
               {t('common.loading')}
             </div>
-          ) : dismissedContacts.length === 0 && dismissedItems.length === 0 && (
+          ) : dismissedItems.length === 0 && (
             <div className="bg-white rounded-xl p-8 text-center text-gray-500">
               {t('followUps.noDismissed')}
             </div>

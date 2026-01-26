@@ -421,7 +421,9 @@
     "restoreCustomerDesc": "{{name}} 将重新出现在跟进列表中。",
     "markResolved": "标记已解决",
     "markResolvedDesc": "此项目将被标记为已解决，并从已隐藏列表中移除。",
-    "itemResolved": "项目已标记为已解决"
+    "itemResolved": "项目已标记为已解决",
+    "contactResolved": "{{name}} 的所有项目已标记为已解决",
+    "confirmResolveContact": "这将永久解决 {{name}} 的 {{packages}} 个包裹和 {{letters}} 封信件。此操作无法撤消。"
   },
 
   "todos": {

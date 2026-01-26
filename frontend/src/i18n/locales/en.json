@@ -421,7 +421,9 @@
     "restoreCustomerDesc": "{{name}} will reappear in follow-ups.",
     "markResolved": "Mark Resolved",
     "markResolvedDesc": "This item will be marked as resolved and removed from the dismissed list.",
-    "itemResolved": "Item marked as resolved"
+    "itemResolved": "Item marked as resolved",
+    "contactResolved": "All items for {{name}} marked as resolved",
+    "confirmResolveContact": "This will permanently resolve {{packages}} package(s) and {{letters}} letter(s) for {{name}}. This action cannot be undone."
   },
 
   "todos": {

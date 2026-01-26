@@ -37,5 +37,8 @@ router.post('/dismiss-item/:id', mailItemsController.dismissItemFromFollowUp);
 // POST /api/mail-items/restore-item/:id - Restore a dismissed item to follow-up
 router.post('/restore-item/:id', mailItemsController.restoreItemToFollowUp);
 
+// POST /api/mail-items/resolve-contact/:id - Resolve all pending items for a contact
+router.post('/resolve-contact/:id', mailItemsController.resolveAllItemsForContact);
+
 module.exports = router;
 

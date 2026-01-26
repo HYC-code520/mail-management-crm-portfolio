@@ -216,11 +216,15 @@ export default function FeesPage() {
 
   // Filter fees based on search and status
   const filteredFees = feesData.filter(group => {
-    const customerName = group.contact.contact_person || group.contact.company_name || '';
-    const mailbox = group.contact.mailbox_number || '';
+    const searchLower = searchQuery.toLowerCase();
+    const contactPerson = (group.contact.contact_person || '').toLowerCase();
+    const companyName = (group.contact.company_name || '').toLowerCase();
+    const mailbox = (group.contact.mailbox_number || '').toLowerCase();
+    
     const matchesSearch = searchQuery === '' || 
-      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mailbox.toLowerCase().includes(searchQuery.toLowerCase());
+      contactPerson.includes(searchLower) ||
+      companyName.includes(searchLower) ||
+      mailbox.includes(searchLower);
     
     if (statusFilter === 'all') return matchesSearch;
     

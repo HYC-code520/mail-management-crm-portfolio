@@ -192,6 +192,8 @@ export const api = {
       apiClient.post(`/mail-items/dismiss-item/${itemId}`, { dismissed_by: dismissedBy }),
     restoreItem: (itemId: string) =>
       apiClient.post(`/mail-items/restore-item/${itemId}`, {}),
+    resolveAllForContact: (contactId: string) =>
+      apiClient.post(`/mail-items/resolve-contact/${contactId}`, {}),
   },
   outreachMessages: {
     getAll: (contactId?: string, mailItemId?: string) => {
