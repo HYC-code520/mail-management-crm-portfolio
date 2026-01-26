@@ -385,29 +385,15 @@ export default function GroupedFollowUpSection({
                   });
                 })()}
                 
-                {/* Footer with totals and last notified */}
-                <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2">
-                  <div className="flex items-center gap-3">
-                    {group.packages.length > 0 && (
-                      <span className="flex items-center gap-1 text-amber-700">
-                        <Package className="w-3 h-3 text-amber-600" />
-                        {group.packages.reduce((sum, pkg) => sum + (pkg.quantity || 1), 0)} {t('followUps.pkg')}
-                      </span>
-                    )}
-                    {group.letters.length > 0 && (
-                      <span className="flex items-center gap-1 text-blue-700">
-                        <Mail className="w-3 h-3 text-blue-500" />
-                        {group.letters.reduce((sum, letter) => sum + (letter.quantity || 1), 0)} {t('followUps.letters')}
-                      </span>
-                    )}
-                  </div>
-                  {group.lastNotified && (
+                {/* Footer with last notified */}
+                {group.lastNotified && (
+                  <div className="flex items-center justify-end text-xs text-gray-400 mt-2 pt-2 px-2">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {t('followUps.notifiedAgo', { days: getDaysSince(group.lastNotified) })}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
