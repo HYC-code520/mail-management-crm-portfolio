@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { render, screen, waitFor, fireEvent } from '../../test/test-utils';
 import ContactDetailPage from '../ContactDetail';
 import { api } from '../../lib/api-client';
 
@@ -53,7 +52,7 @@ const mockMailHistory = [
   },
 ];
 
-describe('ContactDetailPage - Edit Contact Feature', () => {
+describe('ContactDetailPage - Edit Customer Feature', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (api.contacts.getById as any).mockResolvedValue(mockContact);
@@ -61,54 +60,48 @@ describe('ContactDetailPage - Edit Contact Feature', () => {
     (api.notifications.getByContactId as any).mockResolvedValue({});
   });
 
-  it('should render Edit Contact button', async () => {
+  it('should render Edit Customer button', async () => {
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Contact')).toBeInTheDocument();
+      expect(screen.getByText('Edit Customer')).toBeInTheDocument();
     });
   });
 
-  it('should open edit modal when Edit Contact button is clicked', async () => {
+  it('should open edit modal when Edit Customer button is clicked', async () => {
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      const editButtons = screen.getAllByText('Edit Contact');
+      const editButtons = screen.getAllByText('Edit Customer');
       expect(editButtons.length).toBeGreaterThan(0);
     });
 
-    // Click Edit Contact button (the first one, which is the button in header)
-    const editButtons = screen.getAllByText('Edit Contact');
+    // Click Edit Customer button (the first one, which is the button in header)
+    const editButtons = screen.getAllByText('Edit Customer');
     fireEvent.click(editButtons[0]);
 
     // Modal should open - check for form fields
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/John Doe/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Full name/i)).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/customer@example.com/i)).toBeInTheDocument();
     });
   });
 
   it('should pre-fill form with contact data when modal opens', async () => {
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Contact')).toBeInTheDocument();
+      expect(screen.getByText('Edit Customer')).toBeInTheDocument();
     });
 
-    // Click Edit Contact button
-    const editButton = screen.getByText('Edit Contact');
+    // Click Edit Customer button
+    const editButton = screen.getByText('Edit Customer');
     fireEvent.click(editButton);
 
     // Check pre-filled values using placeholders or values
@@ -126,17 +119,15 @@ describe('ContactDetailPage - Edit Contact Feature', () => {
 
   it('should close modal when Cancel button is clicked', async () => {
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Contact')).toBeInTheDocument();
+      expect(screen.getByText('Edit Customer')).toBeInTheDocument();
     });
 
     // Open modal
-    const editButton = screen.getByText('Edit Contact');
+    const editButton = screen.getByText('Edit Customer');
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -157,17 +148,15 @@ describe('ContactDetailPage - Edit Contact Feature', () => {
     (api.contacts.update as any).mockResolvedValue({ success: true });
 
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Contact')).toBeInTheDocument();
+      expect(screen.getByText('Edit Customer')).toBeInTheDocument();
     });
 
     // Open modal
-    const editButton = screen.getByText('Edit Contact');
+    const editButton = screen.getByText('Edit Customer');
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -202,17 +191,15 @@ describe('ContactDetailPage - Edit Contact Feature', () => {
       .mockResolvedValueOnce(updatedContact);
 
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Contact')).toBeInTheDocument();
+      expect(screen.getByText('Edit Customer')).toBeInTheDocument();
     });
 
     // Open modal and submit
-    const editButton = screen.getByText('Edit Contact');
+    const editButton = screen.getByText('Edit Customer');
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -237,17 +224,15 @@ describe('ContactDetailPage - Edit Contact Feature', () => {
     );
 
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Contact')).toBeInTheDocument();
+      expect(screen.getByText('Edit Customer')).toBeInTheDocument();
     });
 
     // Open modal
-    const editButton = screen.getByText('Edit Contact');
+    const editButton = screen.getByText('Edit Customer');
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -276,9 +261,7 @@ describe('ContactDetailPage - Contact without Email (NOW WITH EDIT CONTACT)', ()
 
   it('should show — when contact has no email', async () => {
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
@@ -294,17 +277,15 @@ describe('ContactDetailPage - Contact without Email (NOW WITH EDIT CONTACT)', ()
     (api.contacts.update as any).mockResolvedValue({ success: true });
 
     render(
-      <BrowserRouter>
-        <ContactDetailPage />
-      </BrowserRouter>
+<ContactDetailPage />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Contact')).toBeInTheDocument();
+      expect(screen.getByText('Edit Customer')).toBeInTheDocument();
     });
 
     // Open edit modal
-    const editButton = screen.getByText('Edit Contact');
+    const editButton = screen.getByText('Edit Customer');
     fireEvent.click(editButton);
 
     await waitFor(() => {

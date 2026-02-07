@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, Circle, Trash2, Calendar, Flag, Folder, Edit2 } from 'lucide-react';
+import { Plus, Check, Trash2, Calendar, Flag, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
+import { formatNYDate } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface Todo {
   todo_id: string;
@@ -22,12 +24,18 @@ interface Todo {
   updated_at?: string;
 }
 
-interface TodosByDate {
-  [date: string]: Todo[];
-}
+// Helper to get translated day of week abbreviation
+const getDayOfWeekKey = (dayIndex: number): string => {
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  return days[dayIndex] || 'sun';
+};
 
 export default function TodoList() {
+  const { t } = useLanguage();
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [totalPendingCount, setTotalPendingCount] = useState(0);
+  const [totalCompletedCount, setTotalCompletedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoNotes, setNewTodoNotes] = useState('');
@@ -36,14 +44,13 @@ export default function TodoList() {
   const [newTodoPriority, setNewTodoPriority] = useState(0);
   const [newTodoStaff, setNewTodoStaff] = useState('Merlin'); // Default to Merlin
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showAllCompleted, setShowAllCompleted] = useState(true); // Toggle for completed filter view mode
   
-  // Quick add state for each date section
-  const [quickAddOpen, setQuickAddOpen] = useState<string | null>(null);
-  const [quickAddTitle, setQuickAddTitle] = useState('');
-  const [quickAddPriority, setQuickAddPriority] = useState(0);
-  const [quickAddCategory, setQuickAddCategory] = useState('');
-  const [quickAddStaff, setQuickAddStaff] = useState('Merlin');
-  
+  // Add modal state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
@@ -71,11 +78,18 @@ export default function TodoList() {
       const filters = filter === 'active' ? { completed: false } : 
                      filter === 'completed' ? { completed: true } : 
                      {};
-      const data = await api.todos.getAll(filters);
+      const [data, pendingData, completedData] = await Promise.all([
+        api.todos.getAll(filters),
+        api.todos.getAll({ completed: false }), // Always fetch pending count
+        api.todos.getAll({ completed: true })   // Always fetch completed count
+      ]);
       setTodos(data);
+      setTotalPendingCount(pendingData.length);
+      setTotalCompletedCount(completedData.length);
+      setTotalCount(pendingData.length + completedData.length);
     } catch (error: any) {
       console.error('Failed to load todos:', error);
-      toast.error('Failed to load tasks');
+      toast.error(t('todos.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -83,35 +97,56 @@ export default function TodoList() {
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newTodoTitle.trim()) {
-      toast.error('Please enter a task');
+      toast.error(t('todos.enterTask'));
       return;
     }
 
+    // Prevent duplicate submissions
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
+      // Use selected date if no date is explicitly set
+      const dateToUse = newTodoDate || formatDateKey(selectedDate);
+
       await api.todos.create({
         title: newTodoTitle.trim(),
         notes: newTodoNotes.trim() || undefined,
-        date_header: newTodoDate || undefined,
+        date_header: dateToUse,
         category: newTodoCategory || undefined,
         priority: newTodoPriority,
         staff_member: newTodoStaff,
       });
-      
+
       setNewTodoTitle('');
       setNewTodoNotes('');
       setNewTodoDate('');
       setNewTodoCategory('');
       setNewTodoPriority(0);
       setNewTodoStaff('Merlin');
-      
+      setIsAddModalOpen(false); // Close modal after adding
+
       await loadTodos();
-      toast.success('Task added!');
+      toast.success(t('todos.taskAdded'));
     } catch (error: any) {
       console.error('Failed to add todo:', error);
-      toast.error('Failed to add task');
+      toast.error(t('todos.failedToAdd'));
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const openAddModal = () => {
+    // Reset form and set default date to selected date
+    setNewTodoTitle('');
+    setNewTodoNotes('');
+    setNewTodoDate(formatDateKey(selectedDate));
+    setNewTodoCategory('');
+    setNewTodoPriority(0);
+    setNewTodoStaff('Merlin');
+    setIsAddModalOpen(true);
   };
 
   const handleToggleComplete = async (todo: Todo) => {
@@ -123,14 +158,16 @@ export default function TodoList() {
       } else {
         // Task is being marked as incomplete - optimistic update
         // Update UI immediately
-        setTodos(prevTodos => 
-          prevTodos.map(t => 
-            t.todo_id === todo.todo_id 
+        setTodos(prevTodos =>
+          prevTodos.map(t =>
+            t.todo_id === todo.todo_id
               ? { ...t, is_completed: false }
               : t
           )
         );
-        
+        setTotalPendingCount(prev => prev + 1);
+        setTotalCompletedCount(prev => Math.max(0, prev - 1));
+
         // Then update server in background
         await api.todos.update(todo.todo_id, {
           is_completed: false,
@@ -139,7 +176,7 @@ export default function TodoList() {
       }
     } catch (error: any) {
       console.error('Failed to update todo:', error);
-      toast.error('Failed to update task');
+      toast.error(t('todos.failedToUpdate'));
       // Revert on error
       await loadTodos();
     }
@@ -150,18 +187,20 @@ export default function TodoList() {
     
     try {
       // Optimistic update - update UI immediately
-      setTodos(prevTodos => 
-        prevTodos.map(t => 
-          t.todo_id === todoToComplete.todo_id 
+      setTodos(prevTodos =>
+        prevTodos.map(t =>
+          t.todo_id === todoToComplete.todo_id
             ? { ...t, is_completed: true, last_edited_by_name: staffMember }
             : t
         )
       );
-      
+      setTotalPendingCount(prev => Math.max(0, prev - 1));
+      setTotalCompletedCount(prev => prev + 1);
+
       // Close modal immediately for smooth UX
       setIsCompletionModalOpen(false);
       setTodoToComplete(null);
-      toast.success(`Task completed by ${staffMember}!`);
+      toast.success(t('todos.taskCompletedBy', { name: staffMember }));
       
       // Then update server in background
       await api.todos.update(todoToComplete.todo_id, {
@@ -170,7 +209,7 @@ export default function TodoList() {
       });
     } catch (error: any) {
       console.error('Failed to update todo:', error);
-      toast.error('Failed to update task');
+      toast.error(t('todos.failedToUpdate'));
       // Revert on error
       await loadTodos();
       setIsCompletionModalOpen(false);
@@ -184,10 +223,10 @@ export default function TodoList() {
     try {
       await api.todos.delete(todoId);
       await loadTodos();
-      toast.success('Task deleted');
+      toast.success(t('todos.taskDeleted'));
     } catch (error: any) {
       console.error('Failed to delete todo:', error);
-      toast.error('Failed to delete task');
+      toast.error(t('todos.failedToDelete'));
     }
   };
 
@@ -241,7 +280,7 @@ export default function TodoList() {
     e.preventDefault();
     
     if (!editingTodo || !editFormData.title.trim()) {
-      toast.error('Task title is required');
+      toast.error(t('todos.titleRequired'));
       return;
     }
 
@@ -257,99 +296,33 @@ export default function TodoList() {
       
       closeEditModal();
       await loadTodos();
-      toast.success('Task updated!');
+      toast.success(t('todos.taskUpdated'));
     } catch (error: any) {
       console.error('Failed to update todo:', error);
-      toast.error('Failed to update task');
+      toast.error(t('todos.failedToUpdate'));
     }
   };
-
-  const handleQuickAdd = async (dateKey: string) => {
-    if (!quickAddTitle.trim()) {
-      toast.error('Please enter a task');
-      return;
-    }
-
-    try {
-      await api.todos.create({
-        title: quickAddTitle.trim(),
-        date_header: dateKey === 'No Date' ? undefined : dateKey,
-        priority: quickAddPriority,
-        category: quickAddCategory || undefined,
-        staff_member: quickAddStaff,
-      });
-      
-      setQuickAddTitle('');
-      setQuickAddPriority(0);
-      setQuickAddCategory('');
-      setQuickAddStaff('Merlin');
-      setQuickAddOpen(null);
-      await loadTodos();
-      toast.success('Task added!');
-    } catch (error: any) {
-      console.error('Failed to add todo:', error);
-      toast.error('Failed to add task');
-    }
-  };
-
-  // Group todos by date
-  const groupedTodos: TodosByDate = todos.reduce((acc, todo) => {
-    // Normalize date to YYYY-MM-DD format, removing time/timezone
-    let dateKey = 'No Date';
-    if (todo.date_header) {
-      dateKey = todo.date_header.split('T')[0]; // Extract just the date part
-    }
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
-    }
-    acc[dateKey].push(todo);
-    return acc;
-  }, {} as TodosByDate);
-
-  const sortedDateKeys = Object.keys(groupedTodos).sort((a, b) => {
-    if (a === 'No Date') return 1;
-    if (b === 'No Date') return -1;
-    return new Date(b).getTime() - new Date(a).getTime();
-  });
 
   const getPriorityIcon = (priority: number) => {
     if (priority >= 1) return <Flag className="w-4 h-4 text-red-600 fill-red-600" />;
     return null;
   };
 
-  // Get initials from name (like Apple Notes)
-  const getInitials = (name?: string) => {
-    if (!name) return '?';
-    const parts = name.split(/[.\-_\s]/); // Split by dot, dash, underscore, space
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  // Get color for user - assign specific colors to Merlin and Madison
-  const getUserColor = (staffName?: string) => {
-    if (!staffName) return 'bg-gray-500';
+  // Get staff avatar component
+  const getStaffAvatar = (staffName: string, size: 'sm' | 'md' = 'sm') => {
+    const sizeClasses = size === 'sm' ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm';
+    const initials = staffName === 'Merlin' ? 'MP' : staffName === 'Madison' ? 'MR' : staffName.substring(0, 2).toUpperCase();
+    const colorClasses = staffName === 'Merlin' 
+      ? 'bg-blue-100 text-blue-700 border-blue-200'
+      : staffName === 'Madison'
+      ? 'bg-purple-100 text-purple-700 border-purple-200'
+      : 'bg-gray-100 text-gray-700 border-gray-200';
     
-    // Fixed colors for specific staff members
-    if (staffName === 'Merlin' || staffName.toLowerCase().includes('merlin')) {
-      return 'bg-blue-600'; // Merlin = Blue
-    }
-    if (staffName === 'Madison' || staffName.toLowerCase().includes('madison')) {
-      return 'bg-purple-600'; // Madison = Purple
-    }
-    
-    // Fallback to hash-based color for any other users
-    const colors = [
-      'bg-green-500',
-      'bg-pink-500',
-      'bg-orange-500',
-      'bg-teal-500',
-      'bg-indigo-500',
-      'bg-red-500',
-    ];
-    const hash = staffName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
+    return (
+      <div className={`${sizeClasses} rounded-full ${colorClasses} border-2 flex items-center justify-center font-bold`}>
+        {initials}
+      </div>
+    );
   };
 
   const formatDate = (dateStr: string) => {
@@ -364,19 +337,65 @@ export default function TodoList() {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    if (date.toDateString() === today.toDateString()) return t('todos.today');
+    if (date.toDateString() === yesterday.toDateString()) return t('todos.yesterday');
     
-    return date.toLocaleDateString('en-US', { 
+    return formatNYDate(date, { 
       month: 'short', 
       day: 'numeric', 
       year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined 
     });
   };
 
+  // Get week days starting from selected date
+  const getWeekDays = () => {
+    const days = [];
+    const startDate = new Date(selectedDate);
+    startDate.setDate(startDate.getDate() - startDate.getDay()); // Start from Sunday
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      days.push(date);
+    }
+    return days;
+  };
+
+  const goToPreviousWeek = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 7);
+    setSelectedDate(newDate);
+  };
+
+  const goToNextWeek = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 7);
+    setSelectedDate(newDate);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const isSameDay = (date1: Date, date2: Date) => {
+    return date1.toDateString() === date2.toDateString();
+  };
+
+  const formatDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-full mx-auto px-4 md:px-8 lg:px-16 py-6">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-48"></div>
           <div className="h-96 bg-gray-100 rounded-lg"></div>
@@ -386,186 +405,503 @@ export default function TodoList() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+    <div className="max-w-full mx-auto px-4 md:px-8 lg:px-16 py-6">
       {/* Header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Tasks</h1>
-        <p className="text-sm md:text-base text-gray-600">Manage your daily tasks and priorities</p>
-      </div>
-
-      {/* Add New Todo Form */}
-      <div className="mb-6 md:mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
-          <h2 className="text-base md:text-lg font-semibold text-gray-900">Add New Task</h2>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900">{t('todos.title')}</h1>
+          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+            {totalPendingCount === 1 
+              ? t('todos.nTaskPending', { count: totalPendingCount })
+              : t('todos.nTasksPending', { count: totalPendingCount })}
+          </span>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-        <form onSubmit={handleAddTodo} className="space-y-4">
-          <div>
-            <input
-              type="text"
-              value={newTodoTitle}
-              onChange={(e) => setNewTodoTitle(e.target.value)}
-              placeholder="Add a new task..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-            />
-          </div>
-          
-          {/* Notes / Details */}
-          <div>
-            <textarea
-              value={newTodoNotes}
-              onChange={(e) => setNewTodoNotes(e.target.value)}
-              placeholder="Add notes or details (optional)...
-• Bullet point 1
-• Bullet point 2"
-              rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
-            />
-          </div>
-          
-          <div className="flex flex-col md:flex-row gap-3 md:gap-4 flex-wrap">
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              <input
-                type="date"
-                value={newTodoDate}
-                onChange={(e) => setNewTodoDate(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <Folder className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              <input
-                type="text"
-                value={newTodoCategory}
-                onChange={(e) => setNewTodoCategory(e.target.value)}
-                placeholder="Category (optional)"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              <select
-                value={newTodoPriority}
-                onChange={(e) => setNewTodoPriority(Number(e.target.value))}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value={0}>Normal</option>
-                <option value={1}>Priority</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <span className="text-sm font-medium text-gray-700 flex-shrink-0">Staff:</span>
-              <select
-                value={newTodoStaff}
-                onChange={(e) => setNewTodoStaff(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="Merlin">Merlin</option>
-                <option value="Madison">Madison</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 ml-auto"
-            >
-              <Plus className="w-5 h-5" />
-              Add Task
-            </button>
-          </div>
-        </form>
-      </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-6 bg-purple-600 rounded-full"></div>
-          <h2 className="text-lg font-semibold text-gray-900">Your Tasks</h2>
-        </div>
-        <div className="flex gap-2">
+        {/* Filter Tabs */}
+      <div className="flex items-center gap-2 mb-6">
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === 'all'
               ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          All
+          {t('todos.all')}
+          <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+            filter === 'all' ? 'bg-white/20' : 'bg-gray-200'
+          }`}>
+            {totalCount}
+          </span>
         </button>
         <button
           onClick={() => setFilter('active')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === 'active'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-pink-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Active
+          {t('todos.incompleted')}
+          <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+            filter === 'active' ? 'bg-white/20' : 'bg-gray-200'
+          }`}>
+            {totalPendingCount}
+          </span>
         </button>
         <button
           onClick={() => setFilter('completed')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === 'completed'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-teal-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Completed
+          {t('todos.completed')}
+          <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+            filter === 'completed' ? 'bg-white/20' : 'bg-gray-200'
+          }`}>
+            {totalCompletedCount}
+          </span>
         </button>
       </div>
+
+      {/* Date Selector */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            {filter === 'active' 
+              ? t('todos.allIncompleteTasks') 
+              : filter === 'completed' && showAllCompleted 
+              ? t('todos.allCompletedTasks') 
+              : t('todos.today')}
+          </h2>
+          <div className="flex items-center gap-2">
+            {/* View mode toggle for completed filter */}
+            {filter === 'completed' && (
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setShowAllCompleted(false)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    !showAllCompleted
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {t('todos.byDate')}
+                </button>
+                <button
+                  onClick={() => setShowAllCompleted(true)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    showAllCompleted
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {t('todos.viewAll')}
+                </button>
+              </div>
+            )}
+            {(filter === 'all' || (filter === 'completed' && !showAllCompleted)) && (
+              <button
+                onClick={goToToday}
+                className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                {t('todos.today')}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Show info message when viewing all incomplete tasks */}
+        {filter === 'active' && (
+          <div className="mb-4 px-4 py-3 bg-pink-50 border border-pink-200 rounded-xl">
+            <p className="text-sm text-pink-800">
+              {t('todos.showingAllIncomplete')}
+            </p>
+          </div>
+        )}
+
+        {/* Show info message when viewing all completed tasks */}
+        {filter === 'completed' && showAllCompleted && (
+          <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">
+            <p className="text-sm text-green-800">
+              {t('todos.showingAllCompleted')}
+            </p>
+          </div>
+        )}
+
+        {/* Date selector - show for 'all' filter and 'completed' filter when not showing all */}
+        {(filter === 'all' || (filter === 'completed' && !showAllCompleted)) && (
+        <div className="flex items-center gap-4">
+          <button
+            onClick={goToPreviousWeek}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            title={t('todos.previousWeek')}
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          
+          <div className="flex-1 grid grid-cols-7 gap-2 md:gap-3">
+            {getWeekDays().map((date) => {
+              const isSelected = isSameDay(date, selectedDate);
+              const isTodayDate = isToday(date);
+              const dateKey = formatDateKey(date);
+              const tasksForDate = todos.filter(t => {
+                if (!t.date_header) return false;
+                return t.date_header.startsWith(dateKey);
+              });
+              
+              return (
+                <button
+                  key={dateKey}
+                  onClick={() => setSelectedDate(date)}
+                  className={`flex flex-col items-center justify-center px-2 md:px-4 py-3 rounded-2xl transition-all min-h-[88px] ${
+                    isSelected
+                      ? 'bg-blue-50 shadow-sm border-2 border-blue-500'
+                      : isTodayDate
+                      ? 'bg-white shadow-sm hover:shadow-md border border-gray-100'
+                      : 'bg-white shadow-sm hover:shadow-md border border-gray-100'
+                  }`}
+                >
+                  <span className={`text-xs font-semibold uppercase mb-1 ${
+                    isSelected ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    {t(`daysOfWeek.${getDayOfWeekKey(date.getDay())}`)}
+                  </span>
+                  <span className={`text-xl md:text-2xl font-bold ${
+                    isSelected ? 'text-blue-700' : isTodayDate ? 'text-gray-900' : 'text-gray-700'
+                  }`}>
+                    {date.getDate()}
+                  </span>
+                  {tasksForDate.length > 0 ? (
+                    <span className={`text-xs mt-1 px-2 py-0.5 rounded-full ${
+                      isSelected ? 'bg-blue-100 text-blue-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {tasksForDate.length}
+                    </span>
+                  ) : (
+                    <span className="text-xs mt-1 px-2 py-0.5 invisible">0</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          
+          <button
+            onClick={goToNextWeek}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            title={t('todos.nextWeek')}
+          >
+            <ChevronRight className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+        )}
       </div>
 
-      {/* Todos List - Grouped by Date */}
-      {todos.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <Circle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg font-medium mb-2">No tasks yet</p>
-          <p className="text-gray-400 text-sm">Add your first task above to get started</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {sortedDateKeys.map((dateKey) => (
-            <div key={dateKey} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              {/* Date Header */}
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">{formatDate(dateKey)}</h2>
-              </div>
+      {/* Add Task Button */}
+      <div className="mb-8">
+        <button
+          onClick={openAddModal}
+          className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
+        >
+          <Plus className="w-6 h-6" />
+          {t('todos.addNewTask')}
+        </button>
+      </div>
 
-              {/* Todos for this date */}
+      {/* Todos List - Clean layout */}
+      {(() => {
+        // For 'active' (incomplete) filter, show ALL incomplete tasks grouped by date
+        // For 'all' and 'completed', filter by selected date
+        const dateKey = formatDateKey(selectedDate);
+        const todayKey = formatDateKey(new Date());
+
+        let filteredTodos: Todo[];
+        if (filter === 'active') {
+          // Show ALL incomplete tasks, sorted by date (oldest first to highlight overdue)
+          filteredTodos = todos
+            .filter(t => !t.is_completed)
+            .sort((a, b) => {
+              const dateA = a.date_header || '9999-99-99';
+              const dateB = b.date_header || '9999-99-99';
+              return dateA.localeCompare(dateB);
+            });
+        } else if (filter === 'completed' && showAllCompleted) {
+          // Show ALL completed tasks, sorted by date (most recent first)
+          filteredTodos = todos
+            .filter(t => t.is_completed)
+            .sort((a, b) => {
+              const dateA = a.date_header || '0000-00-00';
+              const dateB = b.date_header || '0000-00-00';
+              return dateB.localeCompare(dateA); // Newest first
+            });
+        } else if (filter === 'completed' && !showAllCompleted) {
+          // Filter completed tasks by selected date
+          filteredTodos = todos.filter(t => {
+            if (!t.date_header) return false;
+            return t.date_header.startsWith(dateKey) && t.is_completed;
+          });
+        } else {
+          // Filter by selected date for 'all' only
+          filteredTodos = todos.filter(t => {
+            if (!t.date_header) return false;
+            return t.date_header.startsWith(dateKey);
+          });
+        }
+
+        // Group tasks by date for 'active' filter and 'completed' filter when showing all
+        const groupedByDate: { [key: string]: Todo[] } = {};
+        const useGroupedView = filter === 'active' || (filter === 'completed' && showAllCompleted);
+        if (useGroupedView) {
+          filteredTodos.forEach(todo => {
+            const todoDate = todo.date_header?.split('T')[0] || 'No Date';
+            if (!groupedByDate[todoDate]) {
+              groupedByDate[todoDate] = [];
+            }
+            groupedByDate[todoDate].push(todo);
+          });
+        }
+
+        // Check if a date is overdue (before today)
+        const isOverdue = (dateStr: string) => {
+          if (dateStr === 'No Date') return false;
+          return dateStr < todayKey;
+        };
+
+        // Format date header for grouped view
+        const formatDateHeader = (dateStr: string) => {
+          if (dateStr === 'No Date') return 'No Date';
+
+          const [year, month, day] = dateStr.split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+
+          if (date.toDateString() === today.toDateString()) return t('todos.today');
+          if (date.toDateString() === yesterday.toDateString()) return t('todos.yesterday');
+
+          // Only show "overdue" for incomplete tasks (active filter)
+          // Completed tasks shouldn't show as overdue
+          if (filter === 'active' && isOverdue(dateStr)) {
+            const diffTime = today.getTime() - date.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const formattedDate = formatNYDate(date, {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+            });
+            return `${formattedDate} (${diffDays} day${diffDays !== 1 ? 's' : ''} overdue)`;
+          }
+
+          return formatNYDate(date, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+          });
+        };
+        
+        // Check if date should show overdue styling (only for active/incomplete filter)
+        const shouldShowOverdueStyle = (dateStr: string) => {
+          return filter === 'active' && isOverdue(dateStr);
+        };
+
+        return filteredTodos.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
+          <img
+            src="/assets/images/to-do2.png"
+            alt="No tasks"
+            className="w-48 h-48 mx-auto mb-4"
+          />
+          <p className="text-gray-500 text-lg font-medium mb-2">
+            {filter === 'active' ? t('todos.noIncompleteTasks') : filter === 'completed' ? t('todos.noCompletedTasksForDay') : t('todos.noTasksForDay')}
+          </p>
+          <p className="text-gray-400 text-sm">
+            {filter === 'active' ? t('todos.allTasksCompleted') : ''}
+          </p>
+        </div>
+      ) : useGroupedView ? (
+        // Grouped view for incomplete/completed tasks
+        <div className="space-y-4">
+          {Object.entries(groupedByDate).map(([dateStr, dateTodos]) => (
+            <div key={dateStr} className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+              {/* Date Header */}
+              <div className={`px-6 py-3 border-b ${
+                shouldShowOverdueStyle(dateStr)
+                  ? 'bg-red-50 border-red-200'
+                  : dateStr === todayKey
+                  ? 'bg-blue-50 border-blue-200'
+                  : filter === 'completed'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <Calendar className={`w-4 h-4 ${
+                    shouldShowOverdueStyle(dateStr) ? 'text-red-600' : filter === 'completed' ? 'text-green-600' : 'text-gray-500'
+                  }`} />
+                  <span className={`font-semibold ${
+                    shouldShowOverdueStyle(dateStr) ? 'text-red-700' : filter === 'completed' ? 'text-green-700' : 'text-gray-700'
+                  }`}>
+                    {formatDateHeader(dateStr)}
+                  </span>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                    shouldShowOverdueStyle(dateStr)
+                      ? 'bg-red-100 text-red-700'
+                      : filter === 'completed'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {dateTodos.length === 1 ? t('todos.nTasks', { count: 1 }) : t('todos.nTasksPlural', { count: dateTodos.length })}
+                  </span>
+                </div>
+              </div>
+              {/* Tasks for this date */}
               <div className="divide-y divide-gray-100">
-                {groupedTodos[dateKey].map((todo) => (
+                {dateTodos.map((todo) => (
                   <div
                     key={todo.todo_id}
-                    className="px-4 md:px-6 py-3 md:py-4 hover:bg-gray-50 transition-colors group"
+                    className={`px-6 py-4 hover:bg-gray-50 transition-colors group ${
+                      shouldShowOverdueStyle(todo.date_header?.split('T')[0] || '') ? 'bg-red-50/30' : ''
+                    }`}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-4">
                       {/* Checkbox */}
                       <button
                         onClick={() => handleToggleComplete(todo)}
-                        className="mt-0.5 flex-shrink-0"
+                        className="flex-shrink-0 mt-0.5"
                       >
                         {todo.is_completed ? (
-                          <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center">
                             <Check className="w-4 h-4 text-white" />
                           </div>
                         ) : (
-                          <Circle className="w-6 h-6 text-gray-400 hover:text-blue-600 transition-colors" />
+                          <div className={`w-6 h-6 rounded-md border-2 ${
+                            shouldShowOverdueStyle(todo.date_header?.split('T')[0] || '')
+                              ? 'border-red-400 hover:border-red-500'
+                              : 'border-gray-300 hover:border-blue-500'
+                          } transition-colors`} />
                         )}
                       </button>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-2">
+                        {/* Title with Priority */}
+                        <div className="flex items-start gap-2 mb-2">
+                          {getPriorityIcon(todo.priority)}
+                          <p className={`text-base font-medium break-words flex-1 ${
+                            todo.is_completed ? 'line-through text-gray-400' : 'text-gray-900'
+                          }`}>
+                            {todo.title}
+                          </p>
+                        </div>
+
+                        {/* Notes/Description (if exists) */}
+                        {todo.notes && (
+                          <div className="text-sm text-gray-600 whitespace-pre-wrap mb-3 pl-6">
+                            {todo.notes}
+                          </div>
+                        )}
+
+                        {/* Clean Metadata Row */}
+                        <div className="flex items-center gap-3 text-xs">
+                          {/* Category Badge */}
+                          {todo.category && (
+                            <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-medium border border-blue-100">
+                              {todo.category}
+                            </span>
+                          )}
+
+                          {/* Completion Status with Avatar - Only show if completed */}
+                          {todo.is_completed && todo.last_edited_by_name && (
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.last_edited_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <Check className={`w-3.5 h-3.5 ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-600' : 'text-purple-600'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.last_edited_by_name}</span>
+                            </div>
+                          )}
+
+                          {/* Assigned To - Only show if NOT completed */}
+                          {!todo.is_completed && todo.created_by_name && (
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.created_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <span className={`text-xs font-medium ${
+                                todo.created_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.created_by_name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side: Action Buttons */}
+                      <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEditModal(todo)}
+                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-blue-600"
+                          title={t('common.edit')}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTodo(todo.todo_id)}
+                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-red-600"
+                          title={t('common.delete')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        // Original single-date view for 'all' and 'completed'
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+          {/* Todos list */}
+              <div className="divide-y divide-gray-100">
+            {filteredTodos.map((todo) => (
+                  <div
+                    key={todo.todo_id}
+                    className="px-6 py-4 hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* Checkbox */}
+                      <button
+                        onClick={() => handleToggleComplete(todo)}
+                        className="flex-shrink-0 mt-0.5"
+                      >
+                        {todo.is_completed ? (
+                          <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded-md border-2 border-gray-300 hover:border-blue-500 transition-colors" />
+                        )}
+                      </button>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Title with Priority */}
+                        <div className="flex items-start gap-2 mb-2">
                           {getPriorityIcon(todo.priority)}
                           <p
-                            className={`text-sm md:text-base break-words ${
+                            className={`text-base font-medium break-words flex-1 ${
                               todo.is_completed
                                 ? 'line-through text-gray-400'
                                 : 'text-gray-900'
@@ -577,181 +913,234 @@ export default function TodoList() {
                         
                         {/* Notes/Description (if exists) */}
                         {todo.notes && (
-                          <div className="mt-2 text-xs md:text-sm text-gray-600 whitespace-pre-wrap pl-6">
+                          <div className="text-sm text-gray-600 whitespace-pre-wrap mb-3 pl-6">
                             {todo.notes}
                           </div>
                         )}
                         
-                        {/* Metadata: Category + User info on mobile */}
-                        <div className="flex flex-col md:flex-row md:items-center gap-2 mt-2">
+                        {/* Clean Metadata Row */}
+                        <div className="flex items-center gap-3 text-xs">
+                          {/* Category Badge */}
                           {todo.category && (
-                            <span className="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full w-fit">
+                            <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-medium border border-blue-100">
                               {todo.category}
                             </span>
                           )}
                           
-                          {/* Show who last edited on mobile (move from right side) */}
-                          {todo.last_edited_by_name && (
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500 md:hidden">
-                              <div 
-                                className={`w-5 h-5 rounded-full ${getUserColor(todo.last_edited_by_name)} flex items-center justify-center text-white text-[10px] font-semibold`}
-                                title={`Last edited by ${todo.last_edited_by_name}`}
-                              >
-                                {getInitials(todo.last_edited_by_name)}
-                              </div>
-                              <span className="truncate">
-                                {todo.created_by_email === todo.last_edited_by_email 
-                                  ? 'created' 
-                                  : 'edited'} {new Date(todo.updated_at || todo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </span>
+                          {/* Date */}
+                          {todo.date_header && (
+                            <span className="text-gray-500 flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {formatDate(todo.date_header.split('T')[0])}
+                            </span>
+                          )}
+                          
+                          {/* Completion Status with Avatar - Only show if completed */}
+                          {todo.is_completed && todo.last_edited_by_name && (
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.last_edited_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <Check className={`w-3.5 h-3.5 ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-600' : 'text-purple-600'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                todo.last_edited_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.last_edited_by_name}</span>
+                            </div>
+                          )}
+                          
+                          {/* Assigned To - Only show if NOT completed */}
+                          {!todo.is_completed && todo.created_by_name && (
+                            <div className={`flex items-center gap-2 ml-auto px-2.5 py-1 rounded-full border ${
+                              todo.created_by_name === 'Merlin' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
+                            }`}>
+                              <span className={`text-xs font-medium ${
+                                todo.created_by_name === 'Merlin' ? 'text-blue-700' : 'text-purple-700'
+                              }`}>{todo.created_by_name}</span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Right side: Creator info (desktop only) + Action Buttons */}
-                      <div className="flex items-start gap-2 md:gap-3 flex-shrink-0">
-                        {/* Show who last edited (desktop only) */}
-                        {todo.last_edited_by_name && (
-                          <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-500">
-                            <div 
-                              className={`w-5 h-5 rounded-full ${getUserColor(todo.last_edited_by_name)} flex items-center justify-center text-white text-[10px] font-semibold`}
-                              title={`Last edited by ${todo.last_edited_by_name}`}
-                            >
-                              {getInitials(todo.last_edited_by_name)}
-                            </div>
-                            <span>
-                              {todo.created_by_email === todo.last_edited_by_email 
-                                ? 'created' 
-                                : 'edited'} {new Date(todo.updated_at || todo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {/* Action Buttons - always visible on mobile, hover on desktop */}
-                        <div className="flex items-center gap-2">
+                      {/* Right side: Action Buttons - Always visible on mobile, hover on desktop */}
+                      <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         {/* Edit Button */}
                         <button
                           onClick={() => openEditModal(todo)}
-                          className="flex-shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-700"
+                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-blue-600"
+                          title={t('common.edit')}
                         >
-                          <Edit2 className="w-4 h-4 md:w-5 md:h-5" />
+                          <Edit2 className="w-4 h-4" />
                         </button>
                         
                         {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteTodo(todo.todo_id)}
-                          className="flex-shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700"
+                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-red-600"
+                          title={t('common.delete')}
                         >
-                          <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              
-              {/* Quick Add Task for This Date */}
-              {quickAddOpen === dateKey ? (
-                <div className="px-6 py-4 bg-blue-50 border-t border-blue-200">
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleQuickAdd(dateKey);
-                    }}
-                    className="space-y-3"
-                  >
-                    <input
-                      type="text"
-                      value={quickAddTitle}
-                      onChange={(e) => setQuickAddTitle(e.target.value)}
-                      placeholder="Add a new task..."
-                      autoFocus
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    
-                    <div className="flex gap-2 flex-wrap">
-                      {/* Priority */}
-                      <select
-                        value={quickAddPriority}
-                        onChange={(e) => setQuickAddPriority(Number(e.target.value))}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      >
-                        <option value={0}>Normal</option>
-                        <option value={1}>Priority</option>
-                      </select>
-
-                      {/* Category */}
-                      <input
-                        type="text"
-                        value={quickAddCategory}
-                        onChange={(e) => setQuickAddCategory(e.target.value)}
-                        placeholder="Category (optional)"
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      />
-
-                      {/* Staff */}
-                      <select
-                        value={quickAddStaff}
-                        onChange={(e) => setQuickAddStaff(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      >
-                        <option value="Merlin">Merlin</option>
-                        <option value="Madison">Madison</option>
-                      </select>
                     </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                      >
-                        Add
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuickAddOpen(null);
-                          setQuickAddTitle('');
-                          setQuickAddPriority(0);
-                          setQuickAddCategory('');
-                          setQuickAddStaff('Merlin');
-                        }}
-                        className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              ) : (
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                  <button
-                    onClick={() => setQuickAddOpen(dateKey)}
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add another task for {formatDate(dateKey)}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      );
+      })()}
       
+      {/* Add Task Modal */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title={t('todos.addNewTask')}
+      >
+        <form onSubmit={handleAddTodo} className="space-y-4">
+          {/* Title */}
+          <div>
+            <label htmlFor="add-title" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('todos.taskTitle')} *
+            </label>
+            <input
+              type="text"
+              id="add-title"
+              value={newTodoTitle}
+              onChange={(e) => setNewTodoTitle(e.target.value)}
+              placeholder={t('todos.enterTaskTitle')}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              autoFocus
+            />
+          </div>
+
+          {/* Notes / Details */}
+          <div>
+            <label htmlFor="add-notes" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('todos.notesDetails')}
+            </label>
+            <textarea
+              id="add-notes"
+              value={newTodoNotes}
+              onChange={(e) => setNewTodoNotes(e.target.value)}
+              rows={4}
+              placeholder={t('todos.notesPlaceholder')}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Date */}
+          <div>
+            <label htmlFor="add-date" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('todos.date')}
+            </label>
+            <input
+              type="date"
+              id="add-date"
+              value={newTodoDate}
+              onChange={(e) => setNewTodoDate(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label htmlFor="add-category" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('todos.category')}
+            </label>
+            <input
+              type="text"
+              id="add-category"
+              value={newTodoCategory}
+              onChange={(e) => setNewTodoCategory(e.target.value)}
+              placeholder={t('todos.categoryPlaceholder')}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Priority */}
+          <div>
+            <label htmlFor="add-priority" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('todos.priority')}
+            </label>
+            <select
+              id="add-priority"
+              value={newTodoPriority}
+              onChange={(e) => setNewTodoPriority(Number(e.target.value))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value={0}>{t('todos.normal')}</option>
+              <option value={1}>{t('todos.priorityHigh')}</option>
+            </select>
+          </div>
+
+          {/* Assigned To */}
+          <div>
+            <label htmlFor="add-staff" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('todos.assignedTo')}
+            </label>
+            <select
+              id="add-staff"
+              value={newTodoStaff}
+              onChange={(e) => setNewTodoStaff(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="Merlin">{t('staff.merlin')}</option>
+              <option value="Madison">{t('staff.madison')}</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              {t('todos.whoShouldComplete')}
+            </p>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {t('common.adding') || 'Adding...'}
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5" />
+                  {t('todos.addTask')}
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Edit Task Modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
-        title="Edit Task"
+        title={t('todos.editTask')}
       >
         <form onSubmit={handleEditSubmit} className="space-y-4">
           {/* Title */}
           <div>
             <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 mb-1">
-              Task Title *
+              {t('todos.taskTitle')} *
             </label>
             <input
               type="text"
@@ -767,7 +1156,7 @@ export default function TodoList() {
           {/* Notes / Description */}
           <div>
             <label htmlFor="edit-notes" className="block text-sm font-medium text-gray-700 mb-1">
-              Notes / Details
+              {t('todos.notesDetails')}
             </label>
             <textarea
               id="edit-notes"
@@ -775,20 +1164,18 @@ export default function TodoList() {
               value={editFormData.notes}
               onChange={handleEditFormChange}
               rows={4}
-              placeholder="Add details, bullet points, or notes...
-• Item 1
-• Item 2"
+              placeholder={t('todos.notesPlaceholder')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Tip: Use • for bullet points, or just write details on multiple lines
+              {t('todos.notesTip')}
             </p>
           </div>
 
           {/* Date */}
           <div>
             <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700 mb-1">
-              Date
+              {t('todos.date')}
             </label>
             <input
               type="date"
@@ -803,7 +1190,7 @@ export default function TodoList() {
           {/* Category */}
           <div>
             <label htmlFor="edit-category" className="block text-sm font-medium text-gray-700 mb-1">
-              Category
+              {t('todos.category')}
             </label>
             <input
               type="text"
@@ -811,7 +1198,7 @@ export default function TodoList() {
               name="category"
               value={editFormData.category}
               onChange={handleEditFormChange}
-              placeholder="e.g., Mail, Social Media"
+              placeholder={t('todos.categoryPlaceholder')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -819,7 +1206,7 @@ export default function TodoList() {
           {/* Priority */}
           <div>
             <label htmlFor="edit-priority" className="block text-sm font-medium text-gray-700 mb-1">
-              Priority
+              {t('todos.priority')}
             </label>
             <select
               id="edit-priority"
@@ -828,15 +1215,15 @@ export default function TodoList() {
               onChange={handleEditFormChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value={0}>Normal</option>
-              <option value={1}>Priority</option>
+              <option value={0}>{t('todos.normal')}</option>
+              <option value={1}>{t('todos.priorityHigh')}</option>
             </select>
           </div>
 
-          {/* Staff Member */}
+          {/* Assigned To */}
           <div>
             <label htmlFor="edit-staff" className="block text-sm font-medium text-gray-700 mb-1">
-              Staff Member
+              {t('todos.assignedTo')}
             </label>
             <select
               id="edit-staff"
@@ -845,9 +1232,12 @@ export default function TodoList() {
               onChange={handleEditFormChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="Merlin">Merlin</option>
-              <option value="Madison">Madison</option>
+              <option value="Merlin">{t('staff.merlin')}</option>
+              <option value="Madison">{t('staff.madison')}</option>
             </select>
+            <p className="mt-1 text-xs text-gray-500">
+              {t('todos.whoShouldComplete')}
+            </p>
           </div>
 
           {/* Buttons */}
@@ -857,13 +1247,13 @@ export default function TodoList() {
               onClick={closeEditModal}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
             >
-              Save Changes
+              {t('common.saveChanges')}
             </button>
           </div>
         </form>
@@ -876,11 +1266,11 @@ export default function TodoList() {
           setIsCompletionModalOpen(false);
           setTodoToComplete(null);
         }}
-        title="Who completed this task?"
+        title={t('todos.whoCompletedTask')}
       >
         <div className="space-y-4">
           <p className="text-gray-600 text-sm">
-            Select who completed: <strong>{todoToComplete?.title}</strong>
+            {t('todos.selectWhoCompleted')} <strong>{todoToComplete?.title}</strong>
           </p>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -891,7 +1281,7 @@ export default function TodoList() {
               <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold group-hover:bg-blue-200">
                 MR
               </div>
-              <span className="font-medium text-gray-900">Merlin</span>
+              <span className="font-medium text-gray-900">{t('staff.merlin')}</span>
             </button>
             
             <button
@@ -901,7 +1291,7 @@ export default function TodoList() {
               <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xl font-bold group-hover:bg-purple-200">
                 MP
               </div>
-              <span className="font-medium text-gray-900">Madison</span>
+              <span className="font-medium text-gray-900">{t('staff.madison')}</span>
             </button>
           </div>
           
@@ -913,7 +1303,7 @@ export default function TodoList() {
               }}
               className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

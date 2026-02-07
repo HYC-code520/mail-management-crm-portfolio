@@ -320,3 +320,4 @@ This software is proprietary and confidential.
 ---
 
 **Built with ❤️ for efficient mail management**
+

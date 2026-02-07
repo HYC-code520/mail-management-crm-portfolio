@@ -12,6 +12,7 @@ export interface ScannedItem {
   id: string;
   photoBlob?: Blob; // Temporary, for preview only
   photoPreviewUrl?: string; // Object URL for thumbnail
+  photoFingerprint?: string; // Hash for duplicate detection
   extractedText: string;
   matchedContact: Contact | null;
   confidence: number;

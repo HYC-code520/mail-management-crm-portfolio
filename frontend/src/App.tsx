@@ -19,20 +19,28 @@ import TodoListPage from './pages/TodoList.tsx';
 import ScanSessionPage from './pages/ScanSession.tsx';
 import DesignSystemPage from './pages/DesignSystem.tsx';
 import SettingsPage from './pages/Settings.tsx';
+import FollowUpsPage from './pages/FollowUps.tsx';
+import FeesPage from './pages/Fees.tsx';
+import PrivacyPolicyPage from './pages/PrivacyPolicy.tsx';
+import TermsOfServicePage from './pages/TermsOfService.tsx';
 
 // Layout
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import DashboardLayout from './components/layouts/DashboardLayout.tsx';
+import ScrollToTop from './components/ScrollToTop.tsx';
 
 function App() {
   return (
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ScrollToTop />
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<SignInPage />} />
           <Route path="/signin" element={<SignInPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           
           {/* Protected Routes with Dashboard Layout */}
           <Route path="/dashboard" element={
@@ -53,6 +61,8 @@ function App() {
             <Route path="mail-items/new" element={<NewMailItemPage />} />
             <Route path="templates" element={<TemplatesPage />} />
             <Route path="todos" element={<TodoListPage />} />
+            <Route path="follow-ups" element={<FollowUpsPage />} />
+            <Route path="fees" element={<FeesPage />} />
             <Route path="scan" element={<ScanSessionPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="design-system" element={<DesignSystemPage />} />

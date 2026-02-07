@@ -1,6 +1,61 @@
 const { supabaseAdmin } = require('../services/supabase.service');
 const { sendTemplateEmail } = require('../services/email.service');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const feeService = require('../services/fee.service');
+
+/**
+ * Sleep helper for retry delays
+ */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Call Gemini with retry logic for rate limiting (429) and overload (503) errors
+ * Uses exponential backoff: 2s, 4s, 8s...
+ */
+async function callGeminiWithRetry(model, content, maxRetries = 4) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await model.generateContent(content);
+      return result;
+    } catch (error) {
+      lastError = error;
+      
+      // Check for retryable errors
+      const errorMsg = error.message || '';
+      const statusCode = error.status || 0;
+      
+      const isRateLimited = statusCode === 429 ||
+                           errorMsg.includes('429') ||
+                           errorMsg.includes('Too Many Requests') ||
+                           errorMsg.includes('RESOURCE_EXHAUSTED');
+      
+      const isOverloaded = statusCode === 503 ||
+                          errorMsg.includes('503') ||
+                          errorMsg.includes('overloaded') ||
+                          errorMsg.includes('Service Unavailable');
+      
+      const shouldRetry = (isRateLimited || isOverloaded) && attempt < maxRetries;
+
+      if (shouldRetry) {
+        // Exponential backoff: 2s, 4s, 8s, 16s
+        const delayMs = Math.pow(2, attempt + 1) * 1000;
+        const errorType = isOverloaded ? 'Service overloaded' : 'Rate limited';
+        console.log(`⏳ ${errorType}, waiting ${delayMs/1000}s before retry ${attempt + 1}/${maxRetries}...`);
+        await sleep(delayMs);
+      } else if (!isRateLimited && !isOverloaded) {
+        // Non-retryable error (e.g., invalid API key, bad request)
+        console.error('❌ Non-retryable Gemini error:', errorMsg);
+        throw error;
+      }
+    }
+  }
+
+  // All retries exhausted
+  console.error(`❌ All ${maxRetries} retries exhausted. Last error:`, lastError.message);
+  throw lastError;
+}
 
 /**
  * Smart AI matching using Gemini Vision
@@ -23,58 +78,102 @@ async function smartMatchWithGemini(req, res, next) {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    // Use gemini-2.5-flash (NOT flash-lite!) - gives 1,500 requests/day instead of 20!
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash'
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash'  // Best flash model - fast and accurate
     });
 
-    // Build contact list string for Gemini
+    // Build contact list string for Gemini - show BOTH personal name and business name
     const contactListStr = contacts
       .map((c, idx) => {
-        const name = c.contact_person || c.company_name || 'Unknown';
+        const personName = c.contact_person || '';
+        const businessName = c.company_name || '';
+        // Show both names separated by " / " if both exist
+        const displayName = [personName, businessName].filter(Boolean).join(' / ') || 'Unknown';
         const mailbox = c.mailbox_number || 'N/A';
-        return `${idx + 1}. ${name} (Mailbox: ${mailbox})`;
+        return `${idx + 1}. ${displayName} (Mailbox: ${mailbox})`;
       })
       .join('\n');
 
     // Smart prompt that asks Gemini to do BOTH extraction AND matching
+    // Updated to recognize both personal names AND business/company names
+    // Enhanced to handle handwritten/cursive text more carefully
     const prompt = `You are analyzing a photograph of a mail label or envelope. Your task is to:
-1. Find and extract the RECIPIENT'S FULL NAME from the image
+1. Find and extract the RECIPIENT'S NAME OR BUSINESS NAME from the image
 2. Match it to one of the customers in the list below
 
 CUSTOMER LIST:
 ${contactListStr}
 
+NOTE: Some customers have both a personal name AND a business name (shown as "Personal Name / Business Name").
+Mail may be addressed to EITHER the personal name OR the business name.
+
 INSTRUCTIONS FOR TEXT EXTRACTION:
-- Look carefully at the ENTIRE image for the recipient's name
+- Look carefully at the ENTIRE image for the recipient's name or business name
+- The recipient could be:
+  * A PERSON'S NAME (e.g., "John Smith", "CHEN HOUYU")
+  * A BUSINESS/COMPANY NAME (e.g., "ACME Corp", "Smith Consulting LLC")
 - The name is usually:
   * Near the center or top of the label
   * After keywords like "TO:", "ATTN:", "ATTENTION:", "RECIPIENT:", "DELIVER TO:"
   * The largest or most prominent text
   * Above the address lines
+- Business names often include: LLC, Inc, Corp, Co., Ltd, Company, Enterprises, Services
 - Extract the COMPLETE name, not just initials or partial text
 - Ignore address lines, city names, zip codes, sender information
 
+SPECIAL HANDLING FOR HANDWRITTEN/CURSIVE TEXT:
+- If the text is HANDWRITTEN or in CURSIVE script, be EXTRA CAREFUL
+- Handwritten text is often harder to read - lower your confidence accordingly
+- If you cannot clearly read the handwritten text, set CONFIDENCE to 30 or below
+- Do NOT guess at handwritten names if you're unsure - it's better to return "NONE" than a wrong match
+- Look for any PRINTED text on the envelope that might be clearer than handwriting
+
 INSTRUCTIONS FOR MATCHING:
 - Compare the extracted name to the customer list
+- Match on EITHER the personal name OR the business name
+- If mail says "ACME Corp" and customer is "John Smith / ACME Corp", that's a match!
 - Handle variations like:
   * First name / last name order (e.g., "Chen Houyu" vs "Houyu Chen")
-  * Missing spaces (e.g., "HouYu Chen" vs "Hou Yu Chen")  
+  * Missing spaces (e.g., "HouYu Chen" vs "Hou Yu Chen")
   * Partial names (e.g., "H. Chen" → "Houyu Chen")
   * Abbreviations or nicknames
   * Different capitalization
+  * Business name variations (e.g., "ACME" vs "ACME Corp")
+
+CONFIDENCE SCORING GUIDELINES:
+- 90-100: Perfect match, text is clearly printed and easy to read
+- 70-89: Good match, minor variations (name order, abbreviations)
+- 50-69: Possible match, some uncertainty (partial name, similar sounding)
+- 30-49: Low confidence - text is hard to read OR match is uncertain
+- 0-29: Very uncertain - handwritten/illegible text OR no reasonable match
+- If text is HANDWRITTEN and hard to read, cap confidence at 50 maximum
 
 RETURN FORMAT (must be EXACT):
-EXTRACTED: [the complete recipient name you found]
-MATCHED: [customer number from list, or "NONE" if no match]
-CONFIDENCE: [0-100, how confident you are in the match]
+EXTRACTED: [the complete recipient name or business name you found, or "UNREADABLE" if text cannot be read]
+MATCHED: [customer number from list, or "NONE" if no match or uncertain]
+CONFIDENCE: [0-100, following the guidelines above]
 REASON: [brief explanation of your match or why no match]
 
-Example response:
+Example responses:
 EXTRACTED: CHEN HOUYU
 MATCHED: 5
 CONFIDENCE: 95
 REASON: Name matches customer #5 "Houyu Chen", just reversed order (last name first)
+
+EXTRACTED: ACME CONSULTING LLC
+MATCHED: 3
+CONFIDENCE: 90
+REASON: Business name matches customer #3 "John Doe / ACME Consulting LLC"
+
+EXTRACTED: Windsor School (handwritten, difficult to read)
+MATCHED: NONE
+CONFIDENCE: 35
+REASON: Handwritten cursive text appears to say "Windsor School" but no matching customer found
+
+EXTRACTED: UNREADABLE
+MATCHED: NONE
+CONFIDENCE: 0
+REASON: Text is handwritten cursive and cannot be read clearly enough to identify recipient
 
 Now analyze the image and provide your response:`;
 
@@ -88,7 +187,7 @@ Now analyze the image and provide your response:`;
     ];
 
     console.log('🤖 Calling Gemini with smart matching...');
-    const result = await model.generateContent([prompt, ...imageParts]);
+    const result = await callGeminiWithRetry(model, [prompt, ...imageParts], 4);
     const responseText = result.response.text().trim();
 
     console.log('📄 Gemini Response:', responseText.substring(0, 200) + '...');
@@ -132,6 +231,64 @@ Now analyze the image and provide your response:`;
     });
   } catch (error) {
     console.error('❌ Gemini smart matching failed:', error);
+
+    // Check if it's a rate limit, quota, or overload error
+    const errorMsg = error.message || '';
+    const statusCode = error.status || 0;
+    
+    const isRateLimited = statusCode === 429 ||
+                         errorMsg.includes('429') ||
+                         errorMsg.includes('Too Many Requests') ||
+                         errorMsg.includes('RESOURCE_EXHAUSTED');
+
+    const isQuotaExhausted = errorMsg.includes('quota') ||
+                            errorMsg.includes('QUOTA_EXCEEDED') ||
+                            errorMsg.includes('exhausted');
+    
+    const isOverloaded = statusCode === 503 ||
+                        errorMsg.includes('503') ||
+                        errorMsg.includes('overloaded') ||
+                        errorMsg.includes('Service Unavailable');
+
+    // If it's a known temporary issue, return 429 to trigger fallback
+    if (isRateLimited || isQuotaExhausted || isOverloaded) {
+      const isLikelyQuota = isQuotaExhausted ||
+        (isRateLimited && errorMsg.toLowerCase().includes('resource'));
+
+      let errorType = 'RATE';
+      let userMessage = 'AI service is temporarily busy. Please wait a moment and try again.';
+      let reason = 'Rate limit exceeded - please wait a few seconds between scans';
+      
+      if (isLikelyQuota) {
+        errorType = 'QUOTA';
+        userMessage = 'Daily AI quota exhausted. Please check your Google AI Studio quota at https://aistudio.google.com/ or wait until tomorrow.';
+        reason = 'Daily quota exceeded - check Google AI Studio for quota reset time';
+      } else if (isOverloaded) {
+        errorType = 'OVERLOAD';
+        userMessage = 'Google AI service is temporarily overloaded. Retrying automatically...';
+        reason = 'Service temporarily overloaded - this should be rare with a paid API key';
+      }
+
+      console.error(`⚠️ Gemini ${errorType} limit hit:`, errorMsg);
+
+      return res.status(429).json({
+        error: userMessage,
+        extractedText: '',
+        matchedContact: null,
+        confidence: 0,
+        reason,
+        quotaExhausted: isLikelyQuota,
+        serviceOverloaded: isOverloaded,
+      });
+    }
+
+    // Unknown error - log details for debugging
+    console.error('⚠️ Unknown Gemini error:', {
+      message: errorMsg,
+      status: statusCode,
+      type: error.constructor.name,
+    });
+
     next(error);
   }
 }
@@ -142,7 +299,7 @@ Now analyze the image and provide your response:`;
  */
 async function bulkSubmitScanSession(req, res, next) {
   try {
-    const { items } = req.body;
+    const { items, scannedBy, templateId, customSubject, customBody, skipNotification } = req.body;
     
     // Get the logged-in user for sending emails
     const userId = req.user?.id;
@@ -200,12 +357,25 @@ async function bulkSubmitScanSession(req, res, next) {
             throw new Error(`Contact not found: ${group.contact_id}`);
           }
 
-          // Create mail items (bulk insert)
-          const mailItemsToInsert = group.items.map(item => ({
-            contact_id: item.contact_id,
-            item_type: item.item_type,
-            quantity: 1,
-            received_date: item.scanned_at,
+          // OPTIMIZATION: Group items by item_type to create ONE record per type with combined quantity
+          // Instead of 5 separate letters, create 1 letter with qty=5
+          const itemsByType = group.items.reduce((acc, item) => {
+            if (!acc[item.item_type]) {
+              acc[item.item_type] = {
+                item_type: item.item_type,
+                count: 0,
+              };
+            }
+            acc[item.item_type].count++;
+            return acc;
+          }, {});
+
+          // Create ONE mail item per type with combined quantity
+          const mailItemsToInsert = Object.values(itemsByType).map(typeGroup => ({
+            contact_id: group.contact_id,
+            item_type: typeGroup.item_type,
+            quantity: typeGroup.count,
+            received_date: new Date().toISOString(), // Use current time for the combined record
             status: 'Received', // Will be updated to 'Notified' if email succeeds
           }));
 
@@ -218,28 +388,97 @@ async function bulkSubmitScanSession(req, res, next) {
             throw new Error(`Failed to insert mail items: ${insertError.message}`);
           }
 
-          // Select appropriate email template based on item types
-          let templateName;
-          const hasLetters = group.letterCount > 0;
-          const hasPackages = group.packageCount > 0;
+          // Log action history for each created mail item (noting it was from bulk scan)
+          // Also create fee records for packages
+          for (const mailItem of createdItems) {
+            const typeGroup = itemsByType[mailItem.item_type] || { count: mailItem.quantity || 1 };
+            
+            // Log action history
+            try {
+              await supabaseAdmin
+                .from('action_history')
+                .insert({
+                  mail_item_id: mailItem.mail_item_id,
+                  action_type: 'scanned',
+                  action_description: `Bulk scanned ${typeGroup.count} ${mailItem.item_type}${typeGroup.count > 1 ? 's' : ''} via Scan Session`,
+                  performed_by: scannedBy || 'Staff', // Use scannedBy which should be "Merlin" or "Madison"
+                  action_timestamp: new Date().toISOString()
+                });
+            } catch (historyError) {
+              console.error('Failed to log scan action history:', historyError);
+              // Don't fail the request if history logging fails
+            }
 
-          if (hasLetters && hasPackages) {
-            templateName = 'Scan: Mixed Items';
-          } else if (hasPackages) {
-            templateName = 'Scan: Packages Only';
-          } else {
-            templateName = 'Scan: Letters Only';
+            // Create fee record for packages
+            if (mailItem.item_type === 'Package' || mailItem.item_type === 'Large Package') {
+              try {
+                await feeService.createFeeRecord(
+                  mailItem.mail_item_id,
+                  mailItem.contact_id,
+                  userId
+                );
+                console.log(`✅ Created fee record for scanned package ${mailItem.mail_item_id}`);
+              } catch (feeError) {
+                console.error('⚠️  Warning: Failed to create fee record for scanned package:', feeError);
+                // Don't fail the request if fee creation fails
+              }
+            }
           }
-
-          // Get template
-          const { data: template, error: templateError } = await supabaseAdmin
-            .from('message_templates')
-            .select('*')
-            .eq('template_name', templateName)
-            .single();
 
           // Send notifications with error handling
           let emailSent = false;
+          
+          // Skip notification if flag is set
+          if (skipNotification) {
+            console.log(`⏭️ Skipping notification for ${contact.email} (skipNotification flag set)`);
+            return {
+              contact_id: contact.contact_id,
+              contact_name: contact.contact_person || contact.company_name,
+              letterCount: group.letterCount,
+              packageCount: group.packageCount,
+              notificationSent: false,
+              itemsCreated: createdItems.length,
+            };
+          }
+          
+          // Get template - use custom template if provided, otherwise use default logic
+          let template = null;
+          let templateError = null;
+          
+          if (templateId) {
+            // Use custom template selected in frontend
+            const { data: customTemplate, error: customError } = await supabaseAdmin
+              .from('message_templates')
+              .select('*')
+              .eq('template_id', templateId)
+              .single();
+            
+            template = customTemplate;
+            templateError = customError;
+          } else {
+            // Fallback: Select appropriate template based on item types
+            let templateName;
+            const hasLetters = group.letterCount > 0;
+            const hasPackages = group.packageCount > 0;
+
+            if (hasLetters && hasPackages) {
+              templateName = 'Scan: Mixed Items';
+            } else if (hasPackages) {
+              templateName = 'Scan: Packages Only';
+            } else {
+              templateName = 'Scan: Letters Only';
+            }
+
+            // Get template
+            const { data: autoTemplate, error: autoError } = await supabaseAdmin
+              .from('message_templates')
+              .select('*')
+              .eq('template_name', templateName)
+              .single();
+            
+            template = autoTemplate;
+            templateError = autoError;
+          }
           
           if (templateError || !template) {
             // Fallback to generic notification template
@@ -269,6 +508,11 @@ async function bulkSubmitScanSession(req, res, next) {
                     Name: contact.contact_person || contact.company_name || 'Valued Customer',
                     BoxNumber: contact.mailbox_number || 'N/A',
                     Type: typeString.join(' and '),
+                    LetterCount: group.letterCount,
+                    PackageCount: group.packageCount,
+                    TotalCount: group.letterCount + group.packageCount,
+                    LetterText: group.letterCount === 1 ? 'letter' : 'letters',
+                    PackageText: group.packageCount === 1 ? 'package' : 'packages',
                     Date: new Date().toLocaleDateString(),
                   },
                   userId: userId, // Use logged-in user for Gmail OAuth!
@@ -286,10 +530,13 @@ async function bulkSubmitScanSession(req, res, next) {
                     message_content: fallbackTemplate.message_body,
                   });
                 
-                // Update mail items to "Notified" status
+                // Update mail items to "Notified" status and set last_notified
                 await supabaseAdmin
                   .from('mail_items')
-                  .update({ status: 'Notified' })
+                  .update({ 
+                    status: 'Notified',
+                    last_notified: new Date().toISOString()
+                  })
                   .in('mail_item_id', createdItems.map(i => i.mail_item_id));
                 
                 emailSent = true;
@@ -299,18 +546,32 @@ async function bulkSubmitScanSession(req, res, next) {
               }
             }
           } else {
-            // Send notification using scan-specific template (with error handling)
+            // Send notification using selected template (with error handling)
+            // Use custom subject/body if provided, otherwise use template defaults
+            const emailSubject = customSubject || template.subject_line;
+            const emailBody = customBody || template.message_body;
+            
+            // Build item type string for {Type} placeholder
+            const typeString = [];
+            if (group.letterCount > 0) {
+              typeString.push(`${group.letterCount} ${group.letterCount === 1 ? 'letter' : 'letters'}`);
+            }
+            if (group.packageCount > 0) {
+              typeString.push(`${group.packageCount} ${group.packageCount === 1 ? 'package' : 'packages'}`);
+            }
+            
             try {
               await sendTemplateEmail({
                 to: contact.email,
-                templateSubject: template.subject_line,
-                templateBody: template.message_body,
+                templateSubject: emailSubject,
+                templateBody: emailBody,
                 variables: {
                   Name: contact.contact_person || contact.company_name || 'Valued Customer',
                   BoxNumber: contact.mailbox_number || 'N/A',
                   LetterCount: group.letterCount,
                   PackageCount: group.packageCount,
                   TotalCount: group.letterCount + group.packageCount,
+                  Type: typeString.join(' and '),
                   Date: new Date().toLocaleDateString(),
                   // Add pluralization text
                   LetterText: group.letterCount === 1 ? 'letter' : 'letters',
@@ -331,10 +592,13 @@ async function bulkSubmitScanSession(req, res, next) {
                   message_content: template.message_body,
                 });
               
-              // Update mail items to "Notified" status
+              // Update mail items to "Notified" status and set last_notified
               await supabaseAdmin
                 .from('mail_items')
-                .update({ status: 'Notified' })
+                .update({ 
+                  status: 'Notified',
+                  last_notified: new Date().toISOString()
+                })
                 .in('mail_item_id', createdItems.map(i => i.mail_item_id));
               
               emailSent = true;
@@ -384,8 +648,193 @@ async function bulkSubmitScanSession(req, res, next) {
   }
 }
 
+/**
+ * Batch Smart AI matching using Gemini Vision
+ * Process multiple images in ONE API call (10x cost savings)
+ */
+async function batchSmartMatchWithGemini(req, res, next) {
+  try {
+    const { images, contacts } = req.body;
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ error: 'Images array is required' });
+    }
+
+    if (images.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 images per batch' });
+    }
+
+    if (!contacts || !Array.isArray(contacts)) {
+      return res.status(400).json({ error: 'Contacts array is required' });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set in environment variables');
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash'
+    });
+
+    // Build contact list string
+    const contactListStr = contacts
+      .map((c, idx) => {
+        const personName = c.contact_person || '';
+        const businessName = c.company_name || '';
+        const displayName = [personName, businessName].filter(Boolean).join(' / ') || 'Unknown';
+        const mailbox = c.mailbox_number || 'N/A';
+        return `${idx + 1}. ${displayName} (Mailbox: ${mailbox})`;
+      })
+      .join('\n');
+
+    // Build prompt for batch processing
+    const prompt = `You are analyzing ${images.length} photographs of mail labels/envelopes. For EACH image, extract the recipient name and match to the customer list.
+
+CUSTOMER LIST:
+${contactListStr}
+
+For EACH image (labeled IMAGE_1, IMAGE_2, etc.), provide:
+- EXTRACTED: the recipient name you found (or "UNREADABLE" if text cannot be read)
+- MATCHED: customer number from list, or "NONE" if no match or uncertain
+- CONFIDENCE: 0-100
+
+CONFIDENCE SCORING GUIDELINES:
+- 90-100: Perfect match, text is clearly printed and easy to read
+- 70-89: Good match, minor variations (name order, abbreviations)
+- 50-69: Possible match, some uncertainty
+- 30-49: Low confidence - text is hard to read OR match is uncertain
+- 0-29: Very uncertain - handwritten/illegible text OR no reasonable match
+- IMPORTANT: If text is HANDWRITTEN or in CURSIVE, cap confidence at 50 maximum
+- If you cannot clearly read handwritten text, return "NONE" rather than guessing wrong
+
+RESPONSE FORMAT (one block per image):
+---IMAGE_1---
+EXTRACTED: [name]
+MATCHED: [number or NONE]
+CONFIDENCE: [0-100]
+
+---IMAGE_2---
+EXTRACTED: [name]
+MATCHED: [number or NONE]
+CONFIDENCE: [0-100]
+
+(continue for all ${images.length} images)
+
+IMPORTANT: Analyze each image separately. Handle name variations (order, abbreviations, partial matches). Be EXTRA CAREFUL with handwritten/cursive text - it's better to return NONE than a wrong match.`;
+
+    // Build image parts array
+    const imageParts = images.map((img, idx) => ({
+      inlineData: {
+        data: img.data,
+        mimeType: img.mimeType || 'image/jpeg',
+      },
+    }));
+
+    console.log(`🤖 Batch processing ${images.length} images in ONE API call...`);
+    const startTime = Date.now();
+
+    const result = await callGeminiWithRetry(model, [prompt, ...imageParts], 4);
+    const responseText = result.response.text().trim();
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ Batch processed ${images.length} images in ${duration}ms`);
+    console.log('📄 Batch Response:', responseText.substring(0, 500) + '...');
+
+    // Parse response for each image - use explicit IMAGE_X matching for robustness
+    const results = [];
+
+    // Build a map of image number -> block content (handles preamble text and formatting variations)
+    const blockMap = new Map();
+    const blockMatches = responseText.matchAll(/---IMAGE_(\d+)---([\s\S]*?)(?=---IMAGE_\d+---|$)/g);
+    for (const match of blockMatches) {
+      const imageNum = parseInt(match[1], 10);
+      const content = match[2];
+      blockMap.set(imageNum, content);
+    }
+
+    // Log if we didn't get expected number of blocks (helps diagnose issues)
+    if (blockMap.size !== images.length) {
+      console.warn(`⚠️ Batch parsing: expected ${images.length} image blocks, found ${blockMap.size}`);
+      console.warn('📄 Raw response preview:', responseText.substring(0, 800));
+    }
+
+    for (let i = 0; i < images.length; i++) {
+      // Use IMAGE_(i+1) since Gemini uses 1-based indexing
+      const block = blockMap.get(i + 1) || '';
+
+      const extractedMatch = block.match(/EXTRACTED:\s*(.+)/i);
+      const matchedMatch = block.match(/MATCHED:\s*(.+)/i);
+      const confidenceMatch = block.match(/CONFIDENCE:\s*(\d+)/i);
+
+      const extractedText = extractedMatch ? extractedMatch[1].trim() : '';
+      const matchedIndexStr = matchedMatch ? matchedMatch[1].trim() : 'NONE';
+      const confidence = confidenceMatch ? parseInt(confidenceMatch[1], 10) / 100 : 0;
+
+      let matchedContact = null;
+      if (matchedIndexStr !== 'NONE') {
+        const matchedIndex = parseInt(matchedIndexStr, 10);
+        if (!isNaN(matchedIndex) && matchedIndex >= 1 && matchedIndex <= contacts.length) {
+          matchedContact = contacts[matchedIndex - 1];
+        }
+      }
+
+      results.push({
+        imageIndex: i,
+        extractedText,
+        matchedContact,
+        confidence,
+      });
+    }
+
+    console.log(`✅ Batch results: ${results.filter(r => r.matchedContact).length}/${results.length} matched`);
+
+    res.json({
+      success: true,
+      results,
+      duration,
+      imageCount: images.length,
+    });
+  } catch (error) {
+    console.error('❌ Batch Gemini matching failed:', error);
+
+    const errorMsg = error.message || '';
+    const statusCode = error.status || 0;
+    
+    const isRateLimited = statusCode === 429 ||
+                         errorMsg.includes('429') ||
+                         errorMsg.includes('Too Many Requests') ||
+                         errorMsg.includes('RESOURCE_EXHAUSTED');
+    
+    const isOverloaded = statusCode === 503 ||
+                        errorMsg.includes('503') ||
+                        errorMsg.includes('overloaded') ||
+                        errorMsg.includes('Service Unavailable');
+
+    if (isRateLimited) {
+      return res.status(429).json({
+        error: 'AI service is temporarily busy. Please try again in a few seconds.',
+        results: [],
+        retryable: true,
+      });
+    }
+
+    if (isOverloaded) {
+      return res.status(503).json({
+        error: 'Google AI service is temporarily overloaded. Please try again in a minute.',
+        results: [],
+        retryable: true,
+        serviceOverloaded: true,
+      });
+    }
+
+    next(error);
+  }
+}
+
 module.exports = {
   bulkSubmitScanSession,
   smartMatchWithGemini,
+  batchSmartMatchWithGemini,
 };
 

@@ -6,6 +6,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
  * API Client for making authenticated requests to the Express backend
  */
 class ApiClient {
+  private refreshPromise: Promise<void> | null = null;
+
   /**
    * Get the current user's auth token
    */
@@ -15,9 +17,63 @@ class ApiClient {
   }
 
   /**
+   * Wait for any ongoing token refresh to complete
+   */
+  private async waitForTokenRefresh(): Promise<void> {
+    if (this.refreshPromise) {
+      console.log('⏳ Waiting for ongoing token refresh...');
+      await this.refreshPromise;
+    }
+  }
+
+  /**
+   * Refresh the authentication token
+   */
+  private async refreshToken(): Promise<boolean> {
+    // If a refresh is already in progress, wait for it
+    if (this.refreshPromise) {
+      await this.refreshPromise;
+      return true;
+    }
+
+    // Start a new refresh
+    this.refreshPromise = (async () => {
+      console.log('🔄 Token expired, refreshing session...');
+      
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('❌ Session refresh failed:', error);
+        // Redirect to sign-in page
+        window.location.href = '/signin';
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      if (session) {
+        console.log('✅ Session refreshed successfully');
+      }
+    })();
+
+    try {
+      await this.refreshPromise;
+      return true;
+    } catch {
+      return false;
+    } finally {
+      // Clear the promise after 1 second to allow new refreshes if needed
+      setTimeout(() => {
+        this.refreshPromise = null;
+      }, 1000);
+    }
+  }
+
+  /**
    * Make an authenticated API request
    */
-  private async request(endpoint: string, options: RequestInit = {}) {
+  private async request(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<any> {
+    // Wait for any ongoing token refresh before making the request
+    await this.waitForTokenRefresh();
+
     const token = await this.getAuthToken();
     
     if (!token) {
@@ -34,9 +90,25 @@ class ApiClient {
     const url = `${API_BASE_URL}${endpoint}`;
     const response = await fetch(url, { ...options, headers });
 
+    // Handle 401 Unauthorized - token might be expired
+    if (response.status === 401 && retryCount < 2) {
+      const refreshed = await this.refreshToken();
+      
+      if (refreshed) {
+        console.log('✅ Token refreshed, retrying request...');
+        // Retry the request with the new token (up to 2 times)
+        return this.request(endpoint, options, retryCount + 1);
+      }
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || `Request failed with status ${response.status}`);
+      // Include status code in error for better debugging
+      const statusText = response.status === 429 ? 'Rate limited - please wait a moment'
+                       : response.status === 400 ? 'Bad request'
+                       : response.status === 500 ? 'Server error'
+                       : `Error ${response.status}`;
+      throw new Error(error.error || error.message || statusText);
     }
 
     // Handle 204 No Content (common for DELETE requests)
@@ -110,6 +182,18 @@ export const api = {
     update: (id: string, data: Record<string, unknown>) => apiClient.put(`/mail-items/${id}`, data),
     updateStatus: (id: string, status: string) => apiClient.put(`/mail-items/${id}`, { status }),
     delete: (id: string) => apiClient.delete(`/mail-items/${id}`),
+    // Follow-up dismissal methods
+    dismissContact: (contactId: string, dismissedBy: string, notes?: string) =>
+      apiClient.post('/mail-items/dismiss-contact', { contact_id: contactId, dismissed_by: dismissedBy, notes }),
+    restoreContact: (contactId: string, undoneBy: string) =>
+      apiClient.post('/mail-items/restore-contact', { contact_id: contactId, undone_by: undoneBy }),
+    getDismissedContacts: () => apiClient.get('/mail-items/dismissed-contacts'),
+    dismissItem: (itemId: string, dismissedBy: string) =>
+      apiClient.post(`/mail-items/dismiss-item/${itemId}`, { dismissed_by: dismissedBy }),
+    restoreItem: (itemId: string) =>
+      apiClient.post(`/mail-items/restore-item/${itemId}`, {}),
+    resolveAllForContact: (contactId: string) =>
+      apiClient.post(`/mail-items/resolve-contact/${contactId}`, {}),
   },
   outreachMessages: {
     getAll: (contactId?: string, mailItemId?: string) => {
@@ -144,7 +228,14 @@ export const api = {
       mail_item_id?: string;
       message_type?: string;
       custom_variables?: Record<string, string>;
+      sent_by?: string;
     }) => apiClient.post('/emails/send', data),
+    sendBulk: (data: {
+      contact_id: string;
+      template_id: string;
+      mail_item_ids: string[];
+      sent_by?: string;
+    }) => apiClient.post('/emails/send-bulk', data),
     sendCustom: (data: {
       to: string;
       subject: string;
@@ -191,12 +282,19 @@ export const api = {
   },
 
   scan: {
-    bulkSubmit: (items: Array<{
-      contact_id: string;
-      item_type: 'Letter' | 'Package';
-      scanned_at: string;
-    }>) => 
-      apiClient.post('/scan/bulk-submit', { items }),
+    bulkSubmit: (
+      items: Array<{
+        contact_id: string;
+        item_type: 'Letter' | 'Package';
+        scanned_at: string;
+      }>,
+      scannedBy?: string,
+      templateId?: string,
+      customSubject?: string,
+      customBody?: string,
+      skipNotification?: boolean
+    ) => 
+      apiClient.post('/scan/bulk-submit', { items, scannedBy, templateId, customSubject, customBody, skipNotification }),
     
     smartMatch: (data: {
       image: string;
@@ -209,6 +307,21 @@ export const api = {
       }>;
     }) =>
       apiClient.post('/scan/smart-match', data),
+
+    // Batch smart match - process up to 10 images in ONE API call (10x cheaper)
+    smartMatchBatch: (data: {
+      images: Array<{
+        data: string;
+        mimeType: string;
+      }>;
+      contacts: Array<{
+        contact_id: string;
+        contact_person?: string;
+        company_name?: string;
+        mailbox_number?: string;
+      }>;
+    }) =>
+      apiClient.post('/scan/smart-match-batch', data),
   },
 
   stats: {
@@ -223,6 +336,7 @@ export const api = {
   fees: {
     getAll: () => apiClient.get('/fees'),
     getOutstanding: () => apiClient.get('/fees/outstanding'),
+    getUnpaidByContact: (contactId: string) => apiClient.get(`/fees/unpaid/${contactId}`),
     getRevenue: (startDate?: string, endDate?: string) => {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
@@ -231,8 +345,8 @@ export const api = {
     },
     waive: (feeId: string, reason: string) => 
       apiClient.post(`/fees/${feeId}/waive`, { reason }),
-    markPaid: (feeId: string, paymentMethod: string) => 
-      apiClient.post(`/fees/${feeId}/pay`, { paymentMethod }),
+    markPaid: (feeId: string, paymentMethod: string, collected_amount?: number, collected_by?: string) => 
+      apiClient.post(`/fees/${feeId}/pay`, { paymentMethod, collected_amount, collected_by }),
     recalculate: () => apiClient.post('/fees/recalculate', {}),
   },
 };

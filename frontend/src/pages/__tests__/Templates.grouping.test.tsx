@@ -144,31 +144,31 @@ describe('Templates Page - Grouped View', () => {
       expect(screen.getByText('Mixed Items')).toBeInTheDocument();
     });
 
-    it('should show "auto" badge for scan templates', async () => {
+    it('should display scan template names without "Scan:" prefix', async () => {
       renderComponent();
 
       await waitFor(() => {
-        const lettersTemplate = screen.getByText('Letters Only').closest('button');
-        expect(within(lettersTemplate!).getByText('auto')).toBeInTheDocument();
+        // The UI strips "Scan:" prefix from template names
+        expect(screen.getByText('Letters Only')).toBeInTheDocument();
+        expect(screen.getByText('Packages Only')).toBeInTheDocument();
+        expect(screen.getByText('Mixed Items')).toBeInTheDocument();
       });
     });
 
-    it('should show "default" badge for standard templates', async () => {
+    it('should display full names for standard templates', async () => {
       renderComponent();
 
       await waitFor(() => {
-        const newMailTemplate = screen.getByText('New Mail Notification').closest('button');
-        expect(within(newMailTemplate!).getByText('default')).toBeInTheDocument();
+        expect(screen.getByText('New Mail Notification')).toBeInTheDocument();
+        expect(screen.getByText('Reminder (Uncollected Mail)')).toBeInTheDocument();
       });
     });
 
-    it('should not show badge for custom templates', async () => {
+    it('should display full names for custom templates', async () => {
       renderComponent();
 
       await waitFor(() => {
-        const customTemplate = screen.getByText('My Custom Template').closest('button');
-        expect(within(customTemplate!).queryByText('auto')).not.toBeInTheDocument();
-        expect(within(customTemplate!).queryByText('default')).not.toBeInTheDocument();
+        expect(screen.getByText('My Custom Template')).toBeInTheDocument();
       });
     });
 
@@ -211,15 +211,14 @@ describe('Templates Page - Grouped View', () => {
         expect(screen.getByText('Letters Only')).toBeInTheDocument();
       });
 
-      // Find the template item
-      const templateItem = screen.getByText('Letters Only').closest('.relative');
+      // Find the template item container
+      const templateItem = screen.getByText('Letters Only').closest('.relative.group');
       expect(templateItem).toBeInTheDocument();
-      
-      // Edit button exists (verifies it's editable)
+
+      // Edit button exists with "Edit template" title for scan templates
       const buttons = within(templateItem!).getAllByRole('button');
-      const editButton = buttons.find(btn => btn.getAttribute('title') === 'Edit');
+      const editButton = buttons.find(btn => btn.getAttribute('title') === 'Edit template');
       expect(editButton).toBeInTheDocument();
-      expect(editButton).toHaveAttribute('title', 'Edit');
     });
 
     it('should not show delete button for scan templates', async () => {
@@ -229,8 +228,8 @@ describe('Templates Page - Grouped View', () => {
         expect(screen.getByText('Letters Only')).toBeInTheDocument();
       });
 
-      const templateItem = screen.getByText('Letters Only').closest('.relative');
-      
+      const templateItem = screen.getByText('Letters Only').closest('.relative.group');
+
       // Delete button should NOT exist for scan templates
       const buttons = within(templateItem!).getAllByRole('button');
       const deleteButton = buttons.find(btn => btn.getAttribute('title') === 'Delete');
@@ -244,8 +243,8 @@ describe('Templates Page - Grouped View', () => {
         expect(screen.getByText('New Mail Notification')).toBeInTheDocument();
       });
 
-      const templateItem = screen.getByText('New Mail Notification').closest('.relative');
-      
+      const templateItem = screen.getByText('New Mail Notification').closest('.relative.group');
+
       // Delete button should NOT exist for standard templates
       const buttons = within(templateItem!).getAllByRole('button');
       const deleteButton = buttons.find(btn => btn.getAttribute('title') === 'Delete');
@@ -259,14 +258,13 @@ describe('Templates Page - Grouped View', () => {
         expect(screen.getByText('My Custom Template')).toBeInTheDocument();
       });
 
-      const templateItem = screen.getByText('My Custom Template').closest('.relative');
-      
+      const templateItem = screen.getByText('My Custom Template').closest('.relative.group');
+
       // Delete button SHOULD exist for custom templates
       const buttons = within(templateItem!).getAllByRole('button');
       const deleteButton = buttons.find(btn => btn.getAttribute('title') === 'Delete');
       expect(deleteButton).toBeInTheDocument();
-      expect(deleteButton).toHaveAttribute('title', 'Delete');
-      
+
       // Verify it's not disabled
       expect(deleteButton).not.toBeDisabled();
     });
@@ -317,18 +315,14 @@ describe('Templates Page - Grouped View', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText(/New Template/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
       });
 
-      const createButton = screen.getByText(/New Template/i);
+      const createButton = screen.getByRole('button', { name: /add/i });
       expect(createButton).toBeInTheDocument();
-      
+
       // Verify button is clickable (not disabled)
-      expect(createButton.closest('button')).not.toBeDisabled();
-      
-      // Verify button has Plus icon (indicates it's a create action)
-      const buttonElement = createButton.closest('button');
-      expect(buttonElement).toBeInTheDocument();
+      expect(createButton).not.toBeDisabled();
     });
   });
 
@@ -365,8 +359,10 @@ describe('Templates Page - Grouped View', () => {
 
       renderComponent();
 
-      // Should show skeleton/pulse animation (no "Loading" text)
-      expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+      // Should show mail animation loading state
+      const mailAnimation = screen.getByAltText('Loading mail animation');
+      expect(mailAnimation).toBeInTheDocument();
+      expect(screen.getByText('Loading templates...')).toBeInTheDocument();
     });
 
     it('should handle API errors', async () => {

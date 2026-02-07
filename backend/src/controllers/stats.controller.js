@@ -1,5 +1,5 @@
 const { getSupabaseClient } = require('../services/supabase.service');
-const { getDaysSinceNY, getDaysBetweenNY, getDaysAgoNY, toNYDateString } = require('../utils/timezone');
+const { getDaysSinceNY, getDaysBetweenNY, getDaysAgoNY, toNYDateString, getTodayNY } = require('../utils/timezone');
 const feeService = require('../services/fee.service');
 
 /**
@@ -107,28 +107,46 @@ function groupNeedsFollowUpByPerson(items, packageFees) {
 }
 
 /**
- * Get revenue collected this month
+ * Get revenue collected this month (using NY timezone)
  */
 async function getMonthlyRevenue(userId, supabase) {
   try {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+    const { getTodayNY, toNYDateString } = require('../utils/timezone');
+    const todayNY = getTodayNY(); // e.g., "2025-12-11"
+    const [year, month] = todayNY.split('-');
+    
+    // First day of current month in NY
+    const startOfMonth = `${year}-${month}-01`;
+    
+    // Last day of current month
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+    const endOfMonth = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
     
     const { data, error } = await supabase
       .from('package_fees')
-      .select('fee_amount')
+      .select('fee_amount, collected_amount, paid_date')
       .eq('user_id', userId)
       .eq('fee_status', 'paid')
-      .gte('paid_date', startOfMonth)
-      .lte('paid_date', endOfMonth);
+      .not('paid_date', 'is', null);
     
     if (error) {
       console.error('Error fetching monthly revenue:', error);
       return 0;
     }
     
-    const total = (data || []).reduce((sum, fee) => sum + parseFloat(fee.fee_amount || 0), 0);
+    // Filter by NY date
+    const monthlyFees = (data || []).filter(fee => {
+      const paidDateNY = toNYDateString(fee.paid_date);
+      return paidDateNY >= startOfMonth && paidDateNY <= endOfMonth;
+    });
+    
+    // Use collected_amount if present (for discounted fees), otherwise fee_amount
+    const total = monthlyFees.reduce((sum, fee) => {
+      const amount = fee.collected_amount !== null && fee.collected_amount !== undefined 
+        ? parseFloat(fee.collected_amount) 
+        : parseFloat(fee.fee_amount || 0);
+      return sum + amount;
+    }, 0);
     return parseFloat(total.toFixed(2));
   } catch (error) {
     console.error('Error in getMonthlyRevenue:', error);
@@ -146,20 +164,22 @@ exports.getDashboardStats = async (req, res, next) => {
     const supabase = getSupabaseClient(req.user.token);
     const { days = 7 } = req.query; // Default to 7 days for charts
 
-    // Auto-recalculate pending fees before loading dashboard
-    // This ensures fees are always up-to-date when users view the dashboard
-    try {
-      await feeService.updateFeesForAllPackages(req.user.id);
-    } catch (feeError) {
-      console.error('Error auto-recalculating fees:', feeError);
-      // Continue even if fee calculation fails
-    }
+    // NOTE: Fee recalculation is now handled by the daily cron job
+    // Removing auto-recalculation here to improve dashboard load performance
+    // Fees are calculated when packages are received and updated daily by cron
 
-    // Fetch all data in parallel
+    // Calculate the 7-day timestamp for staff performance query
+    const { getStartOfDayNY } = require('../utils/timezone');
+    const sevenDaysAgoTimestamp = getStartOfDayNY(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+
+    // Fetch all data in parallel for maximum performance
     const [
       { data: contacts, error: contactsError },
       { data: mailItems, error: mailItemsError },
-      { data: notifications, error: notificationsError }
+      { data: notifications, error: notificationsError },
+      { data: packageFees, error: feesError },
+      { data: todos },
+      { data: followupDismissals }
     ] = await Promise.all([
       supabase
         .from('contacts')
@@ -174,13 +194,29 @@ exports.getDashboardStats = async (req, res, next) => {
             contact_person,
             company_name,
             unit_number,
-            mailbox_number
+            mailbox_number,
+            display_name_preference
           )
         `)
         .order('received_date', { ascending: false }),
       supabase
         .from('notification_history')
-        .select('mail_item_id, sent_at')
+        .select('mail_item_id, sent_at'),
+      supabase
+        .from('package_fees')
+        .select('*')
+        .in('fee_status', ['pending', 'paid', 'waived']),
+      supabase
+        .from('todos')
+        .select('is_completed, last_edited_by_name, completed_at')
+        .eq('is_completed', true)
+        .not('completed_at', 'is', null)
+        .gte('completed_at', sevenDaysAgoTimestamp),
+      // Fetch active follow-up dismissals (contacts dismissed from follow-up view)
+      supabase
+        .from('followup_dismissals')
+        .select('contact_id, dismissed_at')
+        .is('undone_at', null)
     ]);
 
     if (contactsError) {
@@ -208,8 +244,7 @@ exports.getDashboardStats = async (req, res, next) => {
     }));
 
     // Calculate stats
-    const now = new Date();
-    const todayString = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+    const todayString = getTodayNY(); // YYYY-MM-DD in NY timezone
     
     // Active contacts (not archived)
     const activeContacts = contacts.filter(c => c.status !== 'No');
@@ -217,70 +252,148 @@ exports.getDashboardStats = async (req, res, next) => {
     // New customers today
     const newCustomersToday = activeContacts.filter(c => {
       if (!c.created_at) return false;
-      return c.created_at.split('T')[0] === todayString;
+      return toNYDateString(c.created_at) === todayString;
     }).length;
     
     // Recent customers (last 5)
     const recentCustomers = activeContacts.slice(0, 5);
     
-    // Mail items received today
-    const todaysMail = enrichedMailItems.filter(item => 
-      item.received_date && item.received_date.split('T')[0] === todayString
-    ).length;
+    // Mail items received today (NY timezone) - SUM quantities, not count entries
+    const todaysMailItems = enrichedMailItems.filter(item => 
+      item.received_date && toNYDateString(item.received_date) === todayString
+    );
+    const todaysMail = todaysMailItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
-    // Pending pickups (not picked up, not abandoned)
-    const pendingPickups = enrichedMailItems.filter(item => 
+    // Pending pickups (not picked up, not abandoned, not resolved) - SUM quantities
+    const pendingItems = enrichedMailItems.filter(item => 
       item.status !== 'Picked Up' && 
       !item.status.includes('Abandoned') && 
-      item.status !== 'Scanned'
-    ).length;
+      item.status !== 'Scanned' &&
+      item.status !== 'Resolved'
+    );
+    const pendingPickups = pendingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
-    // Overdue mail (7+ days old, not picked up)
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const overdueMail = enrichedMailItems.filter(item => {
-      if (item.status === 'Picked Up' || item.status.includes('Abandoned')) return false;
-      const receivedDate = new Date(item.received_date);
-      return receivedDate < sevenDaysAgo;
-    }).length;
+    // Overdue mail (7+ days old, not picked up) - SUM quantities - using NY timezone
+    const overdueItems = enrichedMailItems.filter(item => {
+      if (item.status === 'Picked Up' || item.status.includes('Abandoned') || item.status === 'Resolved') return false;
+      return getDaysSinceNY(item.received_date) >= 7;
+    });
+    const overdueMail = overdueItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
-    // Completed today
-    const completedToday = enrichedMailItems.filter(item => 
+    // Completed today (picked up today in NY timezone) - SUM quantities
+    const completedItems = enrichedMailItems.filter(item => 
       item.status === 'Picked Up' && 
       item.pickup_date && 
-      item.pickup_date.split('T')[0] === todayString
-    ).length;
-    
-    // Needs follow-up (never notified OR notified 3+ days ago)
-    const threeDaysAgo = new Date(now);
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const needsFollowUpRaw = enrichedMailItems.filter(item => {
-      // Exclude completed/handled statuses
-      if (item.status === 'Picked Up' || 
-          item.status === 'Forwarded' || 
-          item.status === 'Scanned' ||
-          item.status.includes('Abandoned')) {
-        return false;
-      }
-      
-      // Include items never notified (status = "Received")
-      if (!item.last_notified) return true;
-      
-      // Include items notified 3+ days ago
-      const lastNotifiedDate = new Date(item.last_notified);
-      return lastNotifiedDate < threeDaysAgo;
-    });
-    
-    // Fetch package fees for all mail items (including waived fees for display)
-    const { data: packageFees, error: feesError } = await supabase
-      .from('package_fees')
-      .select('*')
-      .in('fee_status', ['pending', 'paid', 'waived']);
+      toNYDateString(item.pickup_date) === todayString
+    );
+    const completedToday = completedItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
     if (feesError) {
       console.error('Error fetching package fees:', feesError);
       // Continue without fees rather than failing
     }
+    
+    // Build a map of mail_item_id -> pending fee
+    const pendingFeeLookup = {};
+    (packageFees || []).forEach(fee => {
+      if (fee.fee_status === 'pending') {
+        pendingFeeLookup[fee.mail_item_id] = fee;
+      }
+    });
+    
+    // Build a Set of dismissed contact IDs (per-contact dismissals)
+    const dismissedContactIds = new Set(
+      (followupDismissals || []).map(d => d.contact_id)
+    );
+
+    // Get ALL non-completed mail items (we'll filter by contact later)
+    // Also exclude individually dismissed items (per-item dismissals)
+    const allActiveItems = enrichedMailItems.filter(item => {
+      // Exclude completed/handled statuses
+      if (item.status === 'Picked Up' ||
+          item.status === 'Forwarded' ||
+          item.status === 'Scanned' ||
+          item.status === 'Resolved' ||
+          item.status.includes('Abandoned')) {
+        return false;
+      }
+      // Exclude individually dismissed items
+      if (item.dismissed_at) {
+        return false;
+      }
+      return true;
+    });
+
+    // Build a Set of contact_ids that should appear in Needs Follow-Up
+    // COOLDOWN LOGIC: If a contact was notified within the last 3 days,
+    // hide them from the list (even if they have pending fees).
+    // They reappear after 3 days if items are still not picked up.
+    const contactIdsToShow = new Set();
+
+    // First, group items by contact and find most recent notification for each
+    const contactNotificationMap = {};
+    allActiveItems.forEach(item => {
+      const contactId = item.contact_id;
+      if (!contactNotificationMap[contactId]) {
+        contactNotificationMap[contactId] = {
+          hasPendingFees: false,
+          hasUnnotifiedItems: false,
+          mostRecentNotification: null
+        };
+      }
+
+      // Check if this item has pending fees
+      if (pendingFeeLookup[item.mail_item_id]) {
+        contactNotificationMap[contactId].hasPendingFees = true;
+      }
+
+      // Check if this item has never been notified
+      if (!item.last_notified) {
+        contactNotificationMap[contactId].hasUnnotifiedItems = true;
+      }
+
+      // Track most recent notification date for this contact
+      if (item.last_notified) {
+        const notifDate = new Date(item.last_notified);
+        if (!contactNotificationMap[contactId].mostRecentNotification ||
+            notifDate > contactNotificationMap[contactId].mostRecentNotification) {
+          contactNotificationMap[contactId].mostRecentNotification = notifDate;
+        }
+      }
+    });
+
+    // Now decide which contacts to show based on cooldown period
+    Object.entries(contactNotificationMap).forEach(([contactId, info]) => {
+      // Skip contacts that have been dismissed from follow-up
+      if (dismissedContactIds.has(contactId)) {
+        return;
+      }
+
+      // If contact has unnotified items, always show them
+      if (info.hasUnnotifiedItems) {
+        contactIdsToShow.add(contactId);
+        return;
+      }
+
+      // If contact was notified within last 3 days, apply cooldown (hide)
+      if (info.mostRecentNotification) {
+        const daysSinceNotification = getDaysSinceNY(info.mostRecentNotification);
+        if (daysSinceNotification < 3) {
+          // Still in cooldown period - don't show
+          return;
+        }
+      }
+
+      // Contact hasn't been notified in 3+ days - show them
+      // (this includes contacts with pending fees after cooldown expires)
+      contactIdsToShow.add(contactId);
+    });
+    
+    // Now get ALL active items for contacts that should appear
+    // This ensures we show ALL of a customer's items, not just filtered ones
+    const needsFollowUpRaw = allActiveItems.filter(item => 
+      contactIdsToShow.has(item.contact_id)
+    );
     
     // Group by person with fee data and urgency
     const needsFollowUp = groupNeedsFollowUpByPerson(
@@ -333,6 +446,120 @@ exports.getDashboardStats = async (req, res, next) => {
       });
     }
 
+    // NEW ANALYTICS: Average Response Time After Email Notification
+    // Only counts items where email notification was sent (has last_notified date)
+    // Measures: Time from email notification to customer pickup
+    const pickedUpItems = enrichedMailItems.filter(item => 
+      item.status === 'Picked Up' && item.pickup_date
+    );
+    
+    const notifiedAndPickedItems = pickedUpItems.filter(item => item.last_notified);
+    const avgResponseTime = notifiedAndPickedItems.length > 0
+      ? notifiedAndPickedItems.reduce((sum, item) => {
+          const days = getDaysBetweenNY(item.last_notified, item.pickup_date);
+          return sum + days;
+        }, 0) / notifiedAndPickedItems.length
+      : 0;
+    
+    // Breakdown: How many customers were notified vs walk-ins
+    const emailCustomersCount = notifiedAndPickedItems.length;
+    const walkInCustomersCount = pickedUpItems.length - notifiedAndPickedItems.length;
+    const totalPickupsCount = pickedUpItems.length;
+    
+    // NEW ANALYTICS: Active vs Inactive Customers (last 30 days)
+    const thirtyDaysAgo = getDaysAgoNY(30);
+    const activeCustomerIds = new Set();
+    enrichedMailItems.forEach(item => {
+      if (item.received_date && toNYDateString(item.received_date) >= thirtyDaysAgo) {
+        activeCustomerIds.add(item.contact_id);
+      }
+    });
+    const activeCustomersCount = activeCustomerIds.size;
+    const inactiveCustomersCount = activeContacts.length - activeCustomersCount;
+    
+    // NEW ANALYTICS: Service Tier Distribution
+    const tier1Count = activeContacts.filter(c => c.service_tier === 1).length;
+    const tier2Count = activeContacts.filter(c => c.service_tier === 2).length;
+    
+    // NEW ANALYTICS: Language Preference Distribution
+    const languageDistribution = {
+      English: activeContacts.filter(c => c.language_preference === 'English').length,
+      Chinese: activeContacts.filter(c => c.language_preference === 'Chinese').length,
+      Both: activeContacts.filter(c => c.language_preference === 'Both').length
+    };
+    
+    // NEW ANALYTICS: Status Distribution (all non-picked-up items, INCLUDING abandoned)
+    const statusDistribution = {};
+    enrichedMailItems.forEach(item => {
+      if (item.status !== 'Picked Up') {
+        statusDistribution[item.status] = (statusDistribution[item.status] || 0) + 1;
+      }
+    });
+    
+    // NEW ANALYTICS: Payment Method Distribution
+    const paymentDistribution = {
+      Cash: 0,
+      Zelle: 0,
+      Venmo: 0,
+      PayPal: 0,
+      Check: 0,
+      Other: 0
+    };
+    (packageFees || []).forEach(fee => {
+      if (fee.fee_status === 'paid' && fee.payment_method) {
+        paymentDistribution[fee.payment_method] = (paymentDistribution[fee.payment_method] || 0) + 1;
+      }
+    });
+    
+    // NEW ANALYTICS: Mail Age Distribution (0-3, 4-7, 8-14, 15-30, 30+)
+    const ageDistribution = {
+      '0-3': 0,
+      '4-7': 0,
+      '8-14': 0,
+      '15-30': 0,
+      '30+': 0
+    };
+    allActiveItems.forEach(item => {
+      const days = getDaysSinceNY(item.received_date);
+      if (days <= 3) ageDistribution['0-3']++;
+      else if (days <= 7) ageDistribution['4-7']++;
+      else if (days <= 14) ageDistribution['8-14']++;
+      else if (days <= 30) ageDistribution['15-30']++;
+      else ageDistribution['30+']++;
+    });
+    
+    // Staff Performance (from todos - already fetched in parallel above)
+    const staffPerformance = {
+      Merlin: (todos || []).filter(t => t.last_edited_by_name === 'Merlin').length,
+      Madison: (todos || []).filter(t => t.last_edited_by_name === 'Madison').length
+    };
+    
+    // NEW ANALYTICS: This Month vs Last Month
+    const lastMonthStart = getDaysAgoNY(60).substring(0, 8) + '01'; // Approximate start of last month
+    const thisMonthStart = todayString.substring(0, 8) + '01';
+    
+    const thisMonthMail = enrichedMailItems.filter(item => {
+      const dateNY = toNYDateString(item.received_date);
+      return dateNY >= thisMonthStart;
+    }).length;
+    
+    const lastMonthMail = enrichedMailItems.filter(item => {
+      const dateNY = toNYDateString(item.received_date);
+      return dateNY >= lastMonthStart && dateNY < thisMonthStart;
+    }).length;
+    
+    const thisMonthCustomers = activeContacts.filter(c => {
+      if (!c.created_at) return false;
+      const dateNY = toNYDateString(c.created_at);
+      return dateNY >= thisMonthStart;
+    }).length;
+    
+    const lastMonthCustomers = activeContacts.filter(c => {
+      if (!c.created_at) return false;
+      const dateNY = toNYDateString(c.created_at);
+      return dateNY >= lastMonthStart && dateNY < thisMonthStart;
+    }).length;
+
     // Return comprehensive stats
     res.json({
       todaysMail,
@@ -351,7 +578,28 @@ exports.getDashboardStats = async (req, res, next) => {
       totalRevenue: revenueStats.totalRevenue,
       waivedFees: revenueStats.waivedFees,
       // Monthly revenue (paid fees in current month)
-      monthlyRevenue: await getMonthlyRevenue(req.user.id, supabase)
+      monthlyRevenue: await getMonthlyRevenue(req.user.id, supabase),
+      // NEW ANALYTICS
+      analytics: {
+        avgResponseTime: parseFloat(avgResponseTime.toFixed(1)),
+        responseTimeBreakdown: {
+          emailCustomers: emailCustomersCount,
+          walkInCustomers: walkInCustomersCount,
+          totalPickups: totalPickupsCount
+        },
+        activeCustomers: activeCustomersCount,
+        inactiveCustomers: inactiveCustomersCount,
+        serviceTiers: { tier1: tier1Count, tier2: tier2Count },
+        languageDistribution,
+        statusDistribution,
+        paymentDistribution,
+        ageDistribution,
+        staffPerformance,
+        comparison: {
+          thisMonth: { mail: thisMonthMail, customers: thisMonthCustomers },
+          lastMonth: { mail: lastMonthMail, customers: lastMonthCustomers }
+        }
+      }
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);

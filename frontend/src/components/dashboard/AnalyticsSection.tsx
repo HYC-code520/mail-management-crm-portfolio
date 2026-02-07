@@ -1,0 +1,294 @@
+import React from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext.tsx';
+
+const COLORS = {
+  blue: '#3B82F6',
+  purple: '#A855F7',
+  green: '#10B981',
+  red: '#EF4444',
+  yellow: '#FCD34D',  // Bright yellow matching "4-7 days" bar
+  orange: '#F97316',
+  pink: '#EC4899',
+  indigo: '#6366F1',
+  teal: '#14B8A6',
+  gray: '#6B7280',
+};
+
+interface AnalyticsData {
+  avgResponseTime: number;
+  responseTimeBreakdown: {
+    emailCustomers: number;
+    walkInCustomers: number;
+    totalPickups: number;
+  };
+  activeCustomers: number;
+  inactiveCustomers: number;
+  serviceTiers: { tier1: number; tier2: number };
+  languageDistribution: { English: number; Chinese: number; Both: number };
+  statusDistribution: { [key: string]: number };
+  paymentDistribution: { Cash: number; Zelle: number; Venmo: number; PayPal: number; Check: number; Other: number };
+  ageDistribution: { '0-3': number; '4-7': number; '8-14': number; '15-30': number; '30+': number };
+  staffPerformance: { Merlin: number; Madison: number };
+  comparison: {
+    thisMonth: { mail: number; customers: number };
+    lastMonth: { mail: number; customers: number };
+  };
+}
+
+interface AnalyticsSectionProps {
+  analytics: AnalyticsData;
+  loading: boolean;
+}
+
+export default function AnalyticsSection({ analytics, loading }: AnalyticsSectionProps) {
+  const { t } = useLanguage();
+  
+  // Helper to translate mail status
+  const translateStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'Received': 'received',
+      'Notified': 'notified',
+      'Pending': 'pending',
+      'Picked Up': 'pickedUp',
+      'Scanned': 'scanned',
+      'Scanned Document': 'scannedDocument',
+      'Forward': 'forward',
+      'Abandoned': 'abandoned',
+      'Abandoned Package': 'abandonedPackage',
+      'Resolved': 'resolved',
+      'Ready for Pickup': 'readyForPickup'
+    };
+    const key = statusMap[status];
+    return key ? t(`mailStatus.${key}`) : status;
+  };
+  
+  // Helper to translate payment method
+  const translatePayment = (method: string) => {
+    const paymentMap: Record<string, string> = {
+      'Cash': 'cash',
+      'Card': 'card',
+      'card': 'card',
+      'Check': 'check',
+      'Zelle': 'zelle',
+      'Venmo': 'venmo',
+      'PayPal': 'paypal',
+      'Other': 'other'
+    };
+    const key = paymentMap[method];
+    return key ? t(`payment.${key}`) : method;
+  };
+  
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="grid grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Prepare data for charts
+  const serviceTierData = [
+    { name: t('dashboard.tier1'), value: analytics.serviceTiers.tier1, color: COLORS.blue },
+    { name: t('dashboard.tier2'), value: analytics.serviceTiers.tier2, color: COLORS.purple },
+  ];
+
+  const languageData = [
+    { name: t('language.english'), value: analytics.languageDistribution.English, color: COLORS.blue },
+    { name: t('language.chinese'), value: analytics.languageDistribution.Chinese, color: COLORS.red },
+    { name: t('language.both'), value: analytics.languageDistribution.Both, color: COLORS.purple },
+  ].filter(item => item.value > 0);
+
+  const statusData = Object.entries(analytics.statusDistribution)
+    .map(([name, value]) => {
+      let color = COLORS.gray;
+      if (name === 'Received') color = COLORS.blue;
+      else if (name === 'Notified') color = COLORS.green;
+      else if (name === 'Scanned') color = COLORS.orange;
+      else if (name === 'Ready for Pickup') color = COLORS.purple;
+      else if (name === 'Picked Up') color = COLORS.purple;
+      else if (name === 'Abandoned' || name === 'Abandoned Package') color = COLORS.yellow;
+      else if (name === 'Forward') color = COLORS.teal;
+      return { name: translateStatus(name), value, color };
+    })
+    .filter(item => item.value > 0);
+
+  // Define preferred payment method order
+  const paymentOrder = ['cash', 'card', 'check', 'zelle', 'paypal', 'venmo', 'other'];
+  
+  const paymentData = Object.entries(analytics.paymentDistribution)
+    .map(([name, value]) => {
+      let color = COLORS.blue;
+      const lowerName = name.toLowerCase();
+      if (lowerName === 'cash') color = COLORS.green;
+      else if (lowerName === 'card') color = COLORS.indigo;
+      else if (lowerName === 'check') color = COLORS.blue;
+      else if (lowerName === 'zelle') color = COLORS.purple;
+      else if (lowerName === 'venmo') color = COLORS.pink;
+      else if (lowerName === 'paypal') color = COLORS.yellow;
+      else if (lowerName === 'other') color = COLORS.orange;
+      return { name: translatePayment(name), value, color, lowerName };
+    })
+    .filter(item => item.value > 0)
+    .sort((a, b) => {
+      const indexA = paymentOrder.indexOf(a.lowerName);
+      const indexB = paymentOrder.indexOf(b.lowerName);
+      return indexA - indexB;
+    });
+
+  return (
+    <div className="space-y-8">
+      {/* Customer Activity Section - One Horizontal Line with 4 Compact Pie Charts */}
+      <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-100">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Service Tiers */}
+          <div>
+            <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.serviceTiers')}</p>
+            <div className="flex items-center gap-2">
+              <ResponsiveContainer width={100} height={100}>
+                <PieChart>
+                  <Pie
+                    data={serviceTierData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={25}
+                    outerRadius={45}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {serviceTierData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="text-xs text-gray-600 space-y-1.5 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: COLORS.blue}}></div>
+                  <span className="font-medium text-xs">T1: {analytics.serviceTiers.tier1}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: COLORS.purple}}></div>
+                  <span className="font-medium text-xs">T2: {analytics.serviceTiers.tier2}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Language */}
+          {languageData.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.language')}</p>
+              <div className="flex items-center gap-2">
+                <ResponsiveContainer width={100} height={100}>
+                  <PieChart>
+                    <Pie
+                      data={languageData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={25}
+                      outerRadius={45}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {languageData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="text-xs text-gray-600 space-y-1.5 flex-1">
+                  {languageData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: item.color}}></div>
+                      <span className="font-medium text-xs truncate">{item.name}: {item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Status */}
+          {statusData.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.mailStatus')}</p>
+              <div className="flex items-center gap-2">
+                <ResponsiveContainer width={100} height={100}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={25}
+                      outerRadius={45}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="text-xs text-gray-600 space-y-1 flex-1">
+                  {statusData.slice(0, 4).map((item) => (
+                    <div key={item.name} className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: item.color}}></div>
+                      <span className="font-medium text-xs truncate">{item.name}: {item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Methods */}
+          {paymentData.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-gray-700 mb-2">{t('dashboard.payment')}</p>
+              <div className="flex items-center gap-2">
+                <ResponsiveContainer width={100} height={100}>
+                  <PieChart>
+                    <Pie
+                      data={paymentData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={25}
+                      outerRadius={45}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {paymentData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="text-xs text-gray-600 space-y-1.5 flex-1">
+                  {paymentData.slice(0, 4).map((item) => (
+                    <div key={item.name} className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: item.color}}></div>
+                      <span className="font-medium text-xs truncate">{item.name}: {item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

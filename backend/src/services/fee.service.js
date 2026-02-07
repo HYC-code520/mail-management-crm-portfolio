@@ -46,7 +46,8 @@ function calculateFeeForPackage(mailItem, asOfDate = new Date()) {
 /**
  * Create initial fee record for a package
  * Called when a package is first logged
- * 
+ * Automatically calculates fee based on received_date (for backdated packages)
+ *
  * @param {string} mailItemId - UUID of mail item
  * @param {string} contactId - UUID of contact
  * @param {string} userId - UUID of user
@@ -54,14 +55,36 @@ function calculateFeeForPackage(mailItem, asOfDate = new Date()) {
  */
 async function createFeeRecord(mailItemId, contactId, userId) {
   try {
+    // First, fetch the mail item to get the received_date for fee calculation
+    const { data: mailItem, error: fetchError } = await supabaseAdmin
+      .from('mail_items')
+      .select('received_date')
+      .eq('mail_item_id', mailItemId)
+      .single();
+
+    if (fetchError || !mailItem) {
+      console.error('❌ Error fetching mail item for fee calculation:', fetchError);
+      // Fallback to $0 if we can't fetch the mail item
+    }
+
+    // Calculate initial fee based on received_date (handles backdated packages)
+    let feeAmount = 0.00;
+    let daysCharged = 0;
+
+    if (mailItem?.received_date) {
+      const calculation = calculateFeeForPackage(mailItem, new Date());
+      feeAmount = calculation.feeAmount;
+      daysCharged = calculation.daysCharged;
+    }
+
     const { data, error } = await supabaseAdmin
       .from('package_fees')
       .insert({
         mail_item_id: mailItemId,
         contact_id: contactId,
         user_id: userId,
-        fee_amount: 0.00, // Starts at $0
-        days_charged: 0,   // Day 0
+        fee_amount: feeAmount,
+        days_charged: daysCharged,
         daily_rate: 2.00,
         grace_period_days: 1,
         fee_status: 'pending',
@@ -69,13 +92,13 @@ async function createFeeRecord(mailItemId, contactId, userId) {
       })
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error creating fee record:', error);
       throw error;
     }
-    
-    console.log(`✅ Created fee record for package ${mailItemId}: $0.00 (Day 0)`);
+
+    console.log(`✅ Created fee record for package ${mailItemId}: $${feeAmount.toFixed(2)} (Day ${daysCharged})`);
     return data;
   } catch (error) {
     console.error('Error in createFeeRecord:', error);
@@ -223,17 +246,25 @@ async function waiveFee(feeId, reason, waivedByUserId) {
  * 
  * @param {string} feeId - UUID of fee to mark as paid
  * @param {string} paymentMethod - How customer paid (cash/card/venmo/etc)
+ * @param {number|null} collectedAmount - Actual amount collected (if discounted from fee_amount)
  * @returns {Promise<Object>} Updated fee record
  */
-async function markFeePaid(feeId, paymentMethod = 'cash') {
+async function markFeePaid(feeId, paymentMethod = 'cash', collectedAmount = null) {
   try {
+    const updateData = {
+      fee_status: 'paid',
+      paid_date: new Date().toISOString(),
+      payment_method: paymentMethod
+    };
+    
+    // If a collected amount is provided and it's different from the fee, store it
+    if (collectedAmount !== null && collectedAmount !== undefined) {
+      updateData.collected_amount = collectedAmount;
+    }
+    
     const { data, error } = await supabaseAdmin
       .from('package_fees')
-      .update({
-        fee_status: 'paid',
-        paid_date: new Date().toISOString(),
-        payment_method: paymentMethod
-      })
+      .update(updateData)
       .eq('fee_id', feeId)
       .eq('fee_status', 'pending') // Only mark pending fees as paid
       .select()
@@ -248,7 +279,8 @@ async function markFeePaid(feeId, paymentMethod = 'cash') {
       throw new Error('Fee not found or already processed');
     }
     
-    console.log(`✅ Marked fee ${feeId} as paid: $${data.fee_amount} via ${paymentMethod}`);
+    const actualAmount = collectedAmount !== null ? collectedAmount : data.fee_amount;
+    console.log(`✅ Marked fee ${feeId} as paid: $${actualAmount} via ${paymentMethod}${collectedAmount !== null ? ` (discounted from $${data.fee_amount})` : ''}`);
     return data;
   } catch (error) {
     console.error('Error in markFeePaid:', error);
@@ -278,11 +310,13 @@ async function getOutstandingFees(userId) {
           contact_id,
           contact_person,
           company_name,
-          mailbox_number
+          mailbox_number,
+          display_name_preference
         )
       `)
       .eq('user_id', userId)
       .eq('fee_status', 'pending')
+      .gt('fee_amount', 0) // Only show fees > $0 (exclude grace period packages)
       .order('fee_amount', { ascending: false }); // Highest fees first
     
     if (error) {
@@ -307,10 +341,10 @@ async function getOutstandingFees(userId) {
  */
 async function getRevenueStats(userId, startDate = null, endDate = null) {
   try {
-    // Build query for paid fees
+    // Build query for paid fees - include collected_amount for discounted fees
     let paidQuery = supabaseAdmin
       .from('package_fees')
-      .select('fee_amount, paid_date')
+      .select('fee_amount, collected_amount, paid_date')
       .eq('user_id', userId)
       .eq('fee_status', 'paid');
     
@@ -353,8 +387,13 @@ async function getRevenueStats(userId, startDate = null, endDate = null) {
       throw waivedError;
     }
     
-    // Calculate totals
-    const totalPaid = paidFees.reduce((sum, fee) => sum + parseFloat(fee.fee_amount || 0), 0);
+    // Calculate totals - use collected_amount if present (for discounted fees), otherwise fee_amount
+    const totalPaid = paidFees.reduce((sum, fee) => {
+      const amount = fee.collected_amount !== null && fee.collected_amount !== undefined 
+        ? parseFloat(fee.collected_amount) 
+        : parseFloat(fee.fee_amount || 0);
+      return sum + amount;
+    }, 0);
     const totalPending = pendingFees.reduce((sum, fee) => sum + parseFloat(fee.fee_amount || 0), 0);
     const totalWaived = waivedFees.reduce((sum, fee) => sum + parseFloat(fee.fee_amount || 0), 0);
     

@@ -10,14 +10,8 @@ exports.getMailItems = async (req, res, next) => {
     const supabase = getSupabaseClient(req.user.token);
     const { contact_id } = req.query;
 
-    // Auto-recalculate pending fees when viewing mail items
-    // This ensures fees are always up-to-date
-    try {
-      await feeService.updateFeesForAllPackages(req.user.id);
-    } catch (feeError) {
-      console.error('Error auto-recalculating fees:', feeError);
-      // Continue even if fee calculation fails
-    }
+    // NOTE: Fee recalculation is now handled by the daily cron job
+    // Removing auto-recalculation here to improve page load performance
 
     let query = supabase
       .from('mail_items')
@@ -28,7 +22,8 @@ exports.getMailItems = async (req, res, next) => {
           contact_person,
           company_name,
           unit_number,
-          mailbox_number
+          mailbox_number,
+          display_name_preference
         )
       `)
       .order('received_date', { ascending: false });
@@ -88,7 +83,7 @@ exports.getMailItems = async (req, res, next) => {
 exports.createMailItem = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient(req.user.token);
-    const { contact_id, item_type, description, status, quantity, received_date } = req.body;
+    const { contact_id, item_type, description, status, quantity, received_date, logged_by } = req.body;
 
     // Validate required fields
     if (!contact_id) {
@@ -96,7 +91,7 @@ exports.createMailItem = async (req, res, next) => {
     }
 
     // Validate status if provided
-    const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned', 'Scanned Document', 'Forward', 'Abandoned', 'Abandoned Package'];
+    const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned', 'Scanned Document', 'Forward', 'Abandoned', 'Abandoned Package', 'Resolved'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
@@ -154,6 +149,24 @@ exports.createMailItem = async (req, res, next) => {
       }
     }
 
+    // Log action history for item creation
+    try {
+      await supabase
+        .from('action_history')
+        .insert({
+          mail_item_id: mailItem.mail_item_id,
+          action_type: 'created',
+          action_description: `${mailItem.item_type} logged (qty: ${mailItem.quantity || 1})${mailItem.description ? ` - ${mailItem.description}` : ''}`,
+          performed_by: logged_by || req.user.email || 'Staff', // Use logged_by which should be "Merlin" or "Madison", fallback to user email
+          action_timestamp: new Date().toISOString()
+        });
+      
+      console.log(`✅ Logged creation action for mail_item ${mailItem.mail_item_id}`);
+    } catch (historyError) {
+      console.error('❌ Error logging action history for creation:', historyError);
+      // Don't fail the request if history logging fails
+    }
+
     res.status(201).json(mailItem);
   } catch (error) {
     next(error);
@@ -168,7 +181,7 @@ exports.updateMailItemStatus = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient(req.user.token);
     const { id } = req.params;
-    const { status, item_type, description, contact_id, received_date, quantity } = req.body;
+    const { status, item_type, description, contact_id, received_date, quantity, performed_by, action_notes } = req.body;
 
     // Fetch existing mail item to detect item_type changes
     const { data: existingMailItem, error: fetchError } = await supabase
@@ -187,7 +200,7 @@ exports.updateMailItemStatus = async (req, res, next) => {
     
     if (status !== undefined) {
       // Validate status
-      const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned', 'Scanned Document', 'Forward', 'Abandoned', 'Abandoned Package'];
+      const validStatuses = ['Received', 'Notified', 'Picked Up', 'Pending', 'Scanned', 'Scanned Document', 'Forward', 'Abandoned', 'Abandoned Package', 'Resolved'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
       }
@@ -248,6 +261,104 @@ exports.updateMailItemStatus = async (req, res, next) => {
       }
     }
 
+    // Log action history for all changes
+    try {
+      const actionDescriptions = [];
+      let previousValue = null;
+      let newValue = null;
+      
+      // Status change
+      if (status !== undefined && status !== existingMailItem.status) {
+        actionDescriptions.push(`Status: ${existingMailItem.status} → ${status}`);
+        previousValue = existingMailItem.status;
+        newValue = status;
+      }
+      
+      // Quantity change
+      if (quantity !== undefined && quantity !== existingMailItem.quantity) {
+        actionDescriptions.push(`Quantity: ${existingMailItem.quantity || 1} → ${quantity}`);
+        // Only set if not already set by status
+        if (!previousValue) {
+          previousValue = String(existingMailItem.quantity || 1);
+          newValue = String(quantity);
+        }
+      }
+      
+      // Item type change
+      if (item_type !== undefined && item_type !== existingMailItem.item_type) {
+        actionDescriptions.push(`Type: ${existingMailItem.item_type} → ${item_type}`);
+        if (!previousValue) {
+          previousValue = existingMailItem.item_type;
+          newValue = item_type;
+        }
+      }
+      
+      // Description change
+      if (description !== undefined && description !== existingMailItem.description) {
+        actionDescriptions.push(`Notes updated`);
+      }
+
+      // Received date change
+      if (received_date !== undefined) {
+        // Extract YYYY-MM-DD from both dates for comparison
+        const existingDateStr = existingMailItem.received_date ? existingMailItem.received_date.split('T')[0] : null;
+        const newDateStr = received_date.split('T')[0];
+        
+        console.log(`📅 Date comparison - Existing: ${existingDateStr}, New: ${newDateStr}, Changed: ${existingDateStr !== newDateStr}`);
+        
+        if (existingDateStr !== newDateStr) {
+          const formatDate = (dateStr) => {
+            // Parse the date string as YYYY-MM-DD and format in NY timezone
+            const [year, month, day] = dateStr.split('T')[0].split('-');
+            const date = new Date(`${year}-${month}-${day}T12:00:00-05:00`);
+            return date.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              year: 'numeric',
+              timeZone: 'America/New_York'
+            });
+          };
+          actionDescriptions.push(`Date: ${formatDate(existingMailItem.received_date)} → ${formatDate(received_date)}`);
+          if (!previousValue) {
+            previousValue = existingDateStr;
+            newValue = newDateStr;
+          }
+        }
+      }
+      
+      if (actionDescriptions.length > 0) {
+        // Determine action type based on what changed
+        // Only use status-specific action types if status was actually changed
+        let actionType = 'updated';
+        const statusChanged = status !== undefined && status !== existingMailItem.status;
+        
+        if (statusChanged) {
+          if (status === 'Picked Up') actionType = 'picked_up';
+          else if (status === 'Forward') actionType = 'forwarded';
+          else if (status === 'Scanned' || status === 'Scanned Document') actionType = 'scanned';
+          else if (status === 'Abandoned' || status === 'Abandoned Package') actionType = 'abandoned';
+        }
+        
+        await supabase
+          .from('action_history')
+          .insert({
+            mail_item_id: id,
+            action_type: actionType,
+            action_description: actionDescriptions.join('; '),
+            previous_value: previousValue,
+            new_value: newValue,
+            performed_by: performed_by || 'Staff', // Use performed_by from request (should be "Merlin" or "Madison")
+            notes: action_notes || null, // Include notes if provided
+            action_timestamp: new Date().toISOString()
+          });
+        
+        console.log(`✅ Logged action history for mail_item ${id}: ${actionDescriptions.join('; ')}`);
+      }
+    } catch (historyError) {
+      console.error('❌ Error logging action history:', historyError);
+      // Don't fail the request if history logging fails
+    }
+
     res.json({ mailItem });
   } catch (error) {
     next(error);
@@ -274,6 +385,333 @@ exports.deleteMailItem = async (req, res, next) => {
     }
 
     res.status(204).send(); // No content on successful deletion
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
+// Follow-up Dismissal Methods
+// ============================================
+
+/**
+ * POST /api/mail-items/dismiss-contact
+ * Dismiss all items for a contact from follow-up view
+ */
+exports.dismissContactFromFollowUp = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req.user.token);
+    const { contact_id, dismissed_by, notes } = req.body;
+
+    if (!contact_id) {
+      return res.status(400).json({ error: 'contact_id is required' });
+    }
+    if (!dismissed_by) {
+      return res.status(400).json({ error: 'dismissed_by is required' });
+    }
+
+    // Check if already dismissed (active dismissal exists)
+    const { data: existing } = await supabase
+      .from('followup_dismissals')
+      .select('dismissal_id')
+      .eq('contact_id', contact_id)
+      .is('undone_at', null)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ error: 'Contact is already dismissed from follow-up' });
+    }
+
+    // Create dismissal record
+    const { data, error } = await supabase
+      .from('followup_dismissals')
+      .insert({
+        contact_id,
+        user_id: req.user.id,
+        dismissed_by,
+        notes: notes || null
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error dismissing contact from follow-up:', error);
+      return res.status(500).json({ error: 'Failed to dismiss contact' });
+    }
+
+    console.log(`✅ Contact ${contact_id} dismissed from follow-up by ${dismissed_by}`);
+    res.status(201).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/mail-items/restore-contact
+ * Restore a dismissed contact back to follow-up view
+ */
+exports.restoreContactToFollowUp = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req.user.token);
+    const { contact_id, undone_by } = req.body;
+
+    if (!contact_id) {
+      return res.status(400).json({ error: 'contact_id is required' });
+    }
+    if (!undone_by) {
+      return res.status(400).json({ error: 'undone_by is required' });
+    }
+
+    // Find and update the active dismissal
+    const { data, error } = await supabase
+      .from('followup_dismissals')
+      .update({
+        undone_at: new Date().toISOString(),
+        undone_by
+      })
+      .eq('contact_id', contact_id)
+      .is('undone_at', null)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('Error restoring contact:', error);
+      return res.status(404).json({ error: 'No active dismissal found for this contact' });
+    }
+
+    console.log(`✅ Contact ${contact_id} restored to follow-up by ${undone_by}`);
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/mail-items/dismissed-contacts
+ * Get all currently dismissed contacts with their pending items count
+ * Also returns individually dismissed items
+ */
+exports.getDismissedContacts = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req.user.token);
+
+    // Get all active contact-level dismissals with contact info
+    const { data: dismissals, error } = await supabase
+      .from('followup_dismissals')
+      .select(`
+        *,
+        contacts (
+          contact_id,
+          contact_person,
+          company_name,
+          mailbox_number,
+          display_name_preference
+        )
+      `)
+      .is('undone_at', null)
+      .order('dismissed_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching dismissed contacts:', error);
+      return res.status(500).json({ error: 'Failed to fetch dismissed contacts' });
+    }
+
+    // For each dismissed contact, get their pending mail items count
+    const enrichedDismissals = await Promise.all((dismissals || []).map(async (dismissal) => {
+      const { data: items } = await supabase
+        .from('mail_items')
+        .select('mail_item_id, item_type, quantity')
+        .eq('contact_id', dismissal.contact_id)
+        .not('status', 'in', '("Picked Up","Forwarded","Scanned","Abandoned","Abandoned Package","Resolved")')
+        .is('dismissed_at', null); // Only non-dismissed items
+
+      const packageCount = items?.filter(i => i.item_type === 'Package')
+        .reduce((sum, i) => sum + (i.quantity || 1), 0) || 0;
+      const letterCount = items?.filter(i => i.item_type !== 'Package')
+        .reduce((sum, i) => sum + (i.quantity || 1), 0) || 0;
+
+      return {
+        ...dismissal,
+        pendingPackages: packageCount,
+        pendingLetters: letterCount,
+        totalPendingItems: packageCount + letterCount
+      };
+    }));
+
+    // Get individually dismissed items (item-level dismissals)
+    const { data: dismissedItems, error: itemsError } = await supabase
+      .from('mail_items')
+      .select(`
+        mail_item_id,
+        item_type,
+        quantity,
+        received_date,
+        dismissed_at,
+        dismissed_by,
+        contact_id,
+        contacts (
+          contact_id,
+          contact_person,
+          company_name,
+          mailbox_number,
+          display_name_preference
+        )
+      `)
+      .not('dismissed_at', 'is', null)
+      .not('status', 'in', '("Picked Up","Forwarded","Scanned","Abandoned","Abandoned Package","Resolved")')
+      .order('dismissed_at', { ascending: false });
+
+    if (itemsError) {
+      console.error('Error fetching dismissed items:', itemsError);
+      // Continue without items rather than failing
+    }
+
+    res.json({
+      dismissedContacts: enrichedDismissals,
+      dismissedItems: dismissedItems || []
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/mail-items/dismiss-item/:id
+ * Dismiss a single mail item from follow-up view
+ */
+exports.dismissItemFromFollowUp = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req.user.token);
+    const { id } = req.params;
+    const { dismissed_by } = req.body;
+
+    if (!dismissed_by) {
+      return res.status(400).json({ error: 'dismissed_by is required' });
+    }
+
+    // Check if item exists and is not already dismissed
+    const { data: existing, error: fetchError } = await supabase
+      .from('mail_items')
+      .select('mail_item_id, dismissed_at')
+      .eq('mail_item_id', id)
+      .single();
+
+    if (fetchError || !existing) {
+      return res.status(404).json({ error: 'Mail item not found' });
+    }
+
+    if (existing.dismissed_at) {
+      return res.status(400).json({ error: 'Item is already dismissed' });
+    }
+
+    // Update the item with dismissed info
+    const { data, error } = await supabase
+      .from('mail_items')
+      .update({
+        dismissed_at: new Date().toISOString(),
+        dismissed_by
+      })
+      .eq('mail_item_id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error dismissing mail item:', error);
+      return res.status(500).json({ error: 'Failed to dismiss item' });
+    }
+
+    console.log(`✅ Mail item ${id} dismissed from follow-up by ${dismissed_by}`);
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/mail-items/restore-item/:id
+ * Restore a dismissed mail item back to follow-up view
+ */
+exports.restoreItemToFollowUp = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req.user.token);
+    const { id } = req.params;
+
+    // Check if item exists and is dismissed
+    const { data: existing, error: fetchError } = await supabase
+      .from('mail_items')
+      .select('mail_item_id, dismissed_at')
+      .eq('mail_item_id', id)
+      .single();
+
+    if (fetchError || !existing) {
+      return res.status(404).json({ error: 'Mail item not found' });
+    }
+
+    if (!existing.dismissed_at) {
+      return res.status(400).json({ error: 'Item is not dismissed' });
+    }
+
+    // Clear the dismissed info
+    const { data, error } = await supabase
+      .from('mail_items')
+      .update({
+        dismissed_at: null,
+        dismissed_by: null
+      })
+      .eq('mail_item_id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error restoring mail item:', error);
+      return res.status(500).json({ error: 'Failed to restore item' });
+    }
+
+    console.log(`✅ Mail item ${id} restored to follow-up`);
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/mail-items/resolve-contact/:id
+ * Resolve all pending items for a contact (marks them as 'Resolved')
+ */
+exports.resolveAllItemsForContact = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req.user.token);
+    const { id: contactId } = req.params;
+
+    if (!contactId) {
+      return res.status(400).json({ error: 'contact_id is required' });
+    }
+
+    // Update all pending items for this contact to 'Resolved'
+    const { data, error } = await supabase
+      .from('mail_items')
+      .update({ status: 'Resolved' })
+      .eq('contact_id', contactId)
+      .not('status', 'in', '("Picked Up","Forwarded","Scanned","Abandoned","Abandoned Package","Resolved")')
+      .select();
+
+    if (error) {
+      console.error('Error resolving items for contact:', error);
+      return res.status(500).json({ error: 'Failed to resolve items' });
+    }
+
+    // Also clear any contact-level dismissal if exists
+    await supabase
+      .from('followup_dismissals')
+      .update({
+        undone_at: new Date().toISOString(),
+        undone_by: 'system-resolved'
+      })
+      .eq('contact_id', contactId)
+      .is('undone_at', null);
+
+    console.log(`✅ Resolved ${data?.length || 0} items for contact ${contactId}`);
+    res.json({ resolved_count: data?.length || 0, items: data });
   } catch (error) {
     next(error);
   }

@@ -37,7 +37,9 @@ vi.mock('react-hot-toast', () => ({
 
 describe('NewContact Page', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Use resetAllMocks to clear both call history AND mock implementations
+    // This prevents hanging tests when other tests set never-resolving mocks
+    vi.resetAllMocks();
   });
 
   it('renders new contact form', () => {
@@ -119,7 +121,7 @@ describe('NewContact Page', () => {
     const user = userEvent.setup();
     render(<NewContact />);
     
-    const backButton = screen.getByText(/back to customers/i);
+    const backButton = screen.getByText(/back to directory/i);
     await user.click(backButton);
     
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/contacts');

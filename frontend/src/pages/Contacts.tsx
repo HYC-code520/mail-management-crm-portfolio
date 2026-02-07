@@ -1,11 +1,39 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Archive, ArchiveRestore, Eye, MessageSquare, Edit, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { Search, Archive, ArchiveRestore, Eye, Edit, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Mail } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
 import LoadingSpinner from '../components/LoadingSpinner.tsx';
+import BulkEmailModal from '../components/BulkEmailModal.tsx';
 import { validateContactForm } from '../utils/validation.ts';
+import { getCustomerAvatarUrl } from '../utils/customerAvatars.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
+
+// Helper function to generate avatar color based on name
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-red-500',
+    'bg-yellow-500',
+    'bg-teal-500',
+  ];
+  const index = name.charCodeAt(0) % colors.length;
+  return colors[index];
+};
+
+// Helper function to get initials from name
+const getInitials = (name: string): string => {
+  const words = name.trim().split(' ');
+  if (words.length >= 2) {
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
 
 interface Contact {
   contact_id: string;
@@ -18,16 +46,26 @@ interface Contact {
   status?: string;
   language_preference?: string;
   service_tier?: number;
+  display_name_preference?: 'company' | 'person' | 'both';
 }
 
 export default function ContactsPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  
+  // Helper to translate contact status
+  const translateStatus = (status: string | undefined) => {
+    const statusKey = (status || 'Active').toLowerCase();
+    return t(`customerStatus.${statusKey}`) || status || t('customerStatus.active');
+  };
+  
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [allContacts, setAllContacts] = useState<Contact[]>([]); // Store all contacts including archived
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showArchived, setShowArchived] = useState(false); // Toggle for showing archived
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkEmailModalOpen, setIsBulkEmailModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
@@ -46,7 +84,8 @@ export default function ContactsPage() {
     phone_number: '',
     language_preference: 'English',
     service_tier: 1,
-    status: 'Pending'
+    status: 'Pending',
+    display_name_preference: 'both' as 'company' | 'person' | 'both'
   });
 
   const loadContacts = useCallback(async () => {
@@ -56,7 +95,7 @@ export default function ContactsPage() {
       setAllContacts(contactsList); // Store all contacts - filtering happens in useEffect
     } catch (err) {
       console.error('Error loading contacts:', err);
-      toast.error('Failed to load contacts');
+      toast.error(t('toast.failedToLoadContacts'));
     } finally {
       setLoading(false);
     }
@@ -123,7 +162,8 @@ export default function ContactsPage() {
       phone_number: contact.phone_number || '',
       language_preference: contact.language_preference || 'English',
       service_tier: contact.service_tier || 1,
-      status: contact.status || 'Pending'
+      status: contact.status || 'Pending',
+      display_name_preference: contact.display_name_preference || 'both'
     });
     setIsModalOpen(true);
   };
@@ -140,7 +180,8 @@ export default function ContactsPage() {
       phone_number: '',
       language_preference: 'English',
       service_tier: 1,
-      status: 'Pending'
+      status: 'Pending',
+      display_name_preference: 'both'
     });
   };
 
@@ -167,7 +208,7 @@ export default function ContactsPage() {
     }
 
     if (!formData.mailbox_number) {
-      toast.error('Mailbox number is required');
+      toast.error(t('validation.mailboxRequired'));
       return;
     }
 
@@ -177,11 +218,11 @@ export default function ContactsPage() {
       if (editingContact) {
         // Update existing contact
         await api.contacts.update(editingContact.contact_id, formData);
-        toast.success('Customer updated successfully!');
+        toast.success(t('toast.customerUpdated'));
       } else {
         // Create new contact
         await api.contacts.create(formData);
-        toast.success('Customer added successfully!');
+        toast.success(t('toast.customerAdded'));
       }
       closeModal();
       loadContacts();
@@ -204,7 +245,7 @@ export default function ContactsPage() {
   };
 
   const handleDelete = async (contactId: string) => {
-    if (!confirm('Are you sure you want to archive this customer? You can restore it later from the archived view.')) {
+    if (!confirm(t('warnings.confirmArchiveWithRestore'))) {
       return;
     }
 
@@ -212,18 +253,18 @@ export default function ContactsPage() {
 
     try {
       await api.contacts.delete(contactId);
-      toast.success('Customer archived successfully!');
+      toast.success(t('toast.customerArchived'));
       loadContacts();
     } catch (err) {
       console.error('Failed to delete contact:', err);
-      toast.error('Failed to archive customer');
+      toast.error(t('toast.failedToArchiveCustomer'));
     } finally {
       setDeletingContactId(null);
     }
   };
 
   const handleRestore = async (contactId: string) => {
-    if (!confirm('Are you sure you want to restore this customer?')) {
+    if (!confirm(t('warnings.confirmRestore'))) {
       return;
     }
 
@@ -232,11 +273,11 @@ export default function ContactsPage() {
     try {
       // Restore by setting status back to 'Active'
       await api.contacts.update(contactId, { status: 'Active' });
-      toast.success('Customer restored successfully!');
+      toast.success(t('toast.customerRestored'));
       loadContacts();
     } catch (err) {
       console.error('Failed to restore contact:', err);
-      toast.error('Failed to restore customer');
+      toast.error(t('toast.failedToRestoreCustomer'));
     } finally {
       setDeletingContactId(null);
     }
@@ -289,11 +330,12 @@ export default function ContactsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-full mx-auto px-16 py-6">
         <div className="flex items-center justify-center min-h-[60vh]">
           <LoadingSpinner 
-            message="Loading contacts..." 
+            message={t('toast.loadingContacts')} 
             size="lg"
+            variant="mail"
           />
         </div>
         <div className="animate-pulse space-y-6 opacity-50 mt-8">
@@ -305,32 +347,39 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-full mx-auto px-16 py-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Customer Directory</h1>
-          <p className="text-gray-600">Manage customer information</p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">{t('customers.title')}</h1>
         <div className="flex items-center gap-4">
+          {/* Bulk Email Button */}
+          <button
+            onClick={() => setIsBulkEmailModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            title={t('customers.sendBulkEmailTooltip')}
+          >
+            <Mail className="w-4 h-4" />
+            <span>{t('templates.sendEmail')}</span>
+          </button>
+
           {/* Show Archived Toggle */}
           <button
             onClick={() => setShowArchived(!showArchived)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              showArchived 
-                ? 'bg-gray-600 text-white hover:bg-gray-700' 
+              showArchived
+                ? 'bg-gray-600 text-white hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {showArchived ? (
               <>
                 <ArchiveRestore className="w-4 h-4" />
-                <span>Viewing Archived</span>
+                <span>{t('customers.viewingArchived')}</span>
               </>
             ) : (
               <>
                 <Archive className="w-4 h-4" />
-                <span>Show Archived</span>
+                <span>{t('customers.showArchived')}</span>
               </>
             )}
           </button>
@@ -339,7 +388,7 @@ export default function ContactsPage() {
             className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <span>+</span>
-            <span>Add New Customer</span>
+            <span>{t('customers.addNew')}</span>
           </button>
         </div>
       </div>
@@ -350,7 +399,7 @@ export default function ContactsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by Name / Company / Mailbox # / Unit #..."
+            placeholder={t('customers.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -363,13 +412,13 @@ export default function ContactsPage() {
         {filteredContacts.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">👥</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No customers yet</h3>
-            <p className="text-gray-600 mb-6">Get started by adding your first customer</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('customers.noCustomers')}</h3>
+            <p className="text-gray-600 mb-6">{t('customers.getStarted')}</p>
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors"
             >
-              + Add New Customer
+              + {t('customers.addNew')}
             </button>
           </div>
         ) : (
@@ -378,12 +427,12 @@ export default function ContactsPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {/* Contact Name - Sortable */}
-                  <th 
+                  <th
                     className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center gap-2">
-                      Contact
+                      {t('customerForm.name')} / {t('customerForm.company')}
                       {sortColumn === 'name' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                       ) : (
@@ -391,17 +440,17 @@ export default function ContactsPage() {
                       )}
                     </div>
                   </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Email</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Phone</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Service Tier</th>
-                  
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.email')}</th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.phone')}</th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.serviceTier')}</th>
+
                   {/* Mailbox # - Sortable */}
-                  <th 
+                  <th
                     className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                     onClick={() => handleSort('mailbox')}
                   >
                     <div className="flex items-center gap-2">
-                      Mailbox #
+                      {t('customerForm.mailboxNumber')}
                       {sortColumn === 'mailbox' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                       ) : (
@@ -409,16 +458,16 @@ export default function ContactsPage() {
                       )}
                     </div>
                   </th>
-                  
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Unit #</th>
-                  
+
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('customerForm.unitNumber')}</th>
+
                   {/* Status - Sortable */}
-                  <th 
+                  <th
                     className="text-left py-3 px-6 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center gap-2">
-                      Status
+                      {t('common.status')}
                       {sortColumn === 'status' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                       ) : (
@@ -426,8 +475,8 @@ export default function ContactsPage() {
                       )}
                     </div>
                   </th>
-                  
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Actions</th>
+
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -438,8 +487,43 @@ export default function ContactsPage() {
                     className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
                   >
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">
-                        {contact.contact_person || contact.company_name || 'Unnamed'}
+                      <div className="flex items-center gap-3">
+                        {/* Avatar */}
+                        {(() => {
+                          const customAvatar = getCustomerAvatarUrl(
+                            contact.contact_id,
+                            contact.mailbox_number,
+                            contact.contact_person,
+                            contact.company_name
+                          );
+                          
+                          if (customAvatar) {
+                            return (
+                              <img
+                                src={customAvatar}
+                                alt={contact.contact_person || contact.company_name || 'Contact'}
+                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                              />
+                            );
+                          }
+                          
+                          return (
+                            <div className={`w-10 h-10 rounded-full ${getAvatarColor(contact.contact_person || contact.company_name || 'U')} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
+                              {getInitials(contact.contact_person || contact.company_name || 'UN')}
+                            </div>
+                          );
+                        })()}
+                        {/* Name and Company */}
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {contact.contact_person || contact.company_name || 'Unnamed'}
+                          </div>
+                          {contact.contact_person && contact.company_name && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              {contact.company_name}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 px-6 text-gray-700">
@@ -463,7 +547,7 @@ export default function ContactsPage() {
                         contact.status === 'Pending' ? 'bg-gray-200 text-gray-700' :
                         'bg-gray-200 text-gray-700'
                       }`}>
-                        {contact.status || 'Active'}
+                        {translateStatus(contact.status)}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -481,19 +565,9 @@ export default function ContactsPage() {
                               </span>
                             </button>
                             <button
-                              onClick={() => navigate(`/dashboard/contacts/${contact.contact_id}/message`)}
-                              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors group relative"
-                              title="Message"
-                            >
-                              <MessageSquare className="w-4 h-4" />
-                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                Message
-                              </span>
-                            </button>
-                            <button
                               onClick={() => openEditModal(contact)}
                               className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors group relative"
-                              title="Edit"
+                              title={t('common.edit')}
                             >
                               <Edit className="w-4 h-4" />
                               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
@@ -546,40 +620,40 @@ export default function ContactsPage() {
 
       {filteredContacts.length > 0 && (
         <div className="mt-4 text-sm text-gray-600 text-center">
-          Showing {filteredContacts.length} of {contacts.length} customers
+          {t('customers.showing', { count: filteredContacts.length, total: contacts.length })}
         </div>
       )}
 
       {/* Add/Edit Customer Modal */}
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingContact ? 'Edit Customer' : 'Add New Customer'}
+        title={editingContact ? t('customers.editCustomer') : t('customers.addNew')}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name & Company */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Name <span className="text-red-500">*</span>
+                {t('customerForm.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="contact_person"
                 value={formData.contact_person}
                 onChange={handleChange}
-                placeholder="Full name"
+                placeholder={t('customerForm.fullName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Company</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.company')}</label>
               <input
                 type="text"
                 name="company_name"
                 value={formData.company_name}
                 onChange={handleChange}
-                placeholder="Company name"
+                placeholder={t('customerForm.companyName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -589,7 +663,7 @@ export default function ContactsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Mailbox # <span className="text-red-500">*</span>
+                {t('customerForm.mailboxNumber')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -602,16 +676,16 @@ export default function ContactsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Preferred Language</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.languagePreference')}</label>
               <select
                 name="language_preference"
                 value={formData.language_preference}
                 onChange={handleChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="English">English</option>
-                <option value="Chinese">Chinese</option>
-                <option value="Both">Both</option>
+                <option value="English">{t('languageOptions.english')}</option>
+                <option value="Chinese">{t('languageOptions.chinese')}</option>
+                <option value="Both">{t('languageOptions.both')}</option>
               </select>
             </div>
           </div>
@@ -619,7 +693,7 @@ export default function ContactsPage() {
           {/* Email & Phone */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.email')}</label>
               <input
                 type="email"
                 name="email"
@@ -630,7 +704,7 @@ export default function ContactsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Phone</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.phone')}</label>
               <input
                 type="tel"
                 name="phone_number"
@@ -646,7 +720,7 @@ export default function ContactsPage() {
           {/* Unit & Service Tier */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Unit #</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.unitNumber')}</label>
               <input
                 type="text"
                 name="unit_number"
@@ -657,7 +731,7 @@ export default function ContactsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Service Tier</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.serviceTier')}</label>
               <select
                 name="service_tier"
                 value={formData.service_tier}
@@ -672,17 +746,47 @@ export default function ContactsPage() {
 
           {/* Customer Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Customer Status</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.status')}</label>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="PENDING">Pending</option>
-              <option value="Active">Active</option>
-              <option value="No">Archived</option>
+              <option value="PENDING">{t('customerStatus.pending')}</option>
+              <option value="Active">{t('customerStatus.active')}</option>
+              <option value="No">{t('customerStatus.archived')}</option>
             </select>
+          </div>
+
+          {/* Display Name Preference */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              {t('customerForm.displayNamePreference')}
+              <span className="text-xs text-gray-500 ml-2 font-normal">
+                {t('customerForm.displayNameHelp')}
+              </span>
+            </label>
+            <select
+              name="display_name_preference"
+              value={formData.display_name_preference}
+              onChange={handleChange}
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="both">{t('customerForm.displayBoth')}</option>
+              <option value="company">{t('customerForm.displayCompany')}</option>
+              <option value="person">{t('customerForm.displayPerson')}</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.display_name_preference === 'company' && formData.company_name && `Will show: "${formData.company_name}"`}
+              {formData.display_name_preference === 'company' && !formData.company_name && 'Will show company name (enter company name above)'}
+              {formData.display_name_preference === 'person' && formData.contact_person && `Will show: "${formData.contact_person}"`}
+              {formData.display_name_preference === 'person' && !formData.contact_person && 'Will show person name (enter name above)'}
+              {(formData.display_name_preference === 'both' || !formData.display_name_preference) && formData.company_name && formData.contact_person &&
+                `Will show: "${formData.company_name} - ${formData.contact_person}"`}
+              {(formData.display_name_preference === 'both' || !formData.display_name_preference) && (!formData.company_name || !formData.contact_person) &&
+                t('customerForm.showsBothNames')}
+            </p>
           </div>
 
           {/* Action Buttons */}
@@ -693,18 +797,25 @@ export default function ContactsPage() {
               disabled={saving}
               className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg font-medium transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving...' : (editingContact ? 'Update Customer' : 'Save Customer')}
+              {saving ? t('common.saving') : (editingContact ? t('customers.editCustomer') : t('customers.saveCustomer'))}
             </button>
           </div>
         </form>
       </Modal>
+
+      {/* Bulk Email Modal */}
+      <BulkEmailModal
+        isOpen={isBulkEmailModalOpen}
+        onClose={() => setIsBulkEmailModalOpen(false)}
+        contacts={filteredContacts}
+      />
     </div>
   );
 }

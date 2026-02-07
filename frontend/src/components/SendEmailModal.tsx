@@ -3,6 +3,8 @@ import { X, Send, Loader2, Mail, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api-client';
 import toast from 'react-hot-toast';
+import { formatNYDateDisplay } from '../utils/timezone.ts';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface MailItem {
   mail_item_id: string;
@@ -13,6 +15,7 @@ interface MailItem {
   tracking_number?: string;
   notification_count?: number;
   last_notified?: string;
+  contact_id?: string;
   contacts?: {
     contact_id?: string;
     contact_person?: string;
@@ -20,6 +23,10 @@ interface MailItem {
     mailbox_number?: string;
     email?: string;
     phone_number?: string;
+  };
+  packageFee?: {
+    fee_amount?: number;
+    fee_status?: string;
   };
 }
 
@@ -35,16 +42,29 @@ interface SendEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
   mailItem: MailItem;
+  bulkMailItems?: MailItem[]; // For bulk notifications (multiple items)
   onSuccess: () => void;
   suggestedTemplateType?: string;
 }
 
-export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, suggestedTemplateType }: SendEmailModalProps) {
+export default function SendEmailModal({ isOpen, onClose, mailItem, bulkMailItems = [], onSuccess, suggestedTemplateType }: SendEmailModalProps) {
+  const { t } = useLanguage();
+  // Determine if we're in bulk mode (multiple items)
+  const isBulkMode = bulkMailItems.length > 1;
+  // Sum up quantities instead of counting entries
+  const totalItems = isBulkMode
+    ? bulkMailItems.reduce((sum, i) => sum + (i.quantity || 1), 0)
+    : (mailItem?.quantity || 1);
+  const packages = isBulkMode ? bulkMailItems.filter(i => i.item_type === 'Package' || i.item_type === 'Large Package') : [];
+  const letters = isBulkMode ? bulkMailItems.filter(i => i.item_type === 'Letter' || i.item_type === 'Certified Mail') : [];
+  const packageCount = packages.reduce((sum, i) => sum + (i.quantity || 1), 0);
+  const letterCount = letters.reduce((sum, i) => sum + (i.quantity || 1), 0);
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [sentBy, setSentBy] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
@@ -76,7 +96,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
   const previewTemplate = useCallback((template: Template) => {
     const customerName = mailItem.contacts?.contact_person || mailItem.contacts?.company_name || 'Customer';
     const mailboxNumber = mailItem.contacts?.mailbox_number || 'N/A';
-    const receivedDate = new Date(mailItem.received_date).toLocaleDateString('en-US', {
+    const receivedDate = formatNYDateDisplay(mailItem.received_date, {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -84,6 +104,53 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
 
     let subjectPreview = template.subject_line || 'Mail Notification';
     let messagePreview = template.message_body || '';
+
+    // Calculate bulk item statistics if we have bulk items (sum quantities, not entries)
+    const itemsToUse = bulkMailItems.length > 0 ? bulkMailItems : [mailItem];
+    const pkgCount = itemsToUse.filter(i => i.item_type === 'Package' || i.item_type === 'Large Package').reduce((sum, i) => sum + (i.quantity || 1), 0);
+    const letterCountPreview = itemsToUse.filter(i => i.item_type === 'Letter' || i.item_type === 'Certified Mail').reduce((sum, i) => sum + (i.quantity || 1), 0);
+    const totalCount = itemsToUse.reduce((sum, i) => sum + (i.quantity || 1), 0);
+    
+    // Calculate oldest item in days
+    const now = new Date();
+    const oldestDays = Math.max(...itemsToUse.map(item => {
+      const received = new Date(item.received_date);
+      return Math.floor((now.getTime() - received.getTime()) / (1000 * 60 * 60 * 24));
+    }));
+
+    // Calculate total fees from packages
+    const totalFees = itemsToUse.reduce((sum, item) => {
+      if (item.packageFee && item.packageFee.fee_status === 'pending') {
+        return sum + (item.packageFee.fee_amount || 0);
+      }
+      return sum;
+    }, 0);
+
+    // Build item summary
+    let itemSummary = '';
+    let itemSummaryChinese = '';
+    if (pkgCount > 0) {
+      itemSummary += `• ${pkgCount} package${pkgCount > 1 ? 's' : ''}`;
+      itemSummaryChinese += `• ${pkgCount} 个包裹`;
+      if (totalFees > 0) {
+        itemSummary += ` ($${totalFees.toFixed(2)} in storage fees)`;
+        itemSummaryChinese += `（存储费：$${totalFees.toFixed(2)}）`;
+      }
+      itemSummary += '\n';
+      itemSummaryChinese += '\n';
+    }
+    if (letterCountPreview > 0) {
+      itemSummary += `• ${letterCountPreview} letter${letterCountPreview > 1 ? 's' : ''}`;
+      itemSummaryChinese += `• ${letterCountPreview} 封信件`;
+    }
+
+    // Build fee summary
+    let feeSummary = '';
+    let feeSummaryChinese = '';
+    if (totalFees > 0) {
+      feeSummary = `• Storage fees: $${totalFees.toFixed(2)}`;
+      feeSummaryChinese = `• 存储费用：$${totalFees.toFixed(2)}`;
+    }
 
     const replacements: Record<string, string> = {
       '{Name}': customerName,
@@ -98,16 +165,26 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
       '{{mailbox_number}}': mailboxNumber,
       '{{quantity}}': mailItem.quantity?.toString() || '1',
       '{{tracking_number}}': mailItem.tracking_number || 'N/A',
+      // Bulk notification variables
+      '{TotalItems}': `${totalCount} ${totalCount === 1 ? 'item' : 'items'}`,
+      '{TotalPackages}': `${pkgCount} ${pkgCount === 1 ? 'package' : 'packages'}`,
+      '{TotalLetters}': `${letterCountPreview} ${letterCountPreview === 1 ? 'letter' : 'letters'}`,
+      '{OldestDays}': oldestDays.toString(),
+      '{ItemSummary}': itemSummary.trim(),
+      '{ItemSummaryChinese}': itemSummaryChinese.trim(),
+      '{FeeSummary}': feeSummary,
+      '{FeeSummaryChinese}': feeSummaryChinese,
+      '{TotalFees}': `$${totalFees.toFixed(2)}`,
     };
 
     Object.entries(replacements).forEach(([key, value]) => {
-      subjectPreview = subjectPreview.replace(new RegExp(key, 'g'), value);
-      messagePreview = messagePreview.replace(new RegExp(key, 'g'), value);
+      subjectPreview = subjectPreview.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+      messagePreview = messagePreview.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
     });
 
     setSubject(subjectPreview);
     setMessage(messagePreview);
-  }, [mailItem.contacts?.contact_person, mailItem.contacts?.company_name, mailItem.contacts?.mailbox_number, mailItem.item_type, mailItem.received_date, mailItem.quantity, mailItem.tracking_number]);
+  }, [mailItem, bulkMailItems]);
 
   const loadTemplates = useCallback(async () => {
     setLoadingTemplates(true);
@@ -154,18 +231,26 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
       }
     } catch (error) {
       console.error('Error loading templates:', error);
-      toast.error('Failed to load email templates');
+      toast.error(t('toast.failedToLoadTemplates'));
     } finally {
       setLoadingTemplates(false);
     }
-  }, [mailItem.notification_count, previewTemplate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mailItem.notification_count, suggestedTemplateType]); // Removed previewTemplate to avoid infinite loop
 
   useEffect(() => {
     if (isOpen) {
       void loadTemplates(); // Explicitly ignore the promise
       void loadLatestContactEmail(); // Explicitly ignore the promise
+    } else {
+      // Reset form when modal closes
+      setSentBy('');
+      setSubject('');
+      setMessage('');
+      setSelectedTemplateId('');
     }
-  }, [isOpen, suggestedTemplateType, loadTemplates, loadLatestContactEmail]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, suggestedTemplateType]); // Only trigger on isOpen/suggestedTemplateType changes
 
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -177,7 +262,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
 
   const handleSend = async () => {
     if (!currentEmail) {
-      toast.error('This customer does not have an email address on file');
+      toast.error(t('toast.noEmailOnFile'));
       return;
     }
 
@@ -186,16 +271,34 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
       return;
     }
 
+    if (!sentBy.trim()) {
+      toast.error(t('toast.selectSender'));
+      return;
+    }
+
     setLoading(true);
     try {
-      await api.emails.sendWithTemplate({
-        contact_id: mailItem.contacts?.contact_id || '',
-        template_id: selectedTemplateId,
-        mail_item_id: mailItem.mail_item_id,
-        message_type: templates.find((t: Template) => t.template_id === selectedTemplateId)?.template_type || 'Initial'
-      });
-
-      toast.success(`Email sent to ${currentEmail}`);
+      if (isBulkMode) {
+        // Use bulk API for multiple items
+        const mailItemIds = bulkMailItems.map(item => item.mail_item_id);
+        await api.emails.sendBulk({
+          contact_id: mailItem.contacts?.contact_id || '',
+          template_id: selectedTemplateId,
+          mail_item_ids: mailItemIds,
+          sent_by: sentBy.trim()
+        });
+        toast.success(`Summary email sent for ${totalItems} items to ${currentEmail}`);
+      } else {
+        // Single item notification
+        await api.emails.sendWithTemplate({
+          contact_id: mailItem.contacts?.contact_id || '',
+          template_id: selectedTemplateId,
+          mail_item_id: mailItem.mail_item_id,
+          message_type: templates.find((t: Template) => t.template_id === selectedTemplateId)?.template_type || 'Initial',
+          sent_by: sentBy.trim()
+        });
+        toast.success(`Email sent to ${currentEmail} by ${sentBy}`);
+      }
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -248,8 +351,63 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
           </button>
         </div>
 
-        {/* Notification History Banner - Compact */}
-        {(mailItem.notification_count ?? 0) > 0 && (
+        {/* Bulk Mode Banner - Redesigned for Better UX */}
+        {isBulkMode && (
+          <div className="mx-4 mt-4 mb-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <Mail className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-purple-900 mb-2">
+                  Bulk Notification - {totalItems} Items
+                </h4>
+                <div className="flex items-center gap-4 text-sm mb-3">
+                  {packageCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-gray-700">
+                      <span className="text-base">📦</span>
+                      <span className="font-medium">{packageCount}</span>
+                      <span className="text-gray-600">package{packageCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                  {letterCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-gray-700">
+                      <span className="text-base">📧</span>
+                      <span className="font-medium">{letterCount}</span>
+                      <span className="text-gray-600">letter{letterCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                  {(() => {
+                    // Calculate total fees from bulk items
+                    const totalFees = bulkMailItems.reduce((sum, item) => {
+                      if (item.packageFee && typeof item.packageFee === 'number') {
+                        return sum + item.packageFee;
+                      }
+                      return sum;
+                    }, 0);
+                    
+                    return totalFees > 0 ? (
+                      <div className="flex items-center gap-1.5 text-orange-700 font-medium">
+                        <span>💰</span>
+                        <span>${totalFees.toFixed(2)}</span>
+                        <span className="text-gray-600 font-normal">fees</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-purple-200">
+                  <span className="text-purple-600 font-bold">✓</span>
+                  <span className="text-sm text-gray-700">
+                    All {totalItems} items will be marked as <span className="font-semibold text-purple-700">"Notified"</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notification History Banner - Compact (only for single item mode) */}
+        {!isBulkMode && (mailItem.notification_count ?? 0) > 0 && (
           <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2 text-sm">
             <span className="font-semibold text-amber-700">⚠️</span>
             <span className="text-amber-800">
@@ -318,8 +476,44 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
                   onChange={(e) => setSubject(e.target.value)}
                   className="w-full text-sm border-none focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-400"
                   disabled={loading}
-                  placeholder="Subject"
+                  placeholder={t('email.subjectPlaceholder')}
                 />
+              </div>
+
+              {/* Sent By Field - Toggle Buttons */}
+              <div className="px-4 py-3 bg-blue-50 border-t border-b border-blue-100">
+                <div className="flex items-center gap-3 mb-1">
+                  <label className="text-xs font-medium text-gray-600">Sent by:</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSentBy('Madison')}
+                      disabled={loading}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        sentBy === 'Madison'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      } disabled:opacity-50`}
+                    >
+                      Madison
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSentBy('Merlin')}
+                      disabled={loading}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        sentBy === 'Merlin'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      } disabled:opacity-50`}
+                    >
+                      Merlin
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 ml-[68px]">
+                  💡 For internal tracking only - not shown to the customer
+                </p>
               </div>
 
               {/* Message Body - Gmail style */}
@@ -329,7 +523,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
                   onChange={(e) => setMessage(e.target.value)}
                   className="w-full h-[280px] text-sm border-none focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-400 resize-none"
                   disabled={loading}
-                  placeholder="Compose email..."
+                  placeholder={t('email.composePlaceholder')}
                 />
               </div>
 
@@ -346,7 +540,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
                   <div className="mt-2 space-y-1 text-xs text-gray-600 pl-5">
                     <div>Mailbox: {mailItem.contacts?.mailbox_number || 'N/A'}</div>
                     <div>Type: {mailItem.item_type} (Qty: {mailItem.quantity || 1})</div>
-                    <div>Received: {new Date(mailItem.received_date).toLocaleDateString()}</div>
+                    <div>Received: {formatNYDateDisplay(mailItem.received_date)}</div>
                     {mailItem.tracking_number && <div>Tracking: {mailItem.tracking_number}</div>}
                   </div>
                 )}
@@ -379,7 +573,7 @@ export default function SendEmailModal({ isOpen, onClose, mailItem, onSuccess, s
             <div className="flex items-center gap-3 text-xs text-gray-500">
               {(mailItem.notification_count ?? 0) > 0 && (
                 <span>
-                  {mailItem.notification_count === 1 ? 'Reminder' : mailItem.notification_count === 2 ? 'Final Notice' : 'Follow-up'}
+                  {mailItem.notification_count === 1 ? t('notificationTypes.reminder') : mailItem.notification_count === 2 ? t('notificationTypes.finalNotice') : t('notificationTypes.followUp')}
                 </span>
               )}
             </div>

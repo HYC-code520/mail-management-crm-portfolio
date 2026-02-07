@@ -4,20 +4,16 @@ import { Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase.ts';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext.tsx';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 export default function SignInPage() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  // Redirect if already logged in
-  if (user) {
-    navigate('/dashboard');
-    return null;
-  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -32,7 +28,7 @@ export default function SignInPage() {
 
         if (error) throw error;
 
-        toast.success('Sign up successful! Please check your email to confirm your account.');
+        toast.success(t('auth.signUpSuccess'));
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -41,36 +37,78 @@ export default function SignInPage() {
 
         if (error) throw error;
 
-        toast.success('Signed in successfully!');
+        toast.success(t('auth.signInSuccess'));
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred');
+      toast.error(error.message || t('common.error'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
+      <div className="max-w-2xl w-full">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 text-4xl font-bold text-brand">
             <Mail className="w-10 h-10" />
-            <span>Mei Way</span>
+            <span>Mei Way Mail Plus</span>
           </div>
-          <p className="text-gray-600 mt-2">
-            {isSignUp ? 'Create your account' : 'Sign in to your account'}
+          <p className="text-gray-600 mt-2 text-lg">
+            {t('auth.tagline')}
           </p>
+        </div>
+
+        {/* App Description */}
+        <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('auth.welcomeTitle')}</h2>
+          <p className="text-gray-700 mb-4">
+            {t('auth.welcomeSubtitle')}
+          </p>
+          
+          <div className="space-y-3 text-gray-700">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
+              <p><strong>{t('auth.services.mailbox')}:</strong> {t('auth.services.mailboxDesc')}</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
+              <p><strong>{t('auth.services.virtual')}:</strong> {t('auth.services.virtualDesc')}</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
+              <p><strong>{t('auth.services.shipping')}:</strong> {t('auth.services.shippingDesc')}</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
+              <p><strong>{t('auth.services.business')}:</strong> {t('auth.services.businessDesc')}</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-brand rounded-full mt-2 flex-shrink-0"></div>
+              <p><strong>{t('auth.services.notifications')}:</strong> {t('auth.services.notificationsDesc')}</p>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm text-gray-600">
+              <strong>{t('auth.location')}:</strong> 37-02 Main Street, Unit B1, Flushing, NY 11354<br/>
+              <strong>{t('auth.phone')}:</strong> <a href="tel:646-535-0363" className="text-brand hover:text-brand-hover">646-535-0363</a><br/>
+              <strong>{t('common.email')}:</strong> <a href="mailto:info@meiwaymail.com" className="text-brand hover:text-brand-hover">info@meiwaymail.com</a>
+            </p>
+          </div>
         </div>
 
         {/* Sign In/Up Form */}
         <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+            {isSignUp ? t('auth.staffRegistration') : t('auth.staffSignIn')}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+                {t('common.email')}
               </label>
               <input
                 id="email"
@@ -85,7 +123,7 @@ export default function SignInPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -104,7 +142,7 @@ export default function SignInPage() {
               disabled={loading}
               className="w-full bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {loading ? t('common.loading') : isSignUp ? t('auth.signUp') : t('auth.signIn')}
             </button>
           </form>
 
@@ -114,10 +152,21 @@ export default function SignInPage() {
               className="text-sm text-brand hover:text-brand-hover transition-colors"
             >
               {isSignUp
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"}
+                ? t('auth.alreadyHaveAccount')
+                : t('auth.dontHaveAccount')}
             </button>
           </div>
+        </div>
+
+        {/* Footer Links */}
+        <div className="mt-6 text-center text-sm text-gray-600">
+          <a href="/privacy-policy" className="text-brand hover:text-brand-hover transition-colors">
+            {t('auth.privacyPolicy')}
+          </a>
+          <span className="mx-2">·</span>
+          <a href="/terms-of-service" className="text-brand hover:text-brand-hover transition-colors">
+            {t('auth.termsOfService')}
+          </a>
         </div>
       </div>
     </div>

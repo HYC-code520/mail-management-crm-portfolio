@@ -1,0 +1,665 @@
+14. UPKEEP & MAINTENANCE
+
+=============================================================================
+OVERVIEW
+=============================================================================
+
+This section outlines the regular tasks and monitoring needed to keep your Mail Management System running smoothly.
+
+Most of these tasks are simple checks that take 5-15 minutes. They help you:
+- Avoid unexpected service interruptions
+- Catch problems before they become critical
+- Stay within free tier limits
+- Keep customer data secure
+
+=============================================================================
+MONTHLY MAINTENANCE CHECKLIST
+=============================================================================
+
+TASK 1: Check Supabase Database Usage
+
+Why: Free tier has 500MB limit. If exceeded, app may stop working.
+
+How:
+1. Log into Supabase Dashboard: https://supabase.com
+2. Select your project
+3. Go to Settings → Database
+4. Check "Database Size"
+5. Look at the usage bar
+
+What to do:
+- Under 400MB (80%): ✅ You're fine
+- 400-480MB (80-96%): ⚠️ Start planning to upgrade to Pro ($25/month)
+- Over 480MB (96%+): 🚨 Upgrade to Pro immediately to avoid downtime
+
+Current usage as of handoff: 27MB (5.4%)
+Estimated time until limit: 12-18 months at current growth rate
+
+---
+
+TASK 2: Review Unclaimed Mail (Follow-Ups)
+
+Why: Mail sitting too long costs storage fees and clutters your system.
+
+How:
+1. Log into your app
+2. Click "Follow-Ups" in left menu
+3. Review mail that's been waiting 30+ days
+
+What to do:
+- Send reminder emails to customers
+- Contact customers who haven't responded
+- Consider returning mail after 60-90 days per your business policy
+
+Frequency: Check weekly or bi-weekly during busy seasons
+
+---
+
+TASK 3: Verify Email Notifications Are Working
+
+Why: Customers need to know when mail arrives.
+
+How:
+1. Log a test mail item for yourself
+2. Check "Send notification" box
+3. Verify you receive the email within 2-3 minutes
+4. Check spam folder if you don't see it
+
+What to do if emails aren't sending:
+- Check Gmail hasn't hit 500 emails/day limit (resets at midnight Pacific Time)
+- Verify OAuth connection in app Settings
+- Check Render backend is running (not sleeping)
+- Contact developer if issue persists
+
+---
+
+TASK 4: Export Database Backup
+
+Why: Extra safety net beyond Supabase's automatic backups.
+
+How:
+1. Go to Supabase Dashboard → Table Editor
+2. For each important table:
+   - contacts
+   - mail_items
+   - package_fees
+   - outreach_messages
+   - message_templates
+3. Click three-dot menu → Export → CSV
+4. Save to external drive or encrypted cloud storage
+
+Frequency: Monthly, or before major changes
+
+Storage location: [Document where you keep these - external drive, encrypted folder, etc.]
+
+---
+
+TASK 5: Review User Access
+
+Why: Remove access for staff who left or no longer need it.
+
+How:
+1. Log into Supabase Dashboard
+2. Go to Authentication → Users
+3. Review list of active users
+4. Check GitHub collaborators at: https://github.com/mwmailplus-boop/mail-management-system/settings/access
+
+What to do:
+- Remove users who left the company
+- Disable accounts for staff on long-term leave
+- Verify all active users still need access
+
+Frequency: Monthly or when staff changes occur
+
+=============================================================================
+QUARTERLY MAINTENANCE CHECKLIST
+=============================================================================
+
+TASK 1: Review Service Costs
+
+Why: Stay aware of what you're spending and plan for future upgrades.
+
+Current costs (as of handoff):
+- Vercel: $0/month (free tier)
+- Render: $0/month (free tier, sleeps after 15 min inactivity)
+- Supabase: $0/month (free tier)
+- Google Cloud: $0/month (under free tier limits)
+- Gmail: $0/month (500 emails/day limit)
+- GitHub: $0/month (free tier)
+**Total: $0/month**
+
+How to check:
+1. Vercel: Dashboard → Settings → Billing
+2. Render: Dashboard → Billing
+3. Supabase: Dashboard → Settings → Billing
+4. Google Cloud: https://console.cloud.google.com → Billing
+
+What to watch for:
+- Unexpected charges (could indicate compromised API keys)
+- Usage approaching free tier limits
+- Emails from services about billing issues
+
+When to consider upgrading:
+- Render ($7/month): If backend sleeping is causing issues
+- Supabase ($25/month): When approaching 400MB database size
+- Gmail/Google Workspace ($6/user/month): If you need to send 500+ emails/day
+
+---
+
+TASK 2: Update Passwords
+
+Why: Regular password rotation improves security.
+
+How:
+1. Update your own app password (Settings → Change Password)
+2. Update GitHub password
+3. Rotate any shared team passwords
+
+Frequency: Every 3-6 months
+
+Don't forget to:
+- Update passwords in your password manager
+- Notify your developer if you change hosting platform passwords
+
+---
+
+TASK 3: Review System Performance
+
+Why: Catch issues before customers complain.
+
+How:
+1. Log into the app
+2. Test each major feature:
+   - Login
+   - Scan/log new mail
+   - Send notification
+   - Mark as picked up
+   - View reports
+   - Search for customers/mail
+3. Note any slowness, errors, or issues
+
+What to do if you find problems:
+- Document the issue (what happened, when, what you were doing)
+- Try again in 10 minutes (Render backend may have been sleeping)
+- Contact developer if issue persists: ariel.chen@pursuit.org
+
+---
+
+TASK 4: Export Quarterly Reports
+
+Why: Good for accounting, business analysis, and tax purposes.
+
+How:
+1. Go to Dashboard
+2. Set date filter to "Last 3 months"
+3. Take screenshots or export data
+4. Save to your business records folder
+
+What to export:
+- Total mail received
+- Storage fees collected
+- Outstanding fees
+- Customer activity
+- Mail pickup statistics
+
+=============================================================================
+WHAT TO MONITOR (ONGOING)
+=============================================================================
+
+Service Status Indicators
+
+Your app depends on these external services. Occasionally, they have outages.
+
+How to check status:
+- Vercel: https://www.vercel-status.com
+- Render: https://status.render.com
+- Supabase: https://status.supabase.com
+- GitHub: https://www.githubstatus.com
+
+If a service is down:
+- Check their status page
+- Wait 15-30 minutes (most outages resolve quickly)
+- Your app will automatically recover when service comes back
+- No action needed from you unless outage lasts 1+ hour
+
+---
+
+Critical Limits to Watch
+
+1. Gmail: 500 emails per day
+   - Limit resets at midnight Pacific Time
+   - If hit, emails will fail until reset
+   - Upgrade to Google Workspace ($6/user/month) for 2,000/day
+
+2. Supabase Database: 500MB storage
+   - Check monthly (see Monthly Task 1)
+   - Upgrade to Pro at 400MB
+
+3. Render Backend: Sleeps after 15 minutes inactivity
+   - First load after sleep takes 30-60 seconds
+   - Not an error, just how free tier works
+   - Upgrade to $7/month for 24/7 availability
+
+4. Vercel Bandwidth: 100GB/month
+   - Unlikely to hit unless you have thousands of daily users
+   - Check in Vercel Dashboard → Usage
+
+---
+
+Signs Something Is Wrong
+
+Contact developer (ariel.chen@pursuit.org) if you notice:
+
+🚨 **Critical (contact immediately):**
+- App won't load at all
+- Can't log in (and you know password is correct)
+- Customer data appears missing or corrupted
+- Notifications stopped sending for 24+ hours
+- Error messages appearing for all users
+
+⚠️ **Important (contact within 24-48 hours):**
+- Slow performance that persists after refresh
+- One feature not working (others work fine)
+- Error messages appearing intermittently
+- Unusual activity in user logs
+
+✅ **Normal (not urgent):**
+- First page load takes 30-60 seconds (Render sleeping)
+- Minor visual glitches
+- Feature requests or improvements
+- Questions about how to use something
+
+=============================================================================
+WHAT COULD BREAK THE SYSTEM
+=============================================================================
+
+Understanding what could go wrong helps you prevent issues.
+
+Scenario 1: Database Runs Out of Space
+
+Cause: Exceeding 500MB limit on free tier
+Symptoms: Can't log new mail, errors when loading pages
+Prevention: Check database size monthly (see Monthly Task 1)
+Fix: Upgrade to Supabase Pro ($25/month) immediately
+
+---
+
+Scenario 2: Gmail Hits Daily Email Limit
+
+Cause: Sending 500+ emails in one day
+Symptoms: "Failed to send notification" errors
+Prevention: Monitor email volume, upgrade if regularly approaching limit
+Fix: Wait until midnight Pacific Time for reset, or upgrade to Google Workspace
+
+---
+
+Scenario 3: API Keys Get Compromised
+
+Cause: Keys accidentally shared publicly (e.g., posted to GitHub)
+Symptoms: Unexpected charges, unauthorized access
+Prevention: Never commit keys to GitHub, keep environment variables private
+Fix: Immediately revoke all keys, generate new ones, update in Vercel/Render
+
+---
+
+Scenario 4: Backend Service Sleeping (Render)
+
+Cause: No activity for 15 minutes (free tier behavior)
+Symptoms: First load very slow (30-60 seconds), then fast
+Prevention: Upgrade to Render paid plan ($7/month)
+Fix: Not an error, just wait for first load to "wake up" the service
+
+---
+
+Scenario 5: Password or 2FA Access Lost
+
+Cause: Forgot password, lost 2FA backup codes, phone stolen
+Symptoms: Can't log into critical services
+Prevention: Save 2FA backup codes, use password manager
+Fix: Contact service support (GitHub, Vercel, etc.) - recovery takes days
+
+---
+
+Scenario 6: Hosting Service Outage
+
+Cause: Vercel, Render, or Supabase has temporary downtime
+Symptoms: App won't load, shows errors
+Prevention: None (external issue)
+Fix: Wait for service to recover (usually 15-30 minutes)
+
+=============================================================================
+KNOWN LIMITATIONS
+=============================================================================
+
+Your system has some built-in limitations. These are normal and expected.
+
+Limitation 1: Render Backend Sleeps After 15 Minutes
+
+What it means:
+- If nobody uses the app for 15 minutes, the backend "goes to sleep"
+- First person to load the app after that wait 30-60 seconds
+- After that, app is fast again
+
+Why this happens:
+- Free tier Render limitation
+- Not an error or bug
+
+Workaround:
+- Upgrade to Render paid plan ($7/month) for 24/7 uptime
+- Or just accept the occasional 30-60 second wait
+
+---
+
+Limitation 2: Gmail 500 Emails Per Day
+
+What it means:
+- Can send maximum 500 notification emails per day
+- Limit resets at midnight Pacific Time
+
+Why this happens:
+- Free Gmail account restriction
+
+What to do if you hit the limit:
+- Wait until midnight for reset
+- Batch notifications (don't send multiple per customer per day)
+- Upgrade to Google Workspace ($6/user/month) for 2,000/day limit
+
+---
+
+Limitation 3: Supabase 500MB Database Limit
+
+What it means:
+- Can store up to 500MB of data (customers, mail records, fees, etc.)
+- Currently using 27MB (5.4%), so plenty of room
+
+Why this happens:
+- Free tier Supabase restriction
+
+Timeline:
+- Estimated 12-18 months before reaching limit at current growth
+- Upgrade to Pro ($25/month) when you hit 400MB
+
+---
+
+Limitation 4: No Automatic Payment Processing
+
+What it means:
+- System calculates storage fees automatically
+- But customers can't pay online through the app
+- You must collect payment manually (cash, check, etc.)
+- Then mark fee as "Paid" in the system
+
+Why:
+- Adding payment processing (Stripe, PayPal) would require:
+  * Additional development work
+  * Monthly fees
+  * PCI compliance
+  * Legal/tax considerations
+
+Workaround:
+- Continue manual payment collection
+- Or request paid development to add payment processing
+
+---
+
+Limitation 5: AI Scanning Not 100% Accurate
+
+What it means:
+- Camera scanning uses AI to read mail labels
+- Works well with clear, legible labels
+- May struggle with:
+  * Handwritten addresses
+  * Damaged or torn labels
+  * Poor lighting
+  * Blurry photos
+
+Why:
+- AI technology limitation (even the best OCR isn't perfect)
+
+Workaround:
+- Always review AI-matched customer before submitting
+- Use manual entry for unclear labels
+- Take photo in good lighting
+
+---
+
+Limitation 6: Chinese Translation Is Optional
+
+What it means:
+- App supports Chinese language toggle (i18n)
+- But translation quality may vary
+- Some technical terms may appear in English
+
+Why:
+- AWS Translate is optional (disabled by default to save costs)
+- Manual translations can be updated by developer
+
+What to do:
+- Use English as primary language
+- Enable Chinese if needed for bilingual staff
+- Contact developer to improve specific translations
+
+=============================================================================
+PAID SUPPORT BOUNDARIES
+=============================================================================
+
+What's Included (Free)
+
+After handoff, you receive:
+- All documentation and guides
+- Access to this handoff document
+- Existing tutorials and training materials
+- Emergency contact information
+
+These are provided once at handoff, with no ongoing cost.
+
+---
+
+What Requires Paid Support
+
+The following require paid hourly support at $[XX]/hour:
+
+NEW FEATURES:
+- Adding payment processing (Stripe, PayPal, etc.)
+- Adding new notification types (SMS, WhatsApp)
+- Creating new reports or analytics
+- Integrating with other software
+- Custom workflows or automations
+
+BUG FIXES & TROUBLESHOOTING:
+- Investigating errors or issues
+- Fixing broken features
+- Performance optimization
+- Security patches
+
+CHANGES & UPDATES:
+- Modifying existing features
+- Changing email templates
+- Updating styling or branding
+- Adding new user roles or permissions
+
+TRAINING & CONSULTATION:
+- Training new staff members
+- Answering technical questions
+- Code reviews or audits
+- Architecture or scaling advice
+
+MAINTENANCE:
+- Upgrading dependencies
+- Migrating to paid tiers
+- Setting up staging environments
+- Optimizing database
+
+---
+
+Support Terms
+
+Contact: Ariel Chen
+Email: ariel.chen@pursuit.org
+Rate: $[XX] per hour (billed in 15-minute increments)
+Response time: 1-2 business days for non-emergencies
+Emergency response: [XX] hours (critical issues only)
+
+Invoicing:
+- Hourly work requires pre-approval
+- Estimate provided before work begins
+- Invoice sent after work is completed
+- Payment due within [XX] days
+
+Retainer option (optional):
+- $[XXX]/month for [X] hours included support
+- Unused hours roll over for [X] months
+- Priority response time
+
+---
+
+When to Contact Developer
+
+Contact for paid support when:
+- Something is broken and you can't fix it
+- You need a new feature
+- You want to change how something works
+- You're approaching service limits and need help upgrading
+- You're hiring a new developer and want a technical handover
+
+Before contacting, gather:
+- What you were trying to do
+- What happened instead
+- Any error messages (take screenshots)
+- When the issue started
+- What you've already tried
+
+=============================================================================
+SYSTEM HEALTH CHECKLIST (QUICK REFERENCE)
+=============================================================================
+
+Use this quick checklist to verify everything is running smoothly:
+
+[ ] App loads at: https://mail-management-system-taupe.vercel.app
+[ ] Can log in successfully
+[ ] Dashboard shows recent data
+[ ] Can log a test mail item
+[ ] Can send a test notification
+[ ] Supabase database under 400MB (check monthly)
+[ ] No unexpected billing charges
+[ ] All staff have appropriate access
+[ ] Backups saved this month
+[ ] No critical error messages
+
+If all boxes are checked: ✅ System is healthy!
+
+If any box fails: Review relevant section above or contact developer.
+
+=============================================================================
+ANNUAL REVIEW (ONCE PER YEAR)
+=============================================================================
+
+Once per year, schedule time to:
+
+1. Review this entire handoff document
+   - Update any outdated information
+   - Add new staff contact info
+   - Document any changes made during the year
+
+2. Export full database backup
+   - Download all tables as CSV
+   - Store on external drive (offline backup)
+
+3. Review service costs and ROI
+   - Calculate total costs for the year
+   - Calculate value (time saved, efficiency gained)
+   - Decide if any upgrades are worthwhile
+
+4. Plan for future improvements
+   - What features would help your business?
+   - What processes could be automated?
+   - Contact developer for estimates
+
+5. Security audit
+   - Review all user access
+   - Update all passwords
+   - Check for any suspicious activity
+   - Verify 2FA is enabled everywhere
+
+6. Documentation update
+   - Update tutorials if workflows changed
+   - Add new FAQs based on common questions
+   - Share with any new staff
+
+=============================================================================
+CONTACTS & RESOURCES
+=============================================================================
+
+Developer Support
+
+Name: Ariel Chen
+Email: ariel.chen@pursuit.org
+Response time: 1-2 business days
+Rate: $[XX]/hour
+Availability: [Your availability]
+
+---
+
+Service Support Links
+
+Vercel Support: https://vercel.com/help
+Render Support: support@render.com
+Supabase Support: support@supabase.io
+GitHub Support: https://support.github.com
+Google Cloud Support: https://cloud.google.com/support
+
+---
+
+Status Pages
+
+Vercel: https://www.vercel-status.com
+Render: https://status.render.com
+Supabase: https://status.supabase.com
+GitHub: https://www.githubstatus.com
+
+---
+
+Your Production URLs
+
+Frontend: https://mail-management-system-taupe.vercel.app
+Backend: https://mail-management-system-y4lx.onrender.com
+GitHub: https://github.com/mwmailplus-boop/mail-management-system
+
+---
+
+Documentation
+
+Main handoff document: [This document]
+User tutorials: [Link to Google Doc]
+GitHub guide: [Link to Google Doc]
+Environment variables: [Link to Google Doc - CONFIDENTIAL]
+
+=============================================================================
+FINAL NOTES
+=============================================================================
+
+Your Mail Management System is designed to run with minimal maintenance.
+
+The tasks in this section are simple checks and backups to ensure everything runs smoothly. Most monthly tasks take less than 30 minutes total.
+
+Key takeaways:
+✅ Check database usage monthly
+✅ Export backups monthly
+✅ Monitor service costs quarterly
+✅ Keep access lists up-to-date
+✅ Contact developer when you need help
+
+Your system is ready for long-term, independent operation!
+
+Questions about maintenance?
+Contact ariel.chen@pursuit.org
+
+=============================================================================
+
+Document: Section 14 - Upkeep & Maintenance
+Prepared for: Mei Way Mail Plus
+Prepared by: Ariel Chen
+Date: January 12, 2026
+Version: 1.0
+
+=============================================================================

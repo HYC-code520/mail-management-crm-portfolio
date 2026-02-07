@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Package, Search, ChevronRight, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Edit, Trash2, Bell, CheckCircle, FileText, Send, AlertTriangle, Eye, MoreVertical, Loader2 } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Package, Search, ChevronRight, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Edit, Trash2, CheckCircle, FileText, Send, AlertTriangle, Eye, MoreVertical, Loader2, HelpCircle } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal.tsx';
@@ -8,7 +8,10 @@ import QuickNotifyModal from '../components/QuickNotifyModal.tsx';
 import ActionModal from '../components/ActionModal.tsx';
 import SendEmailModal from '../components/SendEmailModal.tsx';
 import ActionHistorySection from '../components/ActionHistorySection.tsx';
-import { getTodayNY, getNYTimestamp } from '../utils/timezone.ts';
+import StatusSelect from '../components/StatusSelect.tsx';
+import { getTodayNY, extractNYDate, formatNYDateDisplay } from '../utils/timezone.ts';
+import { getCustomerDisplayName } from '../utils/customerDisplay';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface MailItem {
   mail_item_id: string;
@@ -26,6 +29,7 @@ interface MailItem {
     company_name?: string;
     mailbox_number?: string;
     unit_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both';
   };
 }
 
@@ -34,6 +38,7 @@ interface Contact {
   contact_person?: string;
   company_name?: string;
   mailbox_number?: string;
+  display_name_preference?: 'company' | 'person' | 'both';
 }
 
 interface ActionHistory {
@@ -47,19 +52,149 @@ interface ActionHistory {
   action_timestamp: string;
 }
 
+// Grouped mail items for same person, same day, same type
+interface GroupedMailItem {
+  groupKey: string;           // contact_id|date|item_type
+  contact: MailItem['contacts'];
+  contactId: string;
+  date: string;               // YYYY-MM-DD
+  itemType: string;
+  items: MailItem[];          // All individual items in this group
+  totalQuantity: number;
+  statuses: string[];         // Unique statuses
+  displayStatus: string;      // "Mixed" if different, otherwise the status
+  latestReceivedDate: string; // For sorting
+  hasDescription: boolean;
+}
+
+// Group mail items by contact + day + type
+function groupMailItems(items: MailItem[]): GroupedMailItem[] {
+  const groups = new Map<string, GroupedMailItem>();
+
+  for (const item of items) {
+    // Extract date (YYYY-MM-DD) from received_date
+    const date = item.received_date.split('T')[0];
+    const groupKey = `${item.contact_id}|${date}|${item.item_type}`;
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        groupKey,
+        contact: item.contacts,
+        contactId: item.contact_id,
+        date,
+        itemType: item.item_type,
+        items: [],
+        totalQuantity: 0,
+        statuses: [],
+        displayStatus: '',
+        latestReceivedDate: item.received_date,
+        hasDescription: false,
+      });
+    }
+
+    const group = groups.get(groupKey)!;
+    group.items.push(item);
+    group.totalQuantity += item.quantity || 1;
+    
+    if (!group.statuses.includes(item.status)) {
+      group.statuses.push(item.status);
+    }
+    
+    if (item.description) {
+      group.hasDescription = true;
+    }
+
+    // Track latest received date for sorting
+    if (item.received_date > group.latestReceivedDate) {
+      group.latestReceivedDate = item.received_date;
+    }
+  }
+
+  // Calculate display status for each group
+  for (const group of groups.values()) {
+    if (group.statuses.length === 1) {
+      group.displayStatus = group.statuses[0];
+    } else {
+      // Prioritize certain statuses for display
+      const priorityOrder = ['Picked Up', 'Notified', 'Received', 'Forwarded', 'Scanned & Sent', 'Abandoned'];
+      const sortedStatuses = group.statuses.sort((a, b) => 
+        priorityOrder.indexOf(a) - priorityOrder.indexOf(b)
+      );
+      group.displayStatus = `Mixed (${sortedStatuses.join(', ')})`;
+    }
+
+    // Sort items within group by received_date (newest first)
+    group.items.sort((a, b) => 
+      new Date(b.received_date).getTime() - new Date(a.received_date).getTime()
+    );
+  }
+
+  return Array.from(groups.values());
+}
+
 interface LogPageProps {
   embedded?: boolean;
   showAddForm?: boolean;
 }
 
+// Helper to translate item types to translation keys
+const getItemTypeKey = (itemType: string): string => {
+  const typeMap: Record<string, string> = {
+    'Letter': 'letter',
+    'Package': 'package',
+    'Large Package': 'largePackage',
+    'Certified Mail': 'certifiedMail'
+  };
+  return typeMap[itemType] || 'letter';
+};
+
+// Helper to translate status values to translation keys
+const getStatusKey = (status: string): string => {
+  const statusMap: Record<string, string> = {
+    'Received': 'received',
+    'Pending': 'pending',
+    'Notified': 'notified',
+    'Picked Up': 'pickedUp',
+    'Scanned Document': 'scannedDocument',
+    'Scanned': 'scanned',
+    'Forward': 'forward',
+    'Abandoned Package': 'abandonedPackage',
+    'Abandoned': 'abandoned',
+    'Ready for Pickup': 'readyForPickup',
+    'Resolved': 'resolved'
+  };
+  return statusMap[status] || 'received';
+};
+
+// Helper to get tooltip key for status
+const getStatusTooltipKey = (status: string): string => {
+  const tooltipMap: Record<string, string> = {
+    'Received': 'received',
+    'Pending': 'pending',
+    'Notified': 'notified',
+    'Picked Up': 'pickedUp',
+    'Scanned Document': 'scannedDocument',
+    'Scanned': 'scanned',
+    'Forward': 'forward',
+    'Abandoned Package': 'abandonedPackage',
+    'Abandoned': 'abandoned',
+    'Resolved': 'resolved'
+  };
+  return tooltipMap[status] || 'received';
+};
+
 export default function LogPage({ embedded = false, showAddForm = false }: LogPageProps) {
+  const { t, formatDate } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mailItems, setMailItems] = useState<MailItem[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [actionHistory, setActionHistory] = useState<Record<string, ActionHistory[]>>({});
+  const [loadingActionHistory, setLoadingActionHistory] = useState<Set<string>>(new Set()); // Track loading state per group
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [highlightedGroupKeys, setHighlightedGroupKeys] = useState<Set<string>>(new Set()); // Changed to Set for multiple highlights
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState('All Status');
@@ -67,13 +202,21 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('All Time');
   const [mailboxFilter, setMailboxFilter] = useState('All Mailboxes');
-  const [sortColumn, setSortColumn] = useState<'date' | 'status' | 'customer' | 'type' | 'quantity'>('date');
+  const [sortColumn, setSortColumn] = useState<'date' | 'status' | 'customer' | 'type' | 'quantity' | 'lastNotified'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isFilterExpanded, setIsFilterExpanded] = useState(true); // New state for filter panel
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // Status legend tooltip state
+  const [showStatusLegend, setShowStatusLegend] = useState(false);
   
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMailItem, setEditingMailItem] = useState<MailItem | null>(null);
+  const [editingGroupItems, setEditingGroupItems] = useState<MailItem[]>([]); // All items in the editing group
   const [saving, setSaving] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   
@@ -84,11 +227,13 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   // Send Email Modal states
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const [emailingMailItem, setEmailingMailItem] = useState<MailItem | null>(null);
+  const [emailGroupItems, setEmailGroupItems] = useState<MailItem[]>([]); // All items for bulk email
   
   // Action Modal states
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [actionModalType, setActionModalType] = useState<'picked_up' | 'forward' | 'scanned' | 'abandoned'>('picked_up');
   const [actionMailItem, setActionMailItem] = useState<MailItem | null>(null);
+  const [actionGroupItems, setActionGroupItems] = useState<MailItem[]>([]); // All items for bulk action
   
   // Form data
   const [formData, setFormData] = useState<{
@@ -122,15 +267,19 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   const [searchResults, setSearchResults] = useState<Contact[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [addingMail, setAddingMail] = useState(false);
+  const [loggedBy, setLoggedBy] = useState<string | null>(null); // NEW: Staff selection for logging mail
   
-  // Duplicate detection states
+  // Duplicate detection state
   const [existingTodayMail, setExistingTodayMail] = useState<MailItem | null>(null);
-  const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);
 
   useEffect(() => {
     loadMailItems();
     loadContacts();
   }, []);
+
+  // State to track pending jump after data refresh (used in useEffect after groupedItems is defined)
+  const [pendingJumpGroupKey, setPendingJumpGroupKey] = useState<string | null>(null);
+  const [pendingJumpGroupKeys, setPendingJumpGroupKeys] = useState<string[]>([]); // For bulk emails
 
   const loadMailItems = async () => {
     try {
@@ -138,7 +287,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       setMailItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading mail items:', err);
-      toast.error('Failed to load mail log');
+      toast.error(t('toast.failedToLoadMailLog'));
     } finally {
       setLoading(false);
     }
@@ -180,6 +329,11 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     }
   }, [searchQuery, showAddForm, searchContacts]);
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, typeFilter, searchTerm, dateRangeFilter, mailboxFilter, sortColumn, sortDirection]);
+
   const handleSelectContact = (contact: Contact) => {
     // Warn if selecting a Pending customer
     if ((contact as any).status === 'Pending') {
@@ -197,7 +351,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     e.preventDefault();
 
     if (!selectedContact) {
-      toast.error('Please select a customer');
+      toast.error(t('validation.selectCustomer'));
       return;
     }
 
@@ -249,10 +403,22 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     }
 
     if (existingMail) {
-      // Always show prompt when duplicate is found
-      console.log('Showing duplicate prompt modal');
+      // Automatically add to existing item since we're using grouped view
+      console.log('Found existing mail, automatically adding to it');
       setExistingTodayMail(existingMail);
-      setShowDuplicatePrompt(true);
+      
+      // Calculate new quantity
+      const currentQuantity = typeof quantity === 'string' && quantity === '' ? 1 : Number(quantity);
+      const newQuantity = (existingMail.quantity || 1) + currentQuantity;
+      
+      // Show confirmation toast before adding
+      toast.success(
+        `Adding ${currentQuantity} more ${itemType}${currentQuantity > 1 ? 's' : ''} to existing entry (total will be: ${newQuantity})`,
+        { duration: 3000 }
+      );
+      
+      // Add to existing
+      await submitNewMail(true);
       return;
     }
 
@@ -287,7 +453,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           mail_item_id: existingTodayMail.mail_item_id,
           action_type: 'updated',
           action_description: `Added ${currentQuantity} more ${itemType}${currentQuantity > 1 ? 's' : ''} (total now: ${newQuantity})`,
-          performed_by: 'Staff',
+          performed_by: loggedBy || 'Staff', // Use selected staff name
           notes: note || null
         });
 
@@ -310,7 +476,8 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           description: note,
           status: 'Received',
           quantity: typeof quantity === 'string' && quantity === '' ? 1 : Number(quantity),
-          received_date: receivedDateNY
+          received_date: receivedDateNY,
+          logged_by: loggedBy || undefined // Pass staff name to backend
         });
 
         console.log('Successfully created new mail!');
@@ -325,14 +492,38 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
       setSearchQuery('');
       setSelectedContact(null);
       setDate(getTodayNY()); // Use NY timezone
-      setShowDuplicatePrompt(false);
       setExistingTodayMail(null);
+      setLoggedBy(null); // Reset staff selection
       
       // Small delay before reloading to ensure database has committed the timestamp
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Reload mail items
-      loadMailItems();
+      await loadMailItems();
+      
+      // After reload, highlight the newly added/updated item
+      // Calculate the group key for the item we just added/updated
+      const groupKey = addToExisting && existingTodayMail
+        ? `${existingTodayMail.contact_id}|${date}|${existingTodayMail.item_type}`
+        : `${selectedContact!.contact_id}|${date}|${itemType}`;
+      
+      // Wait a bit for the UI to settle after reload
+      setTimeout(() => {
+        // Find the row element by group key
+        const rowElement = document.querySelector(`[data-group-key="${groupKey}"]`);
+        if (rowElement) {
+          // Scroll into view
+          rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Highlight the row
+          setHighlightedGroupKeys(new Set([groupKey]));
+          
+          // Clear highlight after 8 seconds
+          setTimeout(() => {
+            setHighlightedGroupKeys(new Set());
+          }, 8000);
+        }
+      }, 300);
     } catch (err) {
       console.error('Error in submitNewMail:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -342,21 +533,22 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     }
   };
 
-  const openEditModal = (mailItem: MailItem) => {
+  const openEditModal = (mailItem: MailItem, groupItems: MailItem[], groupTotalQuantity: number) => {
     setEditingMailItem(mailItem);
-    
+    setEditingGroupItems(groupItems);
+
     // Migrate old status names to new short names
     let status = mailItem.status || 'Received';
     if (status === 'Scanned Document') status = 'Scanned';
     if (status === 'Abandoned Package') status = 'Abandoned';
-    
+
     setFormData({
       contact_id: mailItem.contact_id || '',
       item_type: mailItem.item_type || 'Package',
       description: mailItem.description || '',
       status: status,
       received_date: mailItem.received_date?.split('T')[0] || getTodayNY(),
-      quantity: (mailItem as any).quantity || 1,
+      quantity: groupTotalQuantity,
       performed_by: '',
       edit_notes: ''
     });
@@ -366,6 +558,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
   const closeModal = () => {
     setIsEditModalOpen(false);
     setEditingMailItem(null);
+    setEditingGroupItems([]);
     setFormData({
       contact_id: '',
       item_type: 'Package',
@@ -390,7 +583,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     e.preventDefault();
     
     if (!formData.contact_id) {
-      toast.error('Please select a customer');
+      toast.error(t('validation.selectCustomer'));
       return;
     }
 
@@ -407,187 +600,190 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
         
         const normalizedOldStatus = normalizeStatus(editingMailItem.status);
         const normalizedNewStatus = normalizeStatus(formData.status);
-        
+
         // Only consider it a "real" status change if normalized values differ
         const statusActuallyChanged = normalizedOldStatus !== normalizedNewStatus;
-        
-        // Check if quantity changed
-        const oldQuantity = editingMailItem.quantity || 1;
+
+        // Check if quantity changed - compare against group total, not individual item
+        const oldTotalQuantity = editingGroupItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
         const newQuantity = formData.quantity;
-        const quantityChanged = oldQuantity !== newQuantity;
-        
+        const quantityChanged = oldTotalQuantity !== newQuantity;
+
         // If status changed, require staff name
         if (statusActuallyChanged && !formData.performed_by.trim()) {
-          toast.error('Please select who made this status change');
+          toast.error(t('validation.selectPerformer'));
           setSaving(false);
           return;
         }
-        
+
         // If quantity changed, require staff name
         if (quantityChanged && !formData.performed_by.trim()) {
-          toast.error('Please select who made this quantity change');
+          toast.error(t('validation.selectPerformer'));
           setSaving(false);
           return;
         }
-        
+
         // Update the mail item (exclude performed_by and edit_notes from the update payload)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { performed_by: _performed_by, edit_notes: _edit_notes, ...updateData } = formData;
-        
+        const { performed_by, edit_notes: _edit_notes, ...updateData } = formData;
+
         // Ensure quantity is a number (convert empty string to 1)
         updateData.quantity = typeof updateData.quantity === 'string' && updateData.quantity === '' ? 1 : Number(updateData.quantity);
-        
+
         // If received_date is being updated and it's a date-only string, add timezone
         if (updateData.received_date && /^\d{4}-\d{2}-\d{2}$/.test(updateData.received_date)) {
           updateData.received_date = `${updateData.received_date}T12:00:00-05:00`;
         }
-        
-        await api.mailItems.update(editingMailItem.mail_item_id, updateData);
-        
-        // Log quantity change to action history
-        if (quantityChanged) {
-          await api.actionHistory.create({
-            mail_item_id: editingMailItem.mail_item_id,
-            action_type: 'updated',
-            action_description: `Quantity changed from ${oldQuantity} to ${newQuantity}`,
-            previous_value: oldQuantity.toString(),
-            new_value: newQuantity.toString(),
-            performed_by: formData.performed_by,
-            notes: formData.edit_notes.trim() || null
-          });
+
+        // If there are multiple items in the group, consolidate them:
+        // Update the first item with the new total quantity, delete the rest
+        if (editingGroupItems.length > 1) {
+          // Delete extra items (all except the first one)
+          for (let i = 1; i < editingGroupItems.length; i++) {
+            await api.mailItems.delete(editingGroupItems[i].mail_item_id);
+          }
         }
+
+        // Pass performed_by to backend for action history logging
+        await api.mailItems.update(editingMailItem.mail_item_id, {
+          ...updateData,
+          performed_by: performed_by || 'Staff' // Include performed_by in the update
+        });
+
+        // Backend automatically logs action history, so no need to manually create it here
+
+        const itemsConsolidated = editingGroupItems.length > 1 ? ` (consolidated ${editingGroupItems.length} entries)` : '';
+        toast.success(`Mail item updated successfully!${itemsConsolidated}`);
         
-        // Log status change to action history if status ACTUALLY changed (not just name migration)
-        if (statusActuallyChanged) {
-          const statusDescriptions: { [key: string]: string } = {
-            'Received': 'Status changed to Received',
-            'Pending': 'Status changed to Pending',
-            'Notified': 'Status changed to Notified',
-            'Picked Up': 'Marked as Picked Up',
-            'Scanned': 'Marked as Scanned',
-            'Forward': 'Forwarded',
-            'Abandoned': 'Marked as Abandoned'
-          };
-          
-          await api.actionHistory.create({
-            mail_item_id: editingMailItem.mail_item_id,
-            action_type: 'status_change',
-            action_description: statusDescriptions[normalizedNewStatus] || `Status changed to ${normalizedNewStatus}`,
-            previous_value: normalizedOldStatus,
-            new_value: normalizedNewStatus,
-            performed_by: formData.performed_by,
-            notes: formData.edit_notes.trim() || null
-          });
-        }
+        // Get the group key for the updated item
+        const updatedDate = updateData.received_date 
+          ? extractNYDate(updateData.received_date)
+          : extractNYDate(editingMailItem.received_date);
+        const updatedGroupKey = `${editingMailItem.contact_id}|${updatedDate}|${updateData.item_type || editingMailItem.item_type}`;
         
-        toast.success('Mail item updated successfully!');
+        // Store customer info before reloading (editingMailItem will be cleared)
+        const customerName = editingMailItem.contacts?.contact_person || 
+                            editingMailItem.contacts?.company_name || 
+                            'Customer';
+        const itemTypeDisplay = updateData.item_type || editingMailItem.item_type;
+        const dateDisplay = formatNYDateDisplay(updatedDate);
+        
         closeModal();
-        await loadMailItems(); // Ensure we wait for reload
+        
+        // Clear ALL action history cache to ensure fresh data on next expand
+        // This is simpler and more reliable than trying to track specific groups
+        setActionHistory({});
+        
+        // Reload mail items to get updated data
+        await loadMailItems();
+        
+        toast.success(
+          (t) => (
+            <div className="flex items-center justify-between gap-4">
+              <span>Updated {customerName} ({itemTypeDisplay}, {dateDisplay})</span>
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  jumpToRow(updatedGroupKey);
+                }}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+              >
+                View
+              </button>
+            </div>
+          ),
+          {
+            duration: 8000,
+          }
+        );
       }
     } catch (err) {
       console.error('Failed to update mail item:', err);
-      toast.error('Failed to update mail item');
+      toast.error(t('toast.failedToUpdateMailItem'));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (mailItemId: string) => {
-    if (!confirm('Are you sure you want to delete this mail item? This action cannot be undone.')) {
+  const handleDelete = async (groupItems: MailItem[]) => {
+    const itemCount = groupItems.length;
+    const totalQty = groupItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
+    const confirmMessage = itemCount > 1
+      ? `Are you sure you want to delete all ${itemCount} entries (${totalQty} total items)? This action cannot be undone.`
+      : 'Are you sure you want to delete this mail item? This action cannot be undone.';
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
-    setDeletingItemId(mailItemId);
+    setDeletingItemId(groupItems[0].mail_item_id);
 
     try {
-      await api.mailItems.delete(mailItemId);
-      toast.success('Mail item deleted successfully!');
+      // Delete all items in the group
+      for (const item of groupItems) {
+        await api.mailItems.delete(item.mail_item_id);
+      }
+
+      const successMessage = itemCount > 1
+        ? `${itemCount} mail entries deleted successfully!`
+        : 'Mail item deleted successfully!';
+      toast.success(successMessage);
       loadMailItems();
     } catch (err) {
       console.error('Failed to delete mail item:', err);
-      toast.error('Failed to delete mail item');
+      toast.error(t('toast.failedToDeleteMailItem'));
     } finally {
       setDeletingItemId(null);
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const quickStatusUpdate = async (mailItemId: string, newStatus: string, currentStatus?: string) => {
-    // Store the previous status for undo
-    const previousStatus = currentStatus || 'Received';
-    
-    try {
-      // Update to new status
-      await api.mailItems.update(mailItemId, { status: newStatus });
-      
-      // Show success toast with undo button
-      toast.success(
-        (t) => (
-          <div className="flex items-center justify-between gap-4">
-            <span>Status updated to {newStatus}</span>
-            <button
-              onClick={async () => {
-                try {
-                  await api.mailItems.update(mailItemId, { status: previousStatus });
-                  toast.dismiss(t.id);
-                  toast.success(`Undone! Status reverted to ${previousStatus}`);
-                  loadMailItems();
-                } catch (err) {
-                  console.error('Failed to undo:', err);
-                  toast.error('Failed to undo');
-                }
-              }}
-              className="px-3 py-1 bg-white hover:bg-gray-100 text-gray-900 text-sm font-medium rounded border border-gray-300 transition-colors"
-            >
-              Undo
-            </button>
-          </div>
-        ),
-        {
-          duration: 8000, // Show for 8 seconds to give time to undo
-        }
-      );
-      
-      loadMailItems();
-    } catch (err) {
-      console.error('Failed to update status:', err);
-      toast.error('Failed to update status');
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const openQuickNotifyModal = (item: MailItem) => {
-    setNotifyingMailItem(item);
-    setIsQuickNotifyModalOpen(true);
-  };
-
-  const openSendEmailModal = (item: MailItem) => {
+  const openSendEmailModal = (item: MailItem, groupItems?: MailItem[]) => {
     setEmailingMailItem(item);
+    setEmailGroupItems(groupItems || [item]);
     setIsSendEmailModalOpen(true);
   };
 
   const handleQuickNotifySuccess = () => {
-    loadMailItems();
-    // Reload action history if the row is expanded
-    if (notifyingMailItem && expandedRows.has(notifyingMailItem.mail_item_id)) {
+    // Clear action history cache for the item so it reloads fresh
+    if (notifyingMailItem) {
+      setActionHistory(prev => {
+        const newHistory = { ...prev };
+        delete newHistory[notifyingMailItem.mail_item_id];
+        return newHistory;
+      });
+      // Reload immediately for expanded groups
       loadActionHistory(notifyingMailItem.mail_item_id);
     }
+    loadMailItems();
   };
 
   const handleSendEmailSuccess = () => {
-    loadMailItems();
-    // Reload action history if the row is expanded
-    if (emailingMailItem && expandedRows.has(emailingMailItem.mail_item_id)) {
+    // Clear action history cache for the item so it reloads fresh
+    if (emailingMailItem) {
+      setActionHistory(prev => {
+        const newHistory = { ...prev };
+        delete newHistory[emailingMailItem.mail_item_id];
+        return newHistory;
+      });
+      // Reload immediately for expanded groups
       loadActionHistory(emailingMailItem.mail_item_id);
     }
+    loadMailItems();
   };
 
   const handleActionSuccess = () => {
-    loadMailItems();
-    // Reload action history if the row is expanded
-    if (actionMailItem && expandedRows.has(actionMailItem.mail_item_id)) {
+    // Clear action history cache for the item so it reloads fresh
+    if (actionMailItem) {
+      setActionHistory(prev => {
+        const newHistory = { ...prev };
+        delete newHistory[actionMailItem.mail_item_id];
+        return newHistory;
+      });
+      // Reload immediately for expanded groups
       loadActionHistory(actionMailItem.mail_item_id);
     }
+    loadMailItems();
   };
 
   const loadActionHistory = async (mailItemId: string) => {
@@ -602,16 +798,49 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     }
   };
 
-  const toggleRow = (id: string) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-      // Load action history when row is expanded
-      if (!actionHistory[id]) {
-        loadActionHistory(id);
+  // Load action history for all items in a group
+  const loadGroupActionHistory = async (group: GroupedMailItem) => {
+    // Set loading state for this group
+    setLoadingActionHistory(prev => new Set(prev).add(group.groupKey));
+    
+    try {
+      for (const item of group.items) {
+        if (!actionHistory[item.mail_item_id]) {
+          await loadActionHistory(item.mail_item_id);
+        }
       }
+    } finally {
+      // Remove loading state for this group
+      setLoadingActionHistory(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(group.groupKey);
+        return newSet;
+      });
+    }
+  };
+
+  // Get combined action history for a group, sorted by timestamp
+  const getGroupActionHistory = (group: GroupedMailItem): ActionHistory[] => {
+    const allHistory: ActionHistory[] = [];
+    for (const item of group.items) {
+      const itemHistory = actionHistory[item.mail_item_id] || [];
+      allHistory.push(...itemHistory);
+    }
+    // Sort by timestamp descending (newest first)
+    return allHistory.sort((a, b) => 
+      new Date(b.action_timestamp).getTime() - new Date(a.action_timestamp).getTime()
+    );
+  };
+
+  // Toggle for grouped rows
+  const toggleGroupRow = (group: GroupedMailItem) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(group.groupKey)) {
+      newExpanded.delete(group.groupKey);
+    } else {
+      newExpanded.add(group.groupKey);
+      // Load action history for all items in the group
+      loadGroupActionHistory(group);
     }
     setExpandedRows(newExpanded);
   };
@@ -626,14 +855,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     setSortDirection('desc');
   };
 
-  const handleSort = (column: 'date' | 'status' | 'customer' | 'type' | 'quantity') => {
+  const handleSort = (column: 'date' | 'status' | 'customer' | 'type' | 'quantity' | 'lastNotified') => {
     if (sortColumn === column) {
       // Toggle direction if clicking the same column
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // New column, default to ascending (except date defaults to descending)
+      // New column, default to ascending (except date and lastNotified default to descending)
       setSortColumn(column);
-      setSortDirection(column === 'date' ? 'desc' : 'asc');
+      setSortDirection(column === 'date' || column === 'lastNotified' ? 'desc' : 'asc');
     }
   };
 
@@ -687,30 +916,331 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     return matchesSearch && matchesStatus && matchesType && matchesDateRange && matchesMailbox;
   });
 
-  // Sorting
-  const sortedItems = [...filteredItems].sort((a, b) => {
+  // Group filtered items by contact + day + type
+  const groupedItems = groupMailItems(filteredItems);
+  
+  // Keep a ref to always have the latest groupedItems (for async callbacks like toast buttons)
+  const groupedItemsRef = useRef(groupedItems);
+  useEffect(() => {
+    groupedItemsRef.current = groupedItems;
+  }, [groupedItems]);
+
+  // Handle navigation from Dashboard with jumpToGroupKey or jumpToGroupKeys
+  useEffect(() => {
+    const state = location.state as { 
+      jumpToGroupKey?: string; 
+      jumpToGroupKeys?: string[];
+      sortByLastNotified?: boolean; // New flag for auto-sorting
+    } | null;
+    
+    if (state?.jumpToGroupKey || state?.jumpToGroupKeys) {
+      // Clear the state immediately to prevent re-triggering
+      const sortByLastNotified = state.sortByLastNotified || false;
+      navigate(location.pathname, { replace: true, state: {} });
+      
+      // Clear action history cache to force fresh load
+      setActionHistory({});
+      
+      // Auto-sort by Last Notified if requested (for email actions)
+      if (sortByLastNotified) {
+        setSortColumn('lastNotified');
+        setSortDirection('desc');
+      }
+      
+      // Store the target group key(s) - we'll jump after data is loaded
+      if (state.jumpToGroupKeys && state.jumpToGroupKeys.length > 0) {
+        // Bulk email case - multiple group keys
+        setPendingJumpGroupKeys(state.jumpToGroupKeys);
+        setPendingJumpGroupKey(null);
+      } else if (state.jumpToGroupKey) {
+        // Single email case
+        setPendingJumpGroupKey(state.jumpToGroupKey);
+        setPendingJumpGroupKeys([]);
+      }
+      
+      // Force reload mail items from backend
+      setLoading(true);
+      api.mailItems.getAll()
+        .then(data => {
+          setMailItems(Array.isArray(data) ? data : []);
+        })
+        .catch(err => {
+          console.error('Error reloading mail items:', err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [location.state, location.pathname, navigate]);
+
+  // Jump to row after data is loaded and grouped (single row)
+  useEffect(() => {
+    if (pendingJumpGroupKey && groupedItems.length > 0 && !loading) {
+      const targetGroupKey = pendingJumpGroupKey;
+      // Check if the target group exists
+      const group = groupedItems.find(g => g.groupKey === targetGroupKey);
+      if (group) {
+        // Small delay for DOM to fully render
+        setTimeout(() => {
+          // 1. Scroll to the row
+          const rowElement = document.getElementById(`row-${targetGroupKey}`);
+          if (rowElement) {
+            rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          
+          // 2. Highlight the row (no auto-expand for better UX)
+          setHighlightedGroupKeys(new Set([targetGroupKey]));
+          setTimeout(() => setHighlightedGroupKeys(new Set()), 6000); // Highlight for 6 seconds
+          
+          setPendingJumpGroupKey(null);
+        }, 150);
+      } else {
+        // Group not found
+        setPendingJumpGroupKey(null);
+      }
+    }
+  }, [pendingJumpGroupKey, groupedItems, loading]);
+
+  // Jump to multiple rows after data is loaded (bulk email case)
+  useEffect(() => {
+    if (pendingJumpGroupKeys.length > 0 && groupedItems.length > 0 && !loading) {
+      const targetGroupKeys = pendingJumpGroupKeys;
+      
+      // Find all matching groups
+      const matchingGroups = groupedItems.filter(g => targetGroupKeys.includes(g.groupKey));
+      
+      if (matchingGroups.length > 0) {
+        setTimeout(() => {
+          // 1. Scroll to the first row
+          const firstGroupKey = matchingGroups[0].groupKey;
+          const firstRowElement = document.getElementById(`row-${firstGroupKey}`);
+          if (firstRowElement) {
+            firstRowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          
+          // 2. Highlight ALL matching rows SIMULTANEOUSLY
+          const groupKeysSet = new Set(matchingGroups.map(g => g.groupKey));
+          setHighlightedGroupKeys(groupKeysSet);
+          setTimeout(() => setHighlightedGroupKeys(new Set()), 6000); // Highlight for 6 seconds
+          
+          setPendingJumpGroupKeys([]);
+        }, 150);
+      } else {
+        // No groups found
+        setPendingJumpGroupKeys([]);
+      }
+    }
+  }, [pendingJumpGroupKeys, groupedItems, loading]);
+
+  // Jump to a specific row (scroll + highlight + expand + load history)
+  // This is used by the edit toast to jump to the updated row
+  // Uses groupedItemsRef to always get the latest data (important for async toast button clicks)
+  const jumpToRow = useCallback(async (groupKey: string, clearFiltersIfNeeded = true) => {
+    console.log(`🔍 Attempting to jump to row with key: ${groupKey}`);
+    
+    // Use ref to get latest groupedItems (closure would have stale data)
+    // Retry a few times if not found (might be waiting for React to re-render after data update)
+    let group = groupedItemsRef.current.find(g => g.groupKey === groupKey);
+    let retries = 0;
+    while (!group && retries < 5) {
+      console.log(`⏳ Group not found, retrying... (attempt ${retries + 1}/5)`);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      // Re-read from ref to get latest data
+      group = groupedItemsRef.current.find(g => g.groupKey === groupKey);
+      retries++;
+    }
+    
+    // If not found and filters are active, clear them and retry
+    if (!group && clearFiltersIfNeeded) {
+      const hasFilters = searchTerm !== '' || statusFilter !== 'All Status' || 
+                         typeFilter !== 'All Types' || dateRangeFilter !== 'All Time' ||
+                         mailboxFilter !== 'All Mailboxes';
+      if (hasFilters) {
+        console.log(`🔄 Group not found with active filters - clearing filters and retrying`);
+        // Clear all filters
+        setSearchTerm('');
+        setStatusFilter('All Status');
+        setTypeFilter('All Types');
+        setDateRangeFilter('All Time');
+        setMailboxFilter('All Mailboxes');
+        
+        // Wait for React to re-render with cleared filters
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Retry finding the group (max 10 more attempts)
+        let filterRetries = 0;
+        while (!group && filterRetries < 10) {
+          group = groupedItemsRef.current.find(g => g.groupKey === groupKey);
+          if (!group) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            filterRetries++;
+          }
+        }
+      }
+    }
+    
+    if (!group) {
+      console.warn(`❌ Could not find group with key: ${groupKey} after retries`);
+      console.log(`Available groups:`, groupedItemsRef.current.map(g => g.groupKey));
+      toast.error(t('toast.couldNotFindItem'));
+      return;
+    }
+    
+    console.log(`✅ Found group after retries`);
+
+    // Get latest groupedItems from ref for sorting
+    const currentGroupedItems = groupedItemsRef.current;
+
+    // Find the index of the group in sortedGroups (for pagination)
+    const sorted = [...currentGroupedItems].sort((a, b) => {
+      let comparison = 0;
+      switch (sortColumn) {
+        case 'date':
+          comparison = new Date(a.latestReceivedDate).getTime() - new Date(b.latestReceivedDate).getTime();
+          break;
+        case 'status':
+          comparison = a.displayStatus.localeCompare(b.displayStatus);
+          break;
+        case 'customer': {
+          const nameA = a.contact ? getCustomerDisplayName(a.contact) : '';
+          const nameB = b.contact ? getCustomerDisplayName(b.contact) : '';
+          comparison = nameA.localeCompare(nameB);
+          break;
+        }
+        case 'type':
+          comparison = a.itemType.localeCompare(b.itemType);
+          break;
+        case 'quantity':
+          comparison = a.totalQuantity - b.totalQuantity;
+          break;
+        default:
+          comparison = new Date(a.latestReceivedDate).getTime() - new Date(b.latestReceivedDate).getTime();
+      }
+      return sortDirection === 'desc' ? -comparison : comparison;
+    });
+
+    const groupIndex = sorted.findIndex(g => g.groupKey === groupKey);
+    if (groupIndex === -1) {
+      console.warn(`❌ Group found but not in sorted list`);
+      return;
+    }
+
+    // Calculate which page this group is on
+    const targetPage = Math.floor(groupIndex / rowsPerPage) + 1;
+    console.log(`📄 Group is on page ${targetPage} (index ${groupIndex})`);
+
+    // 1. Navigate to the correct page first
+    if (targetPage !== currentPage) {
+      console.log(`📄 Navigating from page ${currentPage} to page ${targetPage}`);
+      setCurrentPage(targetPage);
+      // Wait for React to re-render the page
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    // 2. Scroll to the row (with retry since DOM might not be ready)
+    const scrollToRow = () => {
+      const rowElement = document.getElementById(`row-${groupKey}`);
+      if (rowElement) {
+        rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        console.log(`📍 Scrolled to row`);
+        return true;
+      }
+      return false;
+    };
+
+    // Try immediately, then retry after short delays
+    if (!scrollToRow()) {
+      await new Promise(resolve => setTimeout(resolve, 150));
+      if (!scrollToRow()) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (!scrollToRow()) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+          scrollToRow();
+        }
+      }
+    }
+
+    // 3. Highlight the row
+    setHighlightedGroupKeys(new Set([groupKey]));
+    setTimeout(() => setHighlightedGroupKeys(new Set()), 6000); // Highlight for 6 seconds
+
+    // 4. Expand the row
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      newSet.add(groupKey);
+      return newSet;
+    });
+
+    // 5. Wait a bit then load action history
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // 6. Load action history for all items in the group
+    try {
+      const historyPromises = group.items.map(item =>
+        api.actionHistory.getByMailItem(item.mail_item_id)
+      );
+      const histories = await Promise.all(historyPromises);
+      const combinedHistory = histories.flat().sort((a, b) =>
+        new Date(a.action_timestamp).getTime() - new Date(b.action_timestamp).getTime()
+      );
+      setActionHistory(prev => ({
+        ...prev,
+        [groupKey]: combinedHistory
+      }));
+    } catch (err) {
+      console.error('Failed to load action history:', err);
+    }
+  }, [sortColumn, sortDirection, rowsPerPage, currentPage, searchTerm, statusFilter, typeFilter, dateRangeFilter, mailboxFilter]); // Removed groupedItems from deps - using ref instead
+
+  // Sorting for grouped items
+  const sortedGroups = [...groupedItems].sort((a, b) => {
     let comparison = 0;
     
     switch (sortColumn) {
       case 'date':
-        comparison = new Date(a.received_date).getTime() - new Date(b.received_date).getTime();
+        comparison = new Date(a.latestReceivedDate).getTime() - new Date(b.latestReceivedDate).getTime();
         break;
       case 'status':
-        comparison = a.status.localeCompare(b.status);
+        comparison = a.displayStatus.localeCompare(b.displayStatus);
         break;
       case 'customer': {
-        const nameA = a.contacts?.contact_person || a.contacts?.company_name || '';
-        const nameB = b.contacts?.contact_person || b.contacts?.company_name || '';
+        const nameA = a.contact ? getCustomerDisplayName(a.contact) : '';
+        const nameB = b.contact ? getCustomerDisplayName(b.contact) : '';
         comparison = nameA.localeCompare(nameB);
         break;
       }
       case 'type':
-        comparison = a.item_type.localeCompare(b.item_type);
+        comparison = a.itemType.localeCompare(b.itemType);
         break;
-      case 'quantity': {
-        const qtyA = a.quantity || 1;
-        const qtyB = b.quantity || 1;
-        comparison = qtyA - qtyB;
+      case 'quantity':
+        comparison = a.totalQuantity - b.totalQuantity;
+        break;
+      case 'lastNotified': {
+        // Find the most recent last_notified from items in each group
+        const lastNotifiedA = a.items.reduce((latest, item) => {
+          if (!item.last_notified) return latest;
+          const itemDate = new Date(item.last_notified).getTime();
+          return itemDate > latest ? itemDate : latest;
+        }, 0);
+        const lastNotifiedB = b.items.reduce((latest, item) => {
+          if (!item.last_notified) return latest;
+          const itemDate = new Date(item.last_notified).getTime();
+          return itemDate > latest ? itemDate : latest;
+        }, 0);
+        
+        // Always push empty values to the bottom (regardless of sort direction)
+        if (lastNotifiedA === 0 && lastNotifiedB === 0) {
+          comparison = 0;
+        } else if (lastNotifiedA === 0) {
+          // A is empty, put it after B (positive = A goes down)
+          return 1;
+        } else if (lastNotifiedB === 0) {
+          // B is empty, put it after A (negative = A goes up)
+          return -1;
+        } else {
+          // Both have values, compare normally
+          comparison = lastNotifiedA - lastNotifiedB;
+        }
         break;
       }
     }
@@ -729,10 +1259,18 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-48"></div>
-          <div className="h-96 bg-gray-100 rounded-lg"></div>
+      <div className="max-w-full mx-auto px-16 py-6">
+        <div className="flex flex-col items-center justify-center py-20">
+          {/* Mail Animation */}
+          <div className="w-32 h-32">
+            <img
+              src="/mail-moving-animation.gif"
+              alt="Loading mail animation"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <p className="mt-4 text-lg font-medium text-gray-700">{t('common.loading')}</p>
+          <p className="text-sm text-gray-500 mt-1">{t('common.pleaseWait')}</p>
         </div>
       </div>
     );
@@ -742,40 +1280,49 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
     <div className={embedded ? '' : 'max-w-7xl mx-auto px-6 py-8'}>
       {/* Header - only show if not embedded */}
       {!embedded && (
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mail Log</h1>
-          <p className="text-gray-600">Complete history of mail activities</p>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">{t('mail.title')}</h1>
+          <button
+            onClick={() => navigate('/dashboard/scan')}
+            className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {t('mail.scanMail')}
+          </button>
         </div>
       )}
 
       {/* Add New Mail Form - show if enabled */}
       {showAddForm && (
         <form onSubmit={handleAddMailSubmit} className="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Add New Mail</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">{t('mail.addNewMail')}</h2>
 
           <div className="grid grid-cols-3 gap-4 mb-6">
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.date')}</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
-              <p className="mt-1 text-xs text-gray-500">Select the date the mail was received</p>
+              <p className="mt-1 text-xs text-gray-500">{t('mail.dateReceivedHelp')}</p>
             </div>
 
             {/* Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.type')}</label>
               <select
                 value={itemType}
                 onChange={(e) => {
                   const newType = e.target.value;
                   // Check if selecting Package for Tier 1 customer
                   if (newType === 'Package' && selectedContact && (selectedContact as any).service_tier === 1) {
-                    if (!window.confirm('⚠️ Warning: This customer is on Service Tier 1, which typically does not include package handling. Are you sure you want to log a package for this customer?')) {
+                    if (!window.confirm(t('warnings.tier1PackageWarning'))) {
                       return; // Don't change if user cancels
                     }
                   }
@@ -783,20 +1330,20 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 }}
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Letter">Letter</option>
-                <option value="Package">Package</option>
+                <option value="Letter">{t('mailTypes.letter')}</option>
+                <option value="Package">{t('mailTypes.package')}</option>
               </select>
               {itemType === 'Package' && selectedContact && (selectedContact as any).service_tier === 1 && (
                 <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
                   <AlertTriangle className="w-4 h-4" />
-                  Tier 1 customers typically don't receive packages
+                  {t('warnings.tier1NoPackages')}
                 </p>
               )}
             </div>
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.quantity')}</label>
               <input
                 type="number"
                 min="1"
@@ -809,26 +1356,60 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
           {/* Note */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Note (Optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.noteOptional')}</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              placeholder="Add any relevant notes..."
+              placeholder={t('mail.addRelevantNotes')}
               className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
           </div>
 
+          {/* Staff Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('staff.whoLogging')} *
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setLoggedBy('Madison')}
+                className={`flex-1 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                  loggedBy === 'Madison'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                Madison
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoggedBy('Merlin')}
+                className={`flex-1 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                  loggedBy === 'Merlin'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                Merlin
+              </button>
+            </div>
+            {!loggedBy && (
+              <p className="mt-1 text-xs text-red-600">{t('mail.selectWhoLogging')}</p>
+            )}
+          </div>
+
           {/* Link to Customer */}
           <div className="mb-6 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Link to Customer</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.linkToCustomer')}</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by Name / Company / Mailbox #..."
+                placeholder={t('mail.searchByNameCompanyMailbox')}
                 className="w-full px-4 py-2 pl-10 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -845,7 +1426,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-medium text-gray-900">
-                        {contact.contact_person || contact.company_name}
+                        {getCustomerDisplayName(contact)}
                       </div>
                       {(contact as any).status && (
                         <span className={`px-2 py-0.5 text-xs font-medium rounded ${
@@ -886,7 +1467,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                         ? 'text-gray-700'
                         : 'text-green-900'
                     }`}>
-                      {selectedContact.contact_person || selectedContact.company_name}
+                      {getCustomerDisplayName(selectedContact)}
                     </div>
                     {(selectedContact as any).status === 'Pending' && (
                       <span className="px-2 py-0.5 bg-amber-200 text-amber-800 text-xs font-medium rounded">
@@ -938,23 +1519,25 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={addingMail || !selectedContact}
+            disabled={addingMail || !selectedContact || !loggedBy}
             className="w-full px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {addingMail ? 'Saving...' : 'Add Mail Item'}
+            {addingMail ? t('common.saving') : t('mail.addMailItem')}
           </button>
         </form>
       )}
 
       {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg mb-6 shadow-sm">
+      <div className="bg-gray-50/80 border border-gray-200 rounded-lg mb-6 shadow-sm relative">
+        {/* Left accent line */}
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-l-lg" />
         {/* Filter Header - Always Visible */}
         <button
           onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-          className="w-full flex items-center gap-2 p-4 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center gap-2 p-4 pl-5 hover:bg-gray-100 transition-colors rounded-t-lg"
         >
           <Filter className="w-5 h-5 text-gray-600" />
-          <h3 className="font-semibold text-gray-900">Filters</h3>
+          <h3 className="font-semibold text-gray-900">{t('filters.filters')}</h3>
           {activeFiltersCount > 0 && (
             <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
               {activeFiltersCount} active
@@ -969,7 +1552,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               className="ml-auto text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
             >
               <X className="w-4 h-4" />
-              Clear all
+              {t('filters.clearAll')}
             </button>
           )}
           <div className={`ml-${activeFiltersCount > 0 ? '0' : 'auto'} text-gray-400`}>
@@ -983,63 +1566,118 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
             {/* Filter Row 1 */}
             <div className="grid grid-cols-4 gap-4 mb-4 mt-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
+                <div className="flex items-center gap-1.5 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">{t('common.status')}</label>
+                  {/* Status Legend Icon */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowStatusLegend(!showStatusLegend);
+                      }}
+                      className="p-0.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                      title={t('mail.statusLegend')}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Status Legend Popover */}
+                    {showStatusLegend && (
+                      <div 
+                        className="absolute top-6 left-0 z-[60] bg-white rounded-xl shadow-xl border border-gray-200 p-4 w-80"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-gray-900">{t('mail.statusLegend')}</h4>
+                          <button
+                            onClick={() => setShowStatusLegend(false)}
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 whitespace-nowrap">{t('mailStatus.received')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.received')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700 whitespace-nowrap">{t('mailStatus.pending')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.pending')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 whitespace-nowrap">{t('mailStatus.notified')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.notified')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 whitespace-nowrap">{t('mailStatus.pickedUp')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.pickedUp')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 whitespace-nowrap">{t('mailStatus.scanned')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.scanned')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 whitespace-nowrap">{t('mailStatus.forward')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.forward')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 whitespace-nowrap">{t('mailStatus.abandonedPackage')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.abandonedPackage')}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 whitespace-nowrap">{t('mailStatus.resolved')}</span>
+                            <span className="text-gray-600">{t('statusTooltips.resolved')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <StatusSelect
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option>All Status</option>
-                  <option>Received</option>
-                  <option>Pending</option>
-                  <option>Notified</option>
-                  <option>Picked Up</option>
-                  <option>Scanned</option>
-                  <option>Scanned Document</option>
-                  <option>Forward</option>
-                  <option>Abandoned</option>
-                  <option>Abandoned Package</option>
-                </select>
+                  onChange={setStatusFilter}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.type')}</label>
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option>All Types</option>
-                  <option>Letter</option>
-                  <option>Package</option>
+                  <option value="All Types">{t('filters.allTypes')}</option>
+                  <option value="Letter">{t('mailTypes.letter')}</option>
+                  <option value="Package">{t('mailTypes.package')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4 inline mr-1" />
-                  Date Range
+                  {t('filters.dateRange')}
                 </label>
                 <select
                   value={dateRangeFilter}
                   onChange={(e) => setDateRangeFilter(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option>All Time</option>
-                  <option>Today</option>
-                  <option>Last 7 Days</option>
-                  <option>Last 30 Days</option>
+                  <option value="All Time">{t('filters.allTime')}</option>
+                  <option value="Today">{t('filters.today')}</option>
+                  <option value="Last 7 Days">{t('filters.last7Days')}</option>
+                  <option value="Last 30 Days">{t('filters.last30Days')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mailbox</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('filters.mailbox')}</label>
                 <select
                   value={mailboxFilter}
                   onChange={(e) => setMailboxFilter(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option>All Mailboxes</option>
+                  <option value="All Mailboxes">{t('filters.allMailboxes')}</option>
                   {uniqueMailboxes.map(mailbox => (
                     <option key={mailbox} value={mailbox}>{mailbox}</option>
                   ))}
@@ -1049,12 +1687,12 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
             {/* Filter Row 2 - Just Search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.search')}</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search customer, mailbox, unit..."
+                  placeholder={t('filters.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -1068,7 +1706,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 <div className="flex flex-wrap gap-2">
                   {statusFilter !== 'All Status' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
-                      Status: {statusFilter}
+                      {t('common.status')}: {statusFilter}
                       <button onClick={() => setStatusFilter('All Status')} className="hover:bg-blue-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1076,7 +1714,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   )}
                   {typeFilter !== 'All Types' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
-                      Type: {typeFilter}
+                      {t('common.type')}: {typeFilter}
                       <button onClick={() => setTypeFilter('All Types')} className="hover:bg-purple-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1084,7 +1722,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   )}
                   {dateRangeFilter !== 'All Time' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">
-                      Date: {dateRangeFilter}
+                      {t('common.date')}: {dateRangeFilter}
                       <button onClick={() => setDateRangeFilter('All Time')} className="hover:bg-green-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1092,7 +1730,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   )}
                   {mailboxFilter !== 'All Mailboxes' && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 text-sm rounded-full">
-                      Mailbox: {mailboxFilter}
+                      {t('filters.mailbox')}: {mailboxFilter}
                       <button onClick={() => setMailboxFilter('All Mailboxes')} className="hover:bg-orange-200 rounded-full p-0.5">
                         <X className="w-3 h-3" />
                       </button>
@@ -1113,39 +1751,56 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
         )}
       </div>
 
-      {/* Results Counter */}
+      {/* Results Counter and Rows Per Page */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-600">
-          Showing <span className="font-semibold text-gray-900">{sortedItems.length}</span> of{' '}
-          <span className="font-semibold text-gray-900">{mailItems.length}</span> mail items
+          {t('mail.showingGroups', { groups: sortedGroups.length, items: filteredItems.length, total: mailItems.length })}
         </p>
-        <p className="text-sm text-gray-500 italic">
-          💡 Click column headers to sort
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500 italic">
+            💡 {t('mail.groupedByTip')}
+          </p>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">{t('mail.rowsPerPage')}</label>
+            <select
+              value={rowsPerPage}
+              onChange={(e) => {
+                setRowsPerPage(Number(e.target.value));
+                setCurrentPage(1); // Reset to first page when changing rows per page
+              }}
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Log Table */}
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="overflow-x-auto">
-        {sortedItems.length === 0 ? (
+        {sortedGroups.length === 0 ? (
           <div className="text-center py-12">
             <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">
-              {activeFiltersCount > 0 ? 'No mail items match your filters' : 'No mail items found'}
+              {activeFiltersCount > 0 ? t('mail.noMailItemsMatch') : t('mail.noMailItemsFound')}
             </p>
             {activeFiltersCount > 0 ? (
               <button
                 onClick={clearAllFilters}
                 className="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
               >
-                Clear Filters
+                {t('mail.clearFilters')}
               </button>
             ) : (
               <button
                 onClick={() => navigate('/dashboard/intake')}
                 className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors"
               >
-                Add Mail Item
+                {t('mail.addMailItem')}
               </button>
             )}
           </div>
@@ -1161,7 +1816,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center gap-2">
-                    Date
+                    {t('common.date')}
                     {sortColumn === 'date' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1176,7 +1831,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('type')}
                 >
                   <div className="flex items-center gap-2">
-                    Type
+                    {t('common.type')}
                     {sortColumn === 'type' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1191,7 +1846,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('quantity')}
                 >
                   <div className="flex items-center gap-2">
-                    Qty
+                    {t('mail.qty')}
                     {sortColumn === 'quantity' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1206,7 +1861,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('customer')}
                 >
                   <div className="flex items-center gap-2">
-                    Customer
+                    {t('mail.customer')}
                     {sortColumn === 'customer' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1221,7 +1876,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center gap-2">
-                    Status
+                    {t('common.status')}
                     {sortColumn === 'status' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                     ) : (
@@ -1230,25 +1885,45 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                   </div>
                 </th>
                 
+                {/* Last Notified Column - Sortable */}
+                <th 
+                  className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                  onClick={() => handleSort('lastNotified')}
+                >
+                  <div className="flex items-center gap-2">
+                    {t('mail.lastNotified')}
+                    {sortColumn === 'lastNotified' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </th>
+                
                 {/* Non-sortable columns */}
-                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">Last Notified</th>
-                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">Notes</th>
-                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">Actions</th>
+                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">{t('common.notes')}</th>
+                  <th className="text-left py-2.5 px-4 text-sm font-semibold text-gray-700">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {sortedItems.map((item) => (
-                  <React.Fragment key={item.mail_item_id}>
+              {sortedGroups
+                .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
+                .map((group) => (
+                  <React.Fragment key={group.groupKey}>
                     {/* Main Row - Clickable to expand */}
                     <tr 
-                      className="group border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => toggleRow(item.mail_item_id)}
+                      id={`row-${group.groupKey}`}
+                      data-group-key={group.groupKey}
+                      className={`group border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                        highlightedGroupKeys.has(group.groupKey) ? 'animate-flash-green' : ''
+                      }`}
+                      onClick={() => toggleGroupRow(group)}
                     >
                     <td className="py-3 px-4">
                       <button
                         className="text-gray-500 hover:text-gray-700 transition-transform pointer-events-none"
                         style={{
-                          transform: expandedRows.has(item.mail_item_id) ? 'rotate(90deg)' : 'rotate(0deg)',
+                          transform: expandedRows.has(group.groupKey) ? 'rotate(90deg)' : 'rotate(0deg)',
                           display: 'inline-block',
                         }}
                       >
@@ -1256,53 +1931,48 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                       </button>
                     </td>
                     <td className="py-3 px-4 text-gray-900">
-                      <span 
-                        title={`Logged at: ${new Date(item.received_date).toLocaleString('en-US', {
-                          timeZone: 'America/New_York',
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                          hour12: true,
-                          timeZoneName: 'short'
-                        })}`}
+                      <span
+                        title={`${group.items.length} item${group.items.length > 1 ? 's' : ''} on this date`}
                         className="cursor-help border-b border-dotted border-gray-400"
                       >
-                        {new Date(item.received_date).toLocaleDateString('en-US', {
-                          timeZone: 'America/New_York',
+                        {formatNYDateDisplay(group.date, {
                           year: 'numeric',
                           month: '2-digit',
                           day: '2-digit'
                         })}
                       </span>
+                      {group.items.length > 1 && (
+                        <span className="ml-2 text-xs text-gray-500">
+                          ({group.items.length} {t('plurals.entries')})
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2 text-gray-700">
-                        {item.item_type === 'Package' ? (
+                        {group.itemType === 'Package' || group.itemType === 'Large Package' ? (
                           <Package className="w-4 h-4 text-gray-500" />
                         ) : (
                           <Mail className="w-4 h-4 text-gray-500" />
                         )}
-                        <span>{item.item_type}</span>
+                        <span>{t(`mailTypes.${getItemTypeKey(group.itemType)}`)}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-gray-900 font-semibold">
-                      {item.quantity || 1}
+                      {group.totalQuantity}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span className="text-gray-900">
-                          {item.contacts?.contact_person || item.contacts?.company_name || 'Unknown'}
+                          {group.contact ? getCustomerDisplayName(group.contact) : 'Unknown'}
                         </span>
-                        {item.contact_id && (
+                        {group.contactId && (
                           <button
                             onClick={(e) => {
-                              e.stopPropagation(); // Prevent row expansion when clicking view button
-                              navigate(`/dashboard/contacts/${item.contact_id}`);
+                              e.stopPropagation();
+                              navigate(`/dashboard/contacts/${group.contactId}`);
                             }}
                             className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View Customer Profile"
+                            title={t('mail.viewCustomerProfile')}
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -1310,111 +1980,119 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`px-3 py-1 rounded text-xs font-medium ${
-                        item.status === 'Received' ? 'bg-blue-100 text-blue-700' :
-                        item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                        item.status === 'Notified' ? 'bg-purple-100 text-purple-700' :
-                        item.status === 'Picked Up' ? 'bg-green-100 text-green-700' :
-                        item.status === 'Scanned Document' ? 'bg-cyan-100 text-cyan-700' :
-                        item.status === 'Scanned' ? 'bg-cyan-100 text-cyan-700' :
-                        item.status === 'Forward' ? 'bg-orange-100 text-orange-700' :
-                        item.status === 'Abandoned Package' ? 'bg-red-100 text-red-700' :
-                        item.status === 'Abandoned' ? 'bg-red-100 text-red-700' :
+                      {group.statuses.length === 1 ? (
+                      <span 
+                        className={`px-3 py-1 rounded text-xs font-medium cursor-help ${
+                          group.displayStatus === 'Received' ? 'bg-blue-100 text-blue-700' :
+                          group.displayStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                          group.displayStatus === 'Notified' ? 'bg-purple-100 text-purple-700' :
+                          group.displayStatus === 'Picked Up' ? 'bg-green-100 text-green-700' :
+                          group.displayStatus === 'Scanned Document' ? 'bg-cyan-100 text-cyan-700' :
+                          group.displayStatus === 'Scanned' ? 'bg-cyan-100 text-cyan-700' :
+                          group.displayStatus === 'Forward' ? 'bg-orange-100 text-orange-700' :
+                          group.displayStatus === 'Abandoned Package' ? 'bg-red-100 text-red-700' :
+                          group.displayStatus === 'Abandoned' ? 'bg-red-100 text-red-700' :
+                          group.displayStatus === 'Resolved' ? 'bg-slate-100 text-slate-600' :
                         'bg-gray-200 text-gray-700'
-                      }`}>
-                        {item.status === 'Scanned Document' ? 'Scanned' : 
-                         item.status === 'Abandoned Package' ? 'Abandoned' : 
-                         item.status}
+                      }`}
+                        title={t(`statusTooltips.${getStatusTooltipKey(group.displayStatus)}`)}
+                      >
+                          {group.displayStatus === 'Scanned Document' ? t('mailStatus.scanned') :
+                           group.displayStatus === 'Abandoned Package' ? t('mailStatus.abandoned') :
+                           t(`mailStatus.${getStatusKey(group.displayStatus)}`)}
                       </span>
+                      ) : (
+                        <span 
+                          className="px-3 py-1 rounded text-xs font-medium bg-gray-200 text-gray-700 cursor-help"
+                          title={t('statusTooltips.mixed')}
+                        >
+                          {t('labels.mixed')}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-gray-700">
-                      {item.last_notified ? (
-                        new Date(item.last_notified).toLocaleString('en-US', {
+                      {(() => {
+                        // Find the most recent notification in the group
+                        const lastNotified = group.items
+                          .filter(item => item.last_notified)
+                          .sort((a, b) => new Date(b.last_notified!).getTime() - new Date(a.last_notified!).getTime())[0]?.last_notified;
+                        return lastNotified ? formatDate(lastNotified, {
                           month: 'short',
                           day: 'numeric',
                           hour: 'numeric',
                           minute: '2-digit',
                           hour12: true
-                        })
-                      ) : '—'}
+                        }) : '—';
+                      })()}
                     </td>
                     <td className="py-3 px-4 text-gray-700">
-                      {item.description || '—'}
+                      {group.hasDescription ? (
+                        <span title="Has notes - expand to view">📝</span>
+                      ) : '—'}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-2 text-sm" onClick={(e) => e.stopPropagation()}>
-                        {/* Edit and Delete buttons first */}
-                        <div className="flex items-center gap-2">
+                        {/* Edit button - always visible for quick access */}
                           <button
-                            onClick={() => openEditModal(item)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group relative"
-                            title="Edit"
+                          onClick={() => openEditModal(group.items[0], group.items, group.totalQuantity)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(item.mail_item_id)}
-                            disabled={deletingItemId === item.mail_item_id}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed group relative"
-                            title="Delete"
-                          >
-                            {deletingItemId === item.mail_item_id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                          </button>
-                        </div>
                         
-                        {/* Separator */}
-                        <div className="border-l border-gray-300 h-6 mx-1"></div>
-                        
-                        {/* More Actions Dropdown - on the far right */}
+                        {/* More Actions - works on first item in group */}
                         <div className="relative">
                           <button
-                            id={`more-btn-${item.mail_item_id}`}
+                            id={`more-btn-${group.groupKey}`}
                             onClick={(_e) => {
-                              setOpenDropdownId(openDropdownId === item.mail_item_id ? null : item.mail_item_id);
+                              setOpenDropdownId(openDropdownId === group.groupKey ? null : group.groupKey);
                             }}
                             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="More Actions"
+                            title={t('common.moreActions')}
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
                           
-                          {/* Dropdown Menu */}
-                          {openDropdownId === item.mail_item_id && (
+                          {openDropdownId === group.groupKey && (() => {
+                            const buttonEl = document.getElementById(`more-btn-${group.groupKey}`);
+                            const buttonRect = buttonEl?.getBoundingClientRect();
+                            const menuHeight = 400; // Approximate max height with max-h-96
+                            const spaceBelow = window.innerHeight - (buttonRect?.bottom ?? 0);
+                            const shouldFlipUp = spaceBelow < menuHeight && (buttonRect?.top ?? 0) > menuHeight;
+                            
+                            return (
                             <>
-                              {/* Backdrop to close dropdown */}
                               <div 
                                 className="fixed inset-0 z-30" 
                                 onClick={() => setOpenDropdownId(null)}
                               ></div>
                               
-                              {/* Dropdown content - using fixed positioning */}
                               <div 
                                 className="fixed w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-40 max-h-96 overflow-y-auto"
                                 style={{
-                                  top: `${(document.getElementById(`more-btn-${item.mail_item_id}`)?.getBoundingClientRect().bottom ?? 0) + 4}px`,
-                                  right: `${window.innerWidth - (document.getElementById(`more-btn-${item.mail_item_id}`)?.getBoundingClientRect().right ?? 0)}px`,
+                                  [shouldFlipUp ? 'bottom' : 'top']: shouldFlipUp 
+                                    ? `${window.innerHeight - (buttonRect?.top ?? 0) + 4}px`
+                                    : `${(buttonRect?.bottom ?? 0) + 4}px`,
+                                  right: `${window.innerWidth - (buttonRect?.right ?? 0)}px`,
                                 }}
                               >
-                                {/* Send Email - Always visible */}
                                 <button
                                   onClick={() => {
-                                    openSendEmailModal(item);
+                                    openSendEmailModal(group.items[0], group.items);
                                     setOpenDropdownId(null);
                                   }}
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3"
                                 >
                                   <Send className="w-4 h-4 text-blue-600" />
-                                  Send Email
+                                  {t('mail.sendEmail')}
                                 </button>
                                 
-                                {/* Mark as Scanned - Always visible */}
+                                {/* Mark as Scanned */}
                                 <button
                                   onClick={() => {
-                                    setActionMailItem(item);
+                                    setActionMailItem(group.items[0]);
+                                    setActionGroupItems(group.items);
                                     setActionModalType('scanned');
                                     setIsActionModalOpen(true);
                                     setOpenDropdownId(null);
@@ -1422,13 +2100,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cyan-50 flex items-center gap-3"
                                 >
                                   <FileText className="w-4 h-4 text-cyan-600" />
-                                  Mark as Scanned
+                                  {group.items.length > 1 ? t('common.markAllAsScanned') : t('common.markAsScanned')}
                                 </button>
-                                
-                                {/* Mark as Picked Up - Always visible */}
+
+                                {/* Mark as Picked Up */}
                                 <button
                                   onClick={() => {
-                                    setActionMailItem(item);
+                                    setActionMailItem(group.items[0]);
+                                    setActionGroupItems(group.items);
                                     setActionModalType('picked_up');
                                     setIsActionModalOpen(true);
                                     setOpenDropdownId(null);
@@ -1436,13 +2115,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-green-50 flex items-center gap-3"
                                 >
                                   <CheckCircle className="w-4 h-4 text-green-600" />
-                                  Mark as Picked Up
+                                  {group.items.length > 1 ? t('common.markAllAsPickedUp') : t('common.markAsPickedUp')}
                                 </button>
-                                
-                                {/* Mark as Forward - Always visible */}
+
+                                {/* Mark as Forward */}
                                 <button
                                   onClick={() => {
-                                    setActionMailItem(item);
+                                    setActionMailItem(group.items[0]);
+                                    setActionGroupItems(group.items);
                                     setActionModalType('forward');
                                     setIsActionModalOpen(true);
                                     setOpenDropdownId(null);
@@ -1450,13 +2130,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3"
                                 >
                                   <Send className="w-4 h-4 text-orange-600" />
-                                  Mark as Forward
+                                  {group.items.length > 1 ? t('common.markAllAsForward') : t('common.markAsForward')}
                                 </button>
-                                
-                                {/* Mark as Abandoned - Always visible */}
+
+                                {/* Mark as Abandoned */}
                                 <button
                                   onClick={() => {
-                                    setActionMailItem(item);
+                                    setActionMailItem(group.items[0]);
+                                    setActionGroupItems(group.items);
                                     setActionModalType('abandoned');
                                     setIsActionModalOpen(true);
                                     setOpenDropdownId(null);
@@ -1464,67 +2145,79 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3"
                                 >
                                   <AlertTriangle className="w-4 h-4 text-red-600" />
-                                  Mark as Abandoned
+                                  {group.items.length > 1 ? t('common.markAllAsAbandoned') : t('common.markAsAbandoned')}
                                 </button>
                                 
-                                {/* Separator */}
                                 <div className="border-t border-gray-200 my-1"></div>
                                 
-                                {/* View Customer Profile - Always available */}
-                                {item.contact_id && (
+                                {group.contactId && (
                                   <button
                                     onClick={() => {
-                                      navigate(`/dashboard/contacts/${item.contact_id}`);
+                                      navigate(`/dashboard/contacts/${group.contactId}`);
                                       setOpenDropdownId(null);
                                     }}
                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
                                   >
                                     <Eye className="w-4 h-4 text-gray-600" />
-                                    View Customer Profile
+                                    {t('mail.viewCustomerProfile')}
                                   </button>
                                 )}
+                                
+                                <div className="border-t border-gray-200 my-1"></div>
+                                
+                                {/* Delete - destructive action at bottom */}
+                                <button
+                                  onClick={() => {
+                                    handleDelete(group.items);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  disabled={deletingItemId === group.items[0].mail_item_id}
+                                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 disabled:opacity-50"
+                                >
+                                  {deletingItemId === group.items[0].mail_item_id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                  {group.items.length > 1 ? t('common.deleteAll', { count: group.items.length }) : t('common.delete')}
+                                </button>
                               </div>
                             </>
-                          )}
+                            );
+                          })()}
                         </div>
                       </div>
                     </td>
                   </tr>
 
-                  {/* Expanded Row Details */}
-                  {expandedRows.has(item.mail_item_id) && (
+                  {/* Expanded Row Details - Shows all items in group */}
+                  {expandedRows.has(group.groupKey) && (
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <td colSpan={9} className="py-6 px-4">
                         <div className="space-y-6">
-                          {/* Action History Timeline */}
-                          <ActionHistorySection
-                            actions={actionHistory[item.mail_item_id] || []}
-                            loading={false}
-                          />
+                          {/* Combined Action History Timeline */}
+                          <div>
+                            <ActionHistorySection
+                              actions={getGroupActionHistory(group)}
+                              loading={loadingActionHistory.has(group.groupKey)}
+                            />
+                          </div>
 
                           {/* Mail Item Details */}
                           <div>
-                            <h3 className="font-bold text-gray-900 mb-3">Mail Item Details</h3>
+                            <h3 className="font-bold text-gray-900 mb-3">Customer Details</h3>
                             <div className="grid grid-cols-2 gap-4 text-sm">
-                              {item.pickup_date && (
-                                <div>
-                                  <span className="text-gray-600">Picked Up:</span>
-                                  <span className="ml-2 text-gray-900 font-medium">
-                                    {new Date(item.pickup_date).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              )}
                               <div>
                                 <span className="text-gray-600">Mailbox:</span>
                                 <span className="ml-2 text-gray-900 font-medium">
-                                  {item.contacts?.mailbox_number || 'N/A'}
+                                  {group.contact?.mailbox_number || 'N/A'}
                                 </span>
                               </div>
-                              {item.contacts?.unit_number && (
+                              {group.contact?.unit_number && (
                                 <div>
                                   <span className="text-gray-600">Unit:</span>
                                   <span className="ml-2 text-gray-900 font-medium">
-                                    {item.contacts.unit_number}
+                                    {group.contact.unit_number}
                                   </span>
                                 </div>
                               )}
@@ -1542,17 +2235,102 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
         </div>
       </div>
 
-      {filteredItems.length > 0 && (
-        <div className="mt-4 text-sm text-gray-600 text-center">
-          Showing {filteredItems.length} of {mailItems.length} items
+      {/* Pagination Controls */}
+      {sortedGroups.length > 0 && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            {t('pagination.showing', {
+              from: Math.min((currentPage - 1) * rowsPerPage + 1, sortedGroups.length),
+              to: Math.min(currentPage * rowsPerPage, sortedGroups.length),
+              total: sortedGroups.length
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            {/* First Page Button */}
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={t('pagination.firstPage')}
+            >
+              ⟪
+            </button>
+
+            {/* Previous Page Button */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {t('pagination.previous')}
+            </button>
+            
+            {/* Page Numbers */}
+            {(() => {
+              const totalPages = Math.ceil(sortedGroups.length / rowsPerPage);
+              const pageButtons = [];
+              const maxButtons = 5;
+              
+              let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+              const endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+              if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+              }
+              
+              for (let i = startPage; i <= endPage; i++) {
+                pageButtons.push(
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i)}
+                    className={`px-3 py-1.5 border rounded-lg text-sm transition-colors ${
+                      currentPage === i
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {i}
+                  </button>
+                );
+              }
+              
+              return pageButtons;
+            })()}
+            
+            {/* Show total pages indicator */}
+            {Math.ceil(sortedGroups.length / rowsPerPage) > 5 && (
+              <span className="text-sm text-gray-500">
+                {t('pagination.of', { total: Math.ceil(sortedGroups.length / rowsPerPage) })}
+              </span>
+            )}
+
+            {/* Next Page Button */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(Math.ceil(sortedGroups.length / rowsPerPage), prev + 1))}
+              disabled={currentPage >= Math.ceil(sortedGroups.length / rowsPerPage)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {t('pagination.next')}
+            </button>
+
+            {/* Last Page Button */}
+            <button
+              onClick={() => setCurrentPage(Math.ceil(sortedGroups.length / rowsPerPage))}
+              disabled={currentPage >= Math.ceil(sortedGroups.length / rowsPerPage)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={t('pagination.lastPage')}
+            >
+              ⟫
+            </button>
+          </div>
         </div>
       )}
 
       {/* Edit Mail Item Modal */}
-      <Modal 
-        isOpen={isEditModalOpen} 
+      <Modal
+        isOpen={isEditModalOpen}
         onClose={closeModal}
-        title="Edit Mail Item"
+        title={t('mail.editMailItem')}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Customer Selection */}
@@ -1570,7 +2348,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 .filter(contact => (contact as any).status !== 'No')
                 .map(contact => (
                   <option key={contact.contact_id} value={contact.contact_id}>
-                    {contact.contact_person || contact.company_name} - {contact.mailbox_number}
+                    {getCustomerDisplayName(contact)} - {contact.mailbox_number}
                   </option>
                 ))
               }
@@ -1584,7 +2362,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               <label className="block text-sm font-medium text-gray-900 mb-1">Date *</label>
               {editingMailItem && (
                 <p className="text-xs text-gray-500 mb-2">
-                  Current: {new Date(editingMailItem.received_date).toLocaleDateString('en-US', { 
+                  Current: {formatNYDateDisplay(editingMailItem.received_date, { 
                     month: 'short', 
                     day: 'numeric', 
                     year: 'numeric' 
@@ -1599,15 +2377,16 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
-              <p className="mt-1 text-xs text-gray-500">Select the date the mail was received</p>
+              <p className="mt-1 text-xs text-gray-500">{t('mail.dateReceivedHelp')}</p>
             </div>
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">Quantity *</label>
-              {editingMailItem && (
+              <label className="block text-sm font-medium text-gray-900 mb-1">{t('mail.quantity')} *</label>
+              {editingGroupItems.length > 0 && (
                 <p className="text-xs text-gray-500 mb-2">
-                  Current: {(editingMailItem as any).quantity || 1} item(s)
+                  Current: {editingGroupItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} item(s)
+                  {editingGroupItems.length > 1 && ` (${editingGroupItems.length} entries will be consolidated)`}
                 </p>
               )}
               <input
@@ -1624,7 +2403,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
 
           {/* Mail Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Mail Type *</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('mail.mailType')} *</label>
             <select
               name="item_type"
               value={formData.item_type}
@@ -1632,15 +2411,15 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               required
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="Letter">Letter</option>
-              <option value="Package">Package</option>
-              <option value="Certified Mail">Certified Mail</option>
+              <option value="Letter">{t('mailTypes.letter')}</option>
+              <option value="Package">{t('mailTypes.package')}</option>
+              <option value="Certified Mail">{t('mailTypes.certifiedMail')}</option>
             </select>
           </div>
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Status *</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('common.status')} *</label>
             <select
               name="status"
               value={formData.status}
@@ -1648,75 +2427,96 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               required
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="Received">Received</option>
-              <option value="Pending">Pending</option>
-              <option value="Notified">Notified</option>
-              <option value="Picked Up">Picked Up</option>
-              <option value="Scanned">Scanned</option>
-              <option value="Forward">Forward</option>
-              <option value="Abandoned">Abandoned</option>
+              <option value="Received">{t('mailStatus.received')}</option>
+              <option value="Pending">{t('mailStatus.pending')}</option>
+              <option value="Notified">{t('mailStatus.notified')}</option>
+              <option value="Picked Up">{t('mailStatus.pickedUp')}</option>
+              <option value="Scanned">{t('mailStatus.scanned')}</option>
+              <option value="Forward">{t('mailStatus.forward')}</option>
+              <option value="Abandoned">{t('mailStatus.abandoned')}</option>
             </select>
           </div>
 
           {/* Show staff and notes fields if status or quantity changed */}
-          {editingMailItem && (formData.status !== editingMailItem.status || formData.quantity !== (editingMailItem.quantity || 1)) && (
+          {editingMailItem && (() => {
+            const groupTotalQty = editingGroupItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+            const statusChanged = formData.status !== editingMailItem.status;
+            const quantityChanged = formData.quantity !== groupTotalQty;
+            return (statusChanged || quantityChanged) && (
             <>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                {formData.status !== editingMailItem.status && (
-                  <p className="text-sm text-blue-800 font-medium mb-3">
-                    Status is being changed from "{editingMailItem.status}" to "{formData.status}"
-                  </p>
+                {statusChanged && (
+                <p className="text-sm text-blue-800 font-medium mb-3">
+                  {t('mail.statusChangingFrom', { from: editingMailItem.status, to: formData.status })}
+                </p>
                 )}
-                {formData.quantity !== (editingMailItem.quantity || 1) && (
+                {quantityChanged && (
                   <p className="text-sm text-blue-800 font-medium mb-3">
-                    Quantity is being changed from {editingMailItem.quantity || 1} to {formData.quantity}
+                    {t('mail.quantityChangingFrom', { from: groupTotalQty, to: formData.quantity })}
                   </p>
                 )}
                 
                 {/* Who performed this action */}
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Who is making this change? *
+                    {t('staff.whoMakingChange')} *
                   </label>
-                  <select
-                    name="performed_by"
-                    value={formData.performed_by}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select staff member...</option>
-                    <option value="Merlin">Merlin</option>
-                    <option value="Madison">Madison</option>
-                  </select>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, performed_by: 'Madison' }))}
+                      className={`flex-1 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                        formData.performed_by === 'Madison'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      👤 {t('staff.madison')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, performed_by: 'Merlin' }))}
+                      className={`flex-1 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                        formData.performed_by === 'Merlin'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      👤 {t('staff.merlin')}
+                    </button>
+                  </div>
+                  {!formData.performed_by && (
+                    <p className="mt-1 text-xs text-red-600">{t('validation.selectPerformer')}</p>
+                  )}
                 </div>
 
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Notes (Optional)
+                    {t('actionModal.notesOptional')}
                   </label>
                   <textarea
                     name="edit_notes"
                     value={formData.edit_notes}
                     onChange={handleChange}
-                    placeholder="Add any notes about this change..."
+                    placeholder={t('mail.addNotesAboutChange')}
                     rows={2}
                     className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
             </>
-          )}
+          );
+          })()}
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Description</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">{t('common.description')}</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Add any notes about this mail item..."
+              placeholder={t('mail.addNotesPlaceholder')}
               rows={3}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
@@ -1729,14 +2529,14 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
               onClick={closeModal}
               className="flex-1 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="flex-1 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Updating...' : 'Update Mail Item'}
+              {saving ? t('mail.updating') : t('mail.updateMailItem')}
             </button>
           </div>
         </form>
@@ -1752,7 +2552,7 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           }}
           mailItemId={notifyingMailItem.mail_item_id}
           contactId={notifyingMailItem.contact_id}
-          customerName={notifyingMailItem.contacts?.contact_person || notifyingMailItem.contacts?.company_name || 'Customer'}
+          customerName={notifyingMailItem.contacts ? getCustomerDisplayName(notifyingMailItem.contacts) : 'Customer'}
           onSuccess={handleQuickNotifySuccess}
         />
       )}
@@ -1764,8 +2564,10 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           onClose={() => {
             setIsSendEmailModalOpen(false);
             setEmailingMailItem(null);
+            setEmailGroupItems([]);
           }}
           mailItem={emailingMailItem}
+          bulkMailItems={emailGroupItems.length > 1 ? emailGroupItems : undefined}
           onSuccess={handleSendEmailSuccess}
         />
       )}
@@ -1777,78 +2579,22 @@ export default function LogPage({ embedded = false, showAddForm = false }: LogPa
           onClose={() => {
             setIsActionModalOpen(false);
             setActionMailItem(null);
+            setActionGroupItems([]);
           }}
           mailItemId={actionMailItem.mail_item_id}
+          mailItemIds={actionGroupItems.map(item => item.mail_item_id)}
           mailItemDetails={{
-            customerName: actionMailItem.contacts?.contact_person || actionMailItem.contacts?.company_name || 'Customer',
+            customerName: actionMailItem.contacts ? getCustomerDisplayName(actionMailItem.contacts) : 'Customer',
             itemType: actionMailItem.item_type,
-            currentStatus: actionMailItem.status
+            currentStatus: actionMailItem.status,
+            totalQuantity: actionGroupItems.reduce((sum, item) => sum + (item.quantity || 1), 0)
           }}
           actionType={actionModalType}
           onSuccess={handleActionSuccess}
         />
       )}
 
-      {/* Duplicate Mail Prompt Modal */}
-      {showDuplicatePrompt && existingTodayMail && selectedContact && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Mail Already Logged Today</h2>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-gray-700 mb-2">
-                  <span className="font-semibold">
-                    {selectedContact.contact_person || selectedContact.company_name}
-                  </span>
-                  {' '}already has mail logged today:
-                </p>
-                <div className="text-sm text-gray-600 pl-4 border-l-2 border-yellow-400">
-                  <p><strong>{existingTodayMail.quantity || 1}x {existingTodayMail.item_type}</strong></p>
-                  <p>Status: {existingTodayMail.status}</p>
-                  <p>Logged: {new Date(existingTodayMail.received_date).toLocaleDateString()}</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Would you like to <strong>add {typeof quantity === 'string' && quantity === '' ? 1 : Number(quantity)} more {itemType}{(typeof quantity === 'string' && quantity === '' ? 1 : Number(quantity)) > 1 ? 's' : ''}</strong> to the existing log, 
-                or create a separate entry?
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={async () => {
-                  await submitNewMail(true);
-                }}
-                disabled={addingMail}
-                className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {addingMail ? 'Adding...' : `Add to Existing (Total: ${(existingTodayMail.quantity || 1) + (typeof quantity === 'string' && quantity === '' ? 1 : Number(quantity))})`}
-              </button>
-              
-              <button
-                onClick={async () => {
-                  await submitNewMail(false);
-                }}
-                disabled={addingMail}
-                className="w-full px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {addingMail ? 'Creating...' : 'Create Separate Entry'}
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowDuplicatePrompt(false);
-                  setExistingTodayMail(null);
-                }}
-                disabled={addingMail}
-                className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Duplicate prompt modal removed - now auto-adds to existing items */}
     </div>
   );
 }

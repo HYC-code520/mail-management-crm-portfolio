@@ -46,6 +46,43 @@ vi.mock('../contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// Load English translations for testing
+import enTranslations from '../i18n/locales/en.json';
+
+// Helper to get nested translation value by key path
+const getTranslation = (key: string): string => {
+  const keys = key.split('.');
+  let value: any = enTranslations;
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      return key; // Return key if not found
+    }
+  }
+  return typeof value === 'string' ? value : key;
+};
+
+// Mock LanguageContext
+vi.mock('../contexts/LanguageContext', () => ({
+  useLanguage: () => ({
+    language: 'EN',
+    setLanguage: vi.fn(),
+    t: (key: string, options?: Record<string, unknown>) => {
+      let translation = getTranslation(key);
+      // Handle interpolation (e.g., {{count}})
+      if (options) {
+        Object.entries(options).forEach(([optKey, optValue]) => {
+          translation = translation.replace(new RegExp(`{{${optKey}}}`, 'g'), String(optValue));
+        });
+      }
+      return translation;
+    },
+    tBoth: (key: string) => getTranslation(key),
+  }),
+  LanguageProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

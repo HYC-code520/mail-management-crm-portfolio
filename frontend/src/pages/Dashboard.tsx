@@ -1,20 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Package, UserPlus, FileText, Clock, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, MoreVertical, Send } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Mail, Package, AlertCircle, CheckCircle2, AlertTriangle, Clock, Users, Info } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import Modal from '../components/Modal.tsx';
 import QuickNotifyModal from '../components/QuickNotifyModal.tsx';
 import ActionModal from '../components/ActionModal.tsx';
-import SendEmailModal from '../components/SendEmailModal.tsx';
-import WaiveFeeModal from '../components/WaiveFeeModal.tsx';
 import LoadingSpinner from '../components/LoadingSpinner.tsx';
 import RevenueWidget from '../components/dashboard/RevenueWidget.tsx';
-import GroupedFollowUpSection from '../components/dashboard/GroupedFollowUp.tsx';
-import QuickActionsSection from '../components/dashboard/QuickActionsSection.tsx';
+// QuickActionsSection removed - using inline implementation
 import ChartsSection from '../components/dashboard/ChartsSection.tsx';
+import AnalyticsSection from '../components/dashboard/AnalyticsSection.tsx';
 import toast from 'react-hot-toast';
-import { getTodayNY, toNYDateString, getNYTimestamp } from '../utils/timezone.ts';
+import { getTodayNY, toNYDateString } from '../utils/timezone.ts';
+import { getCustomerDisplayName } from '../utils/customerDisplay';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface PackageFee {
   fee_id: string;
@@ -42,6 +41,7 @@ interface MailItem {
     contact_person?: string;
     company_name?: string;
     mailbox_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both';
   };
 }
 
@@ -51,6 +51,7 @@ interface GroupedFollowUp {
     contact_person?: string;
     company_name?: string;
     mailbox_number?: string;
+    display_name_preference?: 'company' | 'person' | 'both';
   };
   packages: MailItem[];
   letters: MailItem[];
@@ -67,6 +68,27 @@ interface Contact {
   status?: string;
   created_at?: string;
   service_tier?: number;
+}
+
+interface AnalyticsData {
+  avgResponseTime: number;
+  responseTimeBreakdown: {
+    emailCustomers: number;
+    walkInCustomers: number;
+    totalPickups: number;
+  };
+  activeCustomers: number;
+  inactiveCustomers: number;
+  serviceTiers: { tier1: number; tier2: number };
+  languageDistribution: { English: number; Chinese: number; Both: number };
+  statusDistribution: { [key: string]: number };
+  paymentDistribution: { Cash: number; Zelle: number; Venmo: number; PayPal: number; Check: number; Other: number };
+  ageDistribution: { '0-3': number; '4-7': number; '8-14': number; '15-30': number; '30+': number };
+  staffPerformance: { Merlin: number; Madison: number };
+  comparison: {
+    thisMonth: { mail: number; customers: number };
+    lastMonth: { mail: number; customers: number };
+  };
 }
 
 interface DashboardStats {
@@ -86,33 +108,25 @@ interface DashboardStats {
   totalRevenue: number;
   monthlyRevenue: number;
   waivedFees?: number;
+  // NEW: Analytics data
+  analytics?: AnalyticsData;
 }
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartsLoading, setChartsLoading] = useState(false); // Separate loading state for charts
-  const [statusFilter] = useState('All Status');
-  const [searchTerm] = useState('');
-  const [isFollowUpExpanded, setIsFollowUpExpanded] = useState(true);
-  const [followUpDisplayCount, setFollowUpDisplayCount] = useState(10); // Show 10 initially
   
   // Chart time range state
   const [chartTimeRange, setChartTimeRange] = useState<7 | 14 | 30>(7); // Default to 7 days
-  
-  // Sorting states (for future feature)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [sortColumn, setSortColumn] = useState<'date' | 'type' | 'customer' | 'status'>('date');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Add Customer Modal states
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isQuickNotifyModalOpen, setIsQuickNotifyModalOpen] = useState(false);
   const [notifyingMailItem, setNotifyingMailItem] = useState<MailItem | null>(null);
   const [saving, setSaving] = useState(false);
-  const [openFollowUpDropdownId, setOpenFollowUpDropdownId] = useState<string | null>(null);
   
   // Log New Mail Modal states
   const [isLogMailModalOpen, setIsLogMailModalOpen] = useState(false);
@@ -132,19 +146,11 @@ export default function DashboardPage() {
     quantity: 1
   });
   const [contacts, setContacts] = useState<Contact[]>([]);
-  
-  // Send Email Modal states
-  const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
-  const [emailingMailItem, setEmailingMailItem] = useState<MailItem | null>(null);
-  const [suggestedTemplateType, setSuggestedTemplateType] = useState<string | undefined>(undefined);
-  
-  // Waive Fee Modal states
-  const [isWaiveFeeModalOpen, setIsWaiveFeeModalOpen] = useState(false);
-  const [waivingGroup, setWaivingGroup] = useState<GroupedFollowUp | null>(null);
+  const [contactsLoading, setContactsLoading] = useState(false);
   
   // Action Modal states (for picked up, forward, abandoned actions)
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
-  const [actionModalType, setActionModalType] = useState<'picked_up' | 'forward' | 'scanned' | 'abandoned'>('picked_up');
+  const [actionModalType] = useState<'picked_up' | 'forward' | 'scanned' | 'abandoned'>('picked_up');
   const [actionMailItem, setActionMailItem] = useState<MailItem | null>(null);
   
   const [formData, setFormData] = useState({
@@ -203,106 +209,26 @@ export default function DashboardPage() {
     }
   }, [chartTimeRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Helper function to get notification context based on notification history
-  const getNotificationContext = (mailItem: MailItem) => {
-    const count = mailItem.notification_count || 0;
-    
-    let buttonText: string;
-    let suggestedTemplateType: string;
-    let buttonColor: string;
-    
-    if (count === 0) {
-      buttonText = "Send Notification";
-      suggestedTemplateType = "Initial";
-      buttonColor = "bg-blue-600/40 hover:bg-blue-600/60 text-blue-900 border border-blue-600/40";
-    } else if (count === 1) {
-      buttonText = "Send Reminder";
-      suggestedTemplateType = "Reminder";
-      buttonColor = "bg-gray-600/40 hover:bg-gray-600/60 text-gray-900 border border-gray-300";
-    } else {
-      buttonText = "Send Final Notice";
-      suggestedTemplateType = "Final Notice";
-      buttonColor = "bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300";
+  // Load contacts when Log Mail modal opens
+  useEffect(() => {
+    if (isLogMailModalOpen && contacts.length === 0 && !contactsLoading) {
+      const loadContacts = async () => {
+        setContactsLoading(true);
+        try {
+          const data = await api.contacts.getAll();
+          // Filter to only active contacts
+          const activeContacts = data.filter((c: Contact) => c.status === 'Active');
+          setContacts(activeContacts);
+        } catch (err) {
+          console.error('Error loading contacts:', err);
+          toast.error('Failed to load customers');
+        } finally {
+          setContactsLoading(false);
+        }
+      };
+      void loadContacts();
     }
-    
-    return { buttonText, suggestedTemplateType, buttonColor, count };
-  };
-
-  // Helper function to calculate days since a date (NY timezone aware)
-  const getDaysSince = (dateStr: string) => {
-    const todayNY = getTodayNY();
-    const todayDate = new Date(todayNY + 'T00:00:00');
-    const itemDateNY = toNYDateString(dateStr);
-    const itemDate = new Date(itemDateNY + 'T00:00:00');
-    const diffTime = todayDate.getTime() - itemDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
-
-  // Helper function to format date for tooltip display (NY timezone)
-  const formatDateForTooltip = (dateStr: string) => {
-    const nyDateStr = toNYDateString(dateStr);
-    const date = new Date(nyDateStr + 'T12:00:00'); // Use noon to avoid timezone edge cases
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
-
-  // Helper function to generate date range for charts
-  const getChartDateRange = (days: number) => {
-    const result = [];
-    const today = new Date();
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      
-      // Format as YYYY-MM-DD for data matching
-      const dateStr = toNYDateString(date.toISOString());
-      
-      // Format for display (e.g., "Nov 20")
-      const displayDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      
-      result.push({ dateStr, displayDate, date: displayDate }); // 'date' is what the chart uses
-    }
-    
-    return result;
-  };
-
-  // Helper function to generate tooltip content for notification button
-  const getNotificationTooltip = (mailItem: MailItem) => {
-    const count = mailItem.notification_count || 0;
-    const daysSinceReceived = getDaysSince(mailItem.received_date);
-    const receivedDateFormatted = formatDateForTooltip(mailItem.received_date);
-    
-    let tooltip = `📦 Received: ${receivedDateFormatted} (${daysSinceReceived} ${daysSinceReceived === 1 ? 'day' : 'days'} ago)\n`;
-    
-    if (count === 0) {
-      tooltip += `✉️ Status: Not notified yet\n`;
-      tooltip += `→ Action: Send initial notification`;
-    } else if (count === 1) {
-      if (mailItem.last_notified) {
-        const daysSinceNotified = getDaysSince(mailItem.last_notified);
-        const lastNotifiedFormatted = formatDateForTooltip(mailItem.last_notified);
-        tooltip += `✉️ Last notified: ${lastNotifiedFormatted} (${daysSinceNotified} ${daysSinceNotified === 1 ? 'day' : 'days'} ago)\n`;
-      } else {
-        tooltip += `✉️ Notified: 1 time\n`;
-      }
-      tooltip += `→ Action: Send reminder`;
-    } else {
-      if (mailItem.last_notified) {
-        const daysSinceNotified = getDaysSince(mailItem.last_notified);
-        const lastNotifiedFormatted = formatDateForTooltip(mailItem.last_notified);
-        tooltip += `✉️ Last notified: ${lastNotifiedFormatted} (${daysSinceNotified} ${daysSinceNotified === 1 ? 'day' : 'days'} ago)\n`;
-      }
-      tooltip += `🔔 Notified: ${count} times\n`;
-      tooltip += `⚠ Action: Send final notice`;
-    }
-    
-    return tooltip;
-  };
+  }, [isLogMailModalOpen, contacts.length, contactsLoading]);
 
   // Format phone number as user types: 917-822-5751
   const formatPhoneNumber = (value: string) => {
@@ -355,17 +281,6 @@ export default function DashboardPage() {
     });
   };
 
-  const openLogMailModal = async () => {
-    setIsLogMailModalOpen(true);
-    // Load contacts for the dropdown
-    try {
-      const contactsData = await api.contacts.getAll();
-      setContacts(contactsData);
-    } catch (err) {
-      console.error('Failed to load contacts:', err);
-      toast.error('Failed to load customers');
-    }
-  };
 
   const closeLogMailModal = () => {
     setIsLogMailModalOpen(false);
@@ -392,7 +307,20 @@ export default function DashboardPage() {
       }
     }
     
-    setLogMailFormData(prev => ({ ...prev, [name]: value }));
+    // Handle quantity field - allow empty for typing, parse as integer
+    if (name === 'quantity') {
+      // Allow empty string while typing, or parse as positive integer
+      const numValue = value === '' ? '' : parseInt(value, 10);
+      // Only set if it's empty or a valid positive number
+      if (value === '' || (!isNaN(numValue as number) && (numValue as number) >= 0)) {
+        setLogMailFormData(prev => ({
+          ...prev,
+          [name]: numValue
+        }));
+      }
+    } else {
+      setLogMailFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleLogMailSubmit = async (e: React.FormEvent) => {
@@ -414,10 +342,15 @@ export default function DashboardPage() {
       const nyDay = String(dateObj.getDate()).padStart(2, '0');
       const receivedDateNY = `${nyYear}-${nyMonth}-${nyDay}T12:00:00-05:00`; // NY timezone offset
       
+      // Ensure quantity is a valid positive integer (default to 1)
+      const quantity = typeof logMailFormData.quantity === 'number' && logMailFormData.quantity > 0
+        ? Math.floor(logMailFormData.quantity)
+        : 1;
+
       await api.mailItems.create({
         ...logMailFormData,
         received_date: receivedDateNY,
-        quantity: logMailFormData.quantity || 1
+        quantity
       });
       toast.success('Mail logged successfully!');
       closeLogMailModal();
@@ -467,22 +400,6 @@ export default function DashboardPage() {
     }
   };
 
-  // const openQuickNotifyModal = (item: MailItem) => {
-  //   setNotifyingMailItem(item);
-  //   setIsQuickNotifyModalOpen(true);
-  // };
-
-  const openSendEmailModal = (item: MailItem) => {
-    setEmailingMailItem(item);
-    setIsSendEmailModalOpen(true);
-  };
-
-  const handleEmailSuccess = () => {
-    loadDashboardData(); // Refresh data after email sent
-    setIsSendEmailModalOpen(false);
-    setEmailingMailItem(null);
-  };
-
   const handleActionSuccess = () => {
     loadDashboardData();
     setIsActionModalOpen(false);
@@ -495,48 +412,15 @@ export default function DashboardPage() {
     setNotifyingMailItem(null);
   };
 
-  const openWaiveFeeModal = (group: GroupedFollowUp) => {
-    setWaivingGroup(group);
-    setIsWaiveFeeModalOpen(true);
-  };
-
-  const handleWaiveFeeSuccess = () => {
-    loadDashboardData(); // Refresh data after waiving fees
-    setIsWaiveFeeModalOpen(false);
-    setWaivingGroup(null);
-  };
-
-  const openSendEmailForGroup = (group: GroupedFollowUp) => {
-    // For grouped follow-up, we need to handle sending email to the contact
-    // We'll use the first mail item as the reference
-    const firstItem = group.packages[0] || group.letters[0];
-    if (firstItem) {
-      // Calculate suggested template based on urgency
-      const allItems = [...group.packages, ...group.letters];
-      const oldestDays = Math.max(...allItems.map(item => getDaysSince(item.received_date)));
-      
-      let suggested: string | undefined;
-      if (oldestDays >= 28) {
-        suggested = 'Final Notice Before Abandonment';
-      } else if (group.totalFees > 0) {
-        suggested = 'Package Fee Reminder';
-      } else {
-        suggested = 'General Reminder';
-      }
-      
-      setSuggestedTemplateType(suggested);
-      openSendEmailModal(firstItem);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Loading spinner with message */}
+      <div className="max-w-full mx-auto px-16 py-6">
+        {/* Loading animation with message */}
         <div className="flex items-center justify-center min-h-[60vh]">
           <LoadingSpinner 
-            message="Loading dashboard data..." 
+            message={t('dashboard.loadingData')} 
             size="lg"
+            variant="mail"
           />
         </div>
         
@@ -557,118 +441,187 @@ export default function DashboardPage() {
     );
   }
 
-  // const handleSort = (column: 'date' | 'type' | 'customer' | 'status') => {
-  //   if (sortColumn === column) {
-  //     setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-  //   } else {
-  //     setSortColumn(column);
-  //     setSortDirection(column === 'date' ? 'desc' : 'asc');
-  //   }
-  // };
-
-  const filteredItems = stats?.recentMailItems.filter((item: any) => {
-    const matchesStatus = statusFilter === 'All Status' || item.status === statusFilter;
-    const matchesSearch = searchTerm === '' || 
-      item.contacts?.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.contacts?.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  }) || [];
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    let comparison = 0;
-    
-    switch (sortColumn) {
-      case 'date':
-        comparison = new Date(a.received_date).getTime() - new Date(b.received_date).getTime();
-        break;
-      case 'type':
-        comparison = a.item_type.localeCompare(b.item_type);
-        break;
-      case 'customer': {
-        const nameA = a.contacts?.contact_person || a.contacts?.company_name || '';
-        const nameB = b.contacts?.contact_person || b.contacts?.company_name || '';
-        comparison = nameA.localeCompare(nameB);
-        break;
-      }
-      case 'status':
-        comparison = a.status.localeCompare(b.status);
-        break;
-    }
-    
-    return sortDirection === 'asc' ? comparison : -comparison;
-  });
-
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Today's mail activity, metrics, and customer insights</p>
+    <div className="max-w-full mx-auto px-16 py-6">
+      {/* Top Row: Merlin (1/4) | Madison (1/4) | Today's Overview (1/2) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6" style={{ overflow: 'visible' }}>
+        {stats?.analytics && (
+          <>
+            {/* Merlin Performance - 1/4 width */}
+            <div className="lg:col-span-1" style={{ overflow: 'visible' }}>
+              <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 shadow-md border border-gray-100 hover:shadow-lg transition-shadow relative" style={{ minHeight: '160px', overflow: 'visible' }}>
+                {/* Avatar positioned on the RIGHT side - smaller and further right */}
+                <div className="absolute bottom-0 right-0 pointer-events-none" style={{ 
+                  height: '170px',
+                  width: 'auto',
+                  right: '-60px',
+                  bottom: '0',
+                  zIndex: 20
+                }}>
+                  <img 
+                    src="/assets/images/Merlin.png" 
+                    alt="Merlin" 
+                    className="h-full w-auto object-contain object-bottom"
+                    style={{ 
+                      filter: 'drop-shadow(4px 4px 12px rgba(0,0,0,0.25))'
+                    }}
+                  />
+                </div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
+                      <span className="text-white font-bold text-xs">MP</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xs font-bold text-gray-900">Merlin</h3>
+                      <p className="text-xs text-gray-500">{t('dashboard.thisWeek')}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-blue-600">{stats.analytics.staffPerformance.Merlin}</p>
+                    <p className="text-xs text-gray-600">{t('todos.tasksCompleted')}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Madison Performance - 1/4 width */}
+            <div className="lg:col-span-1" style={{ overflow: 'visible' }}>
+              <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-4 shadow-md border border-gray-100 hover:shadow-lg transition-shadow relative" style={{ minHeight: '160px', overflow: 'visible' }}>
+                {/* Avatar positioned on the RIGHT side - smaller and further right */}
+                <div className="absolute bottom-0 right-0 pointer-events-none" style={{ 
+                  height: '170px',
+                  width: 'auto',
+                  right: '-60px',
+                  bottom: '0',
+                  zIndex: 20
+                }}>
+                  <img 
+                    src="/assets/images/Madison.png" 
+                    alt="Madison" 
+                    className="h-full w-auto object-contain object-bottom"
+                    style={{ 
+                      filter: 'drop-shadow(4px 4px 12px rgba(0,0,0,0.25))'
+                    }}
+                  />
+                </div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-md">
+                      <span className="text-white font-bold text-xs">MR</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xs font-bold text-gray-900">Madison</h3>
+                      <p className="text-xs text-gray-500">{t('dashboard.thisWeek')}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-purple-600">{stats.analytics.staffPerformance.Madison}</p>
+                    <p className="text-xs text-gray-600">{t('todos.tasksCompleted')}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Today's Overview - 1/2 width (single horizontal line) */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 h-full flex flex-col justify-center">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-900">{t('dashboard.todaysOverview')}</h2>
+              
+              {/* Info Icon with Tooltip */}
+              <div className="relative group">
+                <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                
+                {/* Tooltip - Positioned outside container */}
+                <div className="absolute right-0 top-full mt-2 px-4 py-3 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 w-80 z-[100] pointer-events-none">
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-semibold text-blue-300">{t('mail.todaysMail')}:</span> {t('dashboard.tooltipTodaysMail')}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-purple-300">{t('mail.pendingPickups')}:</span> {t('dashboard.tooltipPendingPickups')}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-red-300">{t('followUps.overdue')}:</span> {t('dashboard.tooltipOverdue')}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-green-300">{t('todos.completed')}:</span> {t('dashboard.tooltipCompleted')}
+                    </div>
+                  </div>
+                  <div className="absolute bottom-full right-2 border-[6px] border-transparent border-b-gray-900"></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+              {/* Today's Mail */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <Mail className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-600 truncate">{t('mail.todaysMail')}</p>
+                  <p className="text-xl font-bold text-gray-900">{stats?.todaysMail || 0}</p>
+                </div>
+              </div>
+
+              {/* Pending Pickups */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-600 truncate">{t('mail.pendingPickups')}</p>
+                  <p className="text-xl font-bold text-gray-900">{stats?.pendingPickups || 0}</p>
+                </div>
+              </div>
+
+              {/* Overdue */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-600 truncate">{t('followUps.overdue')}</p>
+                  <p className="text-xl font-bold text-red-600">{stats?.overdueMail || 0}</p>
+                </div>
+              </div>
+
+              {/* Completed Today */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-600 truncate">{t('todos.completed')}</p>
+                  <p className="text-xl font-bold text-green-600">{stats?.completedToday || 0}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Action Buttons */}
-      <QuickActionsSection
-        onViewTemplates={() => navigate('/dashboard/templates')}
-        onAddCustomer={() => setIsAddCustomerModalOpen(true)}
-        onLogMail={openLogMailModal}
-      />
-
-      {/* Stats Cards - Responsive grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-        {/* Today's Mail */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">Today's Mail</p>
-              <p className="text-4xl font-bold text-gray-900">{stats?.todaysMail || 0}</p>
-              <p className="text-gray-500 text-sm mt-1">items received</p>
-            </div>
-            <Mail className="w-8 h-8 text-gray-900" />
-          </div>
+      {/* Second Row: Charts (left 1/2) + Revenue Widget (right 1/2) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Left: Charts Section */}
+        <div className="lg:col-span-1">
+          <ChartsSection
+            mailVolumeData={stats?.mailVolumeData || []}
+            customerGrowthData={stats?.customerGrowthData || []}
+            chartTimeRange={chartTimeRange}
+            onTimeRangeChange={setChartTimeRange}
+            loading={chartsLoading}
+          />
         </div>
 
-        {/* Pending Pickups */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">Pending Pickups</p>
-              <p className="text-4xl font-bold text-gray-900">{stats?.pendingPickups || 0}</p>
-              <p className="text-gray-500 text-sm mt-1">awaiting collection</p>
-            </div>
-            <Package className="w-8 h-8 text-gray-900" />
-          </div>
-        </div>
-
-        {/* Overdue! */}
-        <div className="bg-white border-2 border-red-200 rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-gray-900 text-sm mb-1 font-semibold">Overdue!</p>
-              <p className="text-4xl font-bold text-red-600">{stats?.overdueMail || 0}</p>
-              <p className="text-gray-900 text-sm mt-1">&gt;7 days old</p>
-            </div>
-            <AlertCircle className="w-8 h-8 text-red-600" />
-          </div>
-        </div>
-
-        {/* Completed Today */}
-        <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">Completed Today</p>
-              <p className="text-4xl font-bold text-green-600">{stats?.completedToday || 0}</p>
-              <p className="text-gray-500 text-sm mt-1">picked up</p>
-            </div>
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
-          </div>
-        </div>
-      </div>
-
-      {/* Responsive Layout: Stack on mobile, side-by-side on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 items-start">
-        {/* Revenue Widget - NEW */}
-        <div className="lg:col-span-5">
+        {/* Right: Revenue Widget */}
+        <div className="lg:col-span-1">
           <RevenueWidget
             monthlyRevenue={stats?.monthlyRevenue || 0}
             outstandingFees={stats?.outstandingFees || 0}
@@ -676,58 +629,246 @@ export default function DashboardPage() {
             loading={loading}
           />
         </div>
+      </div>
 
-        {/* Needs Follow-Up - Full width on mobile, 60% on desktop */}
-        <div className="lg:col-span-3 h-full">
-          <GroupedFollowUpSection
-            groups={stats?.needsFollowUp || []}
-            onWaiveFee={openWaiveFeeModal}
-            onSendEmail={openSendEmailForGroup}
-            getDaysSince={getDaysSince}
+      {/* Analytics Section */}
+      {stats?.analytics && (
+        <div className="mt-8 mb-6">
+          <AnalyticsSection
+            analytics={stats.analytics}
             loading={loading}
           />
         </div>
+      )}
 
-        {/* Charts - Full width on mobile, 40% on desktop */}
-        <ChartsSection
-          mailVolumeData={stats?.mailVolumeData || []}
-          customerGrowthData={stats?.customerGrowthData || []}
-          chartTimeRange={chartTimeRange}
-          onTimeRangeChange={setChartTimeRange}
-          loading={chartsLoading}
-        />
+      {/* Metric Cards, Mail Age Distribution, and Needs Follow-up - Same Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+        {/* Two Metric Cards Stacked Vertically - 1/5 width, each takes 1/2 height */}
+        {stats?.analytics && (
+          <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+            {/* This Month Mail - takes 1/2 of container height */}
+            <div className="bg-gradient-to-br from-green-50 to-white rounded-xl p-4 border border-green-100 shadow-md hover:shadow-lg transition-shadow flex-1 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Package className="w-4 h-4 text-white" />
+                </div>
+                <p className="text-xs text-green-700 font-semibold uppercase">{t('dashboard.thisMonthMail')}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.mail}</p>
+                  {(() => {
+                    const mailChange = stats.analytics.comparison.lastMonth.mail > 0
+                      ? ((stats.analytics.comparison.thisMonth.mail - stats.analytics.comparison.lastMonth.mail) / stats.analytics.comparison.lastMonth.mail) * 100
+                      : 0;
+                    return mailChange !== 0 && (
+                      <span className={`flex items-center text-sm font-bold ${mailChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {mailChange > 0 ? '↑' : '↓'}
+                        {Math.abs(mailChange).toFixed(0)}%
+                      </span>
+                    );
+                  })()}
+                </div>
+                {/* Mini Sparkline Trend - BIGGER */}
+                {(() => {
+                  const lastMonth = stats.analytics.comparison.lastMonth.mail;
+                  const thisMonth = stats.analytics.comparison.thisMonth.mail;
+                  const maxValue = Math.max(lastMonth, thisMonth, 1);
+                  const lastMonthHeight = (lastMonth / maxValue) * 100;
+                  const thisMonthHeight = (thisMonth / maxValue) * 100;
+                  
+                  return (
+                    <div className="flex items-end gap-1.5 h-16">
+                      <div 
+                        className="w-4 bg-green-300 rounded-t transition-all duration-300"
+                        style={{ height: `${lastMonthHeight}%` }}
+                      />
+                      <div 
+                        className="w-4 bg-green-500 rounded-t transition-all duration-300"
+                        style={{ height: `${thisMonthHeight}%` }}
+                      />
+                    </div>
+                  );
+                })()}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{t('dashboard.vsLastMonth', { count: stats.analytics.comparison.lastMonth.mail })}</p>
+            </div>
+
+            {/* New Customers - takes 1/2 of container height */}
+            <div className="bg-gradient-to-br from-orange-50 to-white rounded-xl p-4 border border-orange-100 shadow-md hover:shadow-lg transition-shadow flex-1 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 text-white" />
+                </div>
+                <p className="text-xs text-orange-700 font-semibold uppercase">{t('dashboard.newCustomers')}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-gray-900">{stats.analytics.comparison.thisMonth.customers}</p>
+                  {(() => {
+                    const customerChange = stats.analytics.comparison.lastMonth.customers > 0
+                      ? ((stats.analytics.comparison.thisMonth.customers - stats.analytics.comparison.lastMonth.customers) / stats.analytics.comparison.lastMonth.customers) * 100
+                      : 0;
+                    return customerChange !== 0 && (
+                      <span className={`flex items-center text-sm font-bold ${customerChange > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                        {customerChange > 0 ? '↑' : '↓'}
+                        {Math.abs(customerChange).toFixed(0)}%
+                      </span>
+                    );
+                  })()}
+                </div>
+                {/* Mini Sparkline Trend - BIGGER */}
+                {(() => {
+                  const lastMonth = stats.analytics.comparison.lastMonth.customers;
+                  const thisMonth = stats.analytics.comparison.thisMonth.customers;
+                  const maxValue = Math.max(lastMonth, thisMonth, 1);
+                  const lastMonthHeight = (lastMonth / maxValue) * 100;
+                  const thisMonthHeight = (thisMonth / maxValue) * 100;
+                  
+                  return (
+                    <div className="flex items-end gap-1.5 h-16">
+                      <div 
+                        className="w-4 bg-orange-300 rounded-t transition-all duration-300"
+                        style={{ height: `${lastMonthHeight}%` }}
+                      />
+                      <div 
+                        className="w-4 bg-orange-500 rounded-t transition-all duration-300"
+                        style={{ height: `${thisMonthHeight}%` }}
+                      />
+                    </div>
+                  );
+                })()}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{t('dashboard.vsLastMonth', { count: stats.analytics.comparison.lastMonth.customers })}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Mail Age Distribution - 2/5 width */}
+        {stats?.analytics?.ageDistribution && (
+          <div className="lg:col-span-2 bg-white rounded-xl p-4 shadow-lg border border-gray-100 h-full flex flex-col">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">{t('dashboard.mailAgeDistribution')}</h3>
+                <p className="text-xs text-gray-500">{t('dashboard.currentPendingByAge')}</p>
+              </div>
+            </div>
+            <div className="flex-1 flex flex-col justify-center gap-3">
+              {[
+                { name: t('ageRanges.0to3days'), value: stats.analytics.ageDistribution['0-3'], color: '#10B981' },
+                { name: t('ageRanges.4to7days'), value: stats.analytics.ageDistribution['4-7'], color: '#FCD34D' },
+                { name: t('ageRanges.8to14days'), value: stats.analytics.ageDistribution['8-14'], color: '#F59E0B' },
+                { name: t('ageRanges.15to30days'), value: stats.analytics.ageDistribution['15-30'], color: '#EF4444' },
+                { name: t('ageRanges.over30days'), value: stats.analytics.ageDistribution['30+'], color: '#A855F7' }
+              ].map((item) => {
+                const total = Object.values(stats.analytics?.ageDistribution || {}).reduce((sum, v) => sum + v, 0);
+                const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                
+                return (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <div className="w-20 text-xs font-semibold text-gray-700 whitespace-nowrap">{item.name}</div>
+                    <div className="flex-1">
+                      <div className="h-10 bg-gray-100 rounded-lg overflow-hidden relative">
+                        <div
+                          className="h-full flex items-center justify-end px-2 transition-all duration-300"
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: item.color,
+                            minWidth: item.value > 0 ? '50px' : '0'
+                          }}
+                        >
+                          {item.value > 0 && (
+                            <span className="text-xs font-bold text-white">{item.value}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-12 text-right text-xs font-semibold text-gray-600">
+                      {percentage.toFixed(0)}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Needs Follow-up Section - 2/5 width */}
+        {stats?.needsFollowUp && stats.needsFollowUp.length > 0 && (
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-100 p-4 h-full">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-gray-900">{t('followUps.title')}</h2>
+                  <p className="text-xs text-gray-500">{t('followUps.needsAttention', { count: stats.needsFollowUp.length })}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/dashboard/follow-ups')}
+                className="px-2 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs font-semibold whitespace-nowrap ml-2"
+              >
+                {t('common.viewAll')}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {stats.needsFollowUp.slice(0, 8).map((group) => (
+                <div key={group.contact.contact_id} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-2.5 border border-orange-200 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-xs truncate">{getCustomerDisplayName(group.contact)}</p>
+                      <p className="text-xs text-gray-600">{t('dashboard.box')} #{group.contact.mailbox_number}</p>
+                    </div>
+                    {group.totalFees > 0 && (
+                      <span className="text-orange-700 font-bold text-sm ml-2 flex-shrink-0">${group.totalFees}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 text-xs text-gray-700">
+                    {group.packages.length > 0 && <span className="flex items-center gap-1">📦 <span className="font-semibold">{group.packages.length}</span></span>}
+                    {group.letters.length > 0 && <span className="flex items-center gap-1">✉️ <span className="font-semibold">{group.letters.length}</span></span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add Customer Modal */}
-      <Modal 
+      <Modal
         isOpen={isAddCustomerModalOpen}
         onClose={closeAddCustomerModal}
-        title="Add New Customer"
+        title={t('customers.addNew')}
       >
         <form onSubmit={handleAddCustomerSubmit} className="space-y-6">
           {/* Name & Company */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Name <span className="text-red-500">*</span>
+                {t('customerForm.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="contact_person"
                 value={formData.contact_person}
                 onChange={handleFormChange}
-                placeholder="Full name"
+                placeholder={t('customerForm.fullName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Company</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.company')}</label>
               <input
                 type="text"
                 name="company_name"
                 value={formData.company_name}
                 onChange={handleFormChange}
-                placeholder="Company name"
+                placeholder={t('customerForm.companyName')}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -737,7 +878,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Mailbox # <span className="text-red-500">*</span>
+                {t('customerForm.mailboxNumber')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -750,16 +891,16 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Preferred Language</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.languagePreference')}</label>
               <select
                 name="language_preference"
                 value={formData.language_preference}
                 onChange={handleFormChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="English">English</option>
-                <option value="Chinese">Chinese</option>
-                <option value="Both">Both</option>
+                <option value="English">{t('languageOptions.english')}</option>
+                <option value="Chinese">{t('languageOptions.chinese')}</option>
+                <option value="Both">{t('languageOptions.both')}</option>
               </select>
             </div>
           </div>
@@ -767,7 +908,7 @@ export default function DashboardPage() {
           {/* Email & Phone */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.email')}</label>
               <input
                 type="email"
                 name="email"
@@ -778,7 +919,7 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Phone</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.phone')}</label>
               <input
                 type="tel"
                 name="phone_number"
@@ -794,7 +935,7 @@ export default function DashboardPage() {
           {/* Unit & Service Tier */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Unit #</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.unitNumber')}</label>
               <input
                 type="text"
                 name="unit_number"
@@ -805,15 +946,15 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Service Tier</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">{t('customerForm.serviceTier')}</label>
               <select
                 name="service_tier"
                 value={formData.service_tier}
                 onChange={handleFormChange}
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value={1}>Tier 1 - Basic</option>
-                <option value={2}>Tier 2 - Standard</option>
+                <option value={1}>{t('customerForm.tier1')}</option>
+                <option value={2}>{t('customerForm.tier2')}</option>
               </select>
             </div>
           </div>
@@ -826,39 +967,40 @@ export default function DashboardPage() {
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={saving}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Customer'}
+              {saving ? t('common.saving') : t('customers.saveCustomer')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Log New Mail Modal */}
-      <Modal 
-        isOpen={isLogMailModalOpen} 
+      <Modal
+        isOpen={isLogMailModalOpen}
         onClose={closeLogMailModal}
-        title="Log New Mail"
+        title={t('mail.logNewMail')}
       >
         <form onSubmit={handleLogMailSubmit} className="space-y-6">
           {/* Customer Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Customer <span className="text-red-500">*</span>
+              {t('mail.customer')} <span className="text-red-500">*</span>
             </label>
             <select
               name="contact_id"
               value={logMailFormData.contact_id}
               onChange={handleLogMailFormChange}
               required
-              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              disabled={contactsLoading}
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-wait"
             >
-              <option value="">Select a customer</option>
+              <option value="">{contactsLoading ? t('mail.loadingCustomers') : t('mail.selectCustomer')}</option>
               {contacts
                 .sort((a, b) => (a.mailbox_number || '').localeCompare(b.mailbox_number || ''))
                 .map(contact => (
@@ -874,7 +1016,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Item Type <span className="text-red-500">*</span>
+                {t('mail.itemType')} <span className="text-red-500">*</span>
               </label>
               <select
                 name="item_type"
@@ -883,23 +1025,23 @@ export default function DashboardPage() {
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Letter">Letter</option>
-                <option value="Package">Package</option>
-                <option value="Large Package">Large Package</option>
-                <option value="Certified Mail">Certified Mail</option>
+                <option value="Letter">{t('mailTypes.letter')}</option>
+                <option value="Package">{t('mailTypes.package')}</option>
+                <option value="Large Package">{t('mailTypes.largePackage')}</option>
+                <option value="Certified Mail">{t('mailTypes.certifiedMail')}</option>
               </select>
-              {(logMailFormData.item_type === 'Package' || logMailFormData.item_type === 'Large Package') && 
-               logMailFormData.contact_id && 
+              {(logMailFormData.item_type === 'Package' || logMailFormData.item_type === 'Large Package') &&
+               logMailFormData.contact_id &&
                contacts.find(c => c.contact_id === logMailFormData.contact_id)?.service_tier === 1 && (
                 <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
                   <AlertTriangle className="w-4 h-4" />
-                  Tier 1 customers typically don't receive packages
+                  {t('warnings.tier1NoPackages')}
                 </p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Status <span className="text-red-500">*</span>
+                {t('common.status')} <span className="text-red-500">*</span>
               </label>
               <select
                 name="status"
@@ -908,13 +1050,13 @@ export default function DashboardPage() {
                 required
                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="Received">Received</option>
-                <option value="Notified">Notified</option>
-                <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Picked Up">Picked Up</option>
-                <option value="Forward">Forward</option>
-                <option value="Scanned">Scanned</option>
-                <option value="Abandoned">Abandoned</option>
+                <option value="Received">{t('mailStatus.received')}</option>
+                <option value="Notified">{t('mailStatus.notified')}</option>
+                <option value="Ready for Pickup">{t('mailStatus.readyForPickup')}</option>
+                <option value="Picked Up">{t('mailStatus.pickedUp')}</option>
+                <option value="Forward">{t('mailStatus.forward')}</option>
+                <option value="Scanned">{t('mailStatus.scanned')}</option>
+                <option value="Abandoned">{t('mailStatus.abandoned')}</option>
               </select>
             </div>
           </div>
@@ -923,7 +1065,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Quantity
+                {t('mail.quantity')}
               </label>
               <input
                 type="number"
@@ -936,7 +1078,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Received Date <span className="text-red-500">*</span>
+                {t('mail.receivedDate')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -952,14 +1094,14 @@ export default function DashboardPage() {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Description (Optional)
+              {t('mail.descriptionOptional')}
             </label>
             <textarea
               name="description"
               value={logMailFormData.description}
               onChange={handleLogMailFormChange}
               rows={3}
-              placeholder="Add any notes about this mail item..."
+              placeholder={t('mail.addNotesPlaceholder')}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
           </div>
@@ -972,7 +1114,7 @@ export default function DashboardPage() {
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={saving}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -982,10 +1124,10 @@ export default function DashboardPage() {
               {saving ? (
                 <>
                   <LoadingSpinner size="sm" />
-                  <span>Logging...</span>
+                  <span>{t('mail.logging')}</span>
                 </>
               ) : (
-                'Log Mail'
+                t('mail.logMail')
               )}
             </button>
           </div>
@@ -1025,34 +1167,7 @@ export default function DashboardPage() {
           onSuccess={handleActionSuccess}
         />
       )}
-      
-      {/* Waive Fee Modal */}
-      {waivingGroup && (
-        <WaiveFeeModal
-          isOpen={isWaiveFeeModalOpen}
-          onClose={() => {
-            setIsWaiveFeeModalOpen(false);
-            setWaivingGroup(null);
-          }}
-          group={waivingGroup}
-          onSuccess={handleWaiveFeeSuccess}
-        />
-      )}
-      
-      {/* Send Email Modal */}
-      {emailingMailItem && (
-        <SendEmailModal
-          isOpen={isSendEmailModalOpen}
-          onClose={() => {
-            setIsSendEmailModalOpen(false);
-            setEmailingMailItem(null);
-            setSuggestedTemplateType(undefined);
-          }}
-          mailItem={emailingMailItem}
-          onSuccess={handleEmailSuccess}
-          suggestedTemplateType={suggestedTemplateType}
-        />
-      )}
     </div>
   );
 }
+

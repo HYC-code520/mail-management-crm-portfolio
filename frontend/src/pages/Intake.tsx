@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Save, Bell, Mail, Package, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '../lib/api-client.ts';
 import toast from 'react-hot-toast';
 import { getTodayNY, getNYTimestamp } from '../utils/timezone';
+import { useLanguage } from '../contexts/LanguageContext.tsx';
 
 interface Contact {
   contact_id: string;
@@ -27,6 +29,10 @@ interface IntakePageProps {
 }
 
 export default function IntakePage({ embedded = false }: IntakePageProps) {
+  const { t } = useLanguage();
+  const [searchParams] = useSearchParams();
+  const preselectedContactId = searchParams.get('contactId');
+
   const [date, setDate] = useState(getTodayNY());
   const [itemType, setItemType] = useState('Letter');
   const [quantity, setQuantity] = useState(1);
@@ -41,6 +47,24 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
   // Sorting states
   const [sortColumn, setSortColumn] = useState<'type' | 'customer' | 'status' | 'quantity'>('customer');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Load preselected contact if contactId is in URL
+  useEffect(() => {
+    if (preselectedContactId) {
+      const loadPreselectedContact = async () => {
+        try {
+          const contact = await api.contacts.getById(preselectedContactId);
+          if (contact) {
+            setSelectedContact(contact);
+            setSearchQuery(contact.contact_person || contact.company_name || '');
+          }
+        } catch (err) {
+          console.error('Error loading preselected contact:', err);
+        }
+      };
+      loadPreselectedContact();
+    }
+  }, [preselectedContactId]);
 
   useEffect(() => {
     loadTodaysEntries();
@@ -101,7 +125,7 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
     e.preventDefault();
 
     if (!selectedContact) {
-      toast.error('Please select a customer');
+      toast.error(t('validation.selectCustomer'));
       return;
     }
 
@@ -130,7 +154,7 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
       loadTodaysEntries();
     } catch (err) {
       console.error('Error creating mail item:', err);
-      toast.error('Failed to add mail item');
+      toast.error(t('toast.failedToLogMail'));
     } finally {
       setLoading(false);
     }
@@ -139,11 +163,11 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
   const markAsNotified = async (mailItemId: string) => {
     try {
       await api.mailItems.updateStatus(mailItemId, 'Notified');
-      toast.success('Marked as notified!');
+      toast.success(t('toast.markedAsNotified'));
       loadTodaysEntries();
     } catch (err) {
       console.error('Error updating status:', err);
-      toast.error('Failed to update status');
+      toast.error(t('toast.failedToUpdateMailItem'));
     }
   };
 
@@ -191,19 +215,19 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
       {/* Header - only show if not embedded */}
       {!embedded && (
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mail Intake</h1>
-          <p className="text-gray-600">Add new mail items</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('mail.mailIntake')}</h1>
+          <p className="text-gray-600">{t('mail.addNewMail')}</p>
         </div>
       )}
 
       {/* Add New Mail Form */}
       <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm" aria-label="Add new mail form">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Add New Mail</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6">{t('mail.addNewMail')}</h2>
 
         <div className="grid grid-cols-3 gap-4 mb-6">
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.date')}</label>
             <input
               type="date"
               value={date}
@@ -214,20 +238,20 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
 
           {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.type')}</label>
             <select
               value={itemType}
               onChange={(e) => setItemType(e.target.value)}
               className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="Letter">Letter</option>
-              <option value="Package">Package</option>
+              <option value="Letter">{t('mailTypes.letter')}</option>
+              <option value="Package">{t('mailTypes.package')}</option>
             </select>
           </div>
 
           {/* Quantity */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.quantity')}</label>
             <input
               type="number"
               min="1"
@@ -240,19 +264,19 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
 
         {/* Note */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Note (Optional)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.descriptionOptional')}</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            placeholder="Add any relevant notes..."
+            placeholder={t('mail.addNotesPlaceholder')}
             className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
           />
         </div>
 
         {/* Link to Customer */}
         <div className="mb-6 relative">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Link to Customer</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t('mail.customer')}</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
@@ -319,20 +343,20 @@ export default function IntakePage({ embedded = false }: IntakePageProps) {
           className="w-full py-3 bg-black hover:bg-gray-800 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           <Save className="w-4 h-4" />
-          <span>{loading ? 'Saving...' : 'Save Mail Entry'}</span>
+          <span>{loading ? t('common.saving') : t('mail.logMail')}</span>
         </button>
       </form>
 
       {/* Today's Entries */}
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Today's Entries</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('mail.todaysEntries')}</h2>
         </div>
 
         {todaysEntries.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📭</div>
-            <p className="text-gray-600">No entries yet today</p>
+            <p className="text-gray-600">{t('mail.noEntriesYet')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

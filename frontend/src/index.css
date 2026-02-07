@@ -231,3 +231,39 @@ html {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* Flash green animation for updated rows */
+@keyframes flashGreen {
+  0% {
+    background-color: rgb(220, 252, 231); /* green-100 */
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-flash-green {
+  animation: flashGreen 2s ease-out;
+}
+
+/* Bounce-in animation for celebration overlay */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
