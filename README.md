@@ -19,14 +19,15 @@ This application helps manage:
 ![Dashboard](screenshots/dashboard.png)
 *Comprehensive dashboard with analytics, mail volume charts, and quick-access follow-ups*
 
+### AI-Powered Mail Scanning
+![AI Scanning Feature](screenshots/Ai%20scanning%20feature.gif)
+*Intelligent AI scanning feature for automated mail processing and categorization*
+
 ### Mail Log
 ![Mail Log](screenshots/mail-log.png)
 *Advanced filtering and tracking of all mail items with status updates*
 
 ### Follow-ups Management
-![Follow-ups](screenshots/follow-ups.png)
-*Organized follow-up cards grouped by customer with urgency indicators*
-
 ![Follow-ups Detail](screenshots/follow-ups-detail.png)
 *Detailed view of customer follow-ups with action buttons*
 
