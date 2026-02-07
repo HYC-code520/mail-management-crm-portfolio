@@ -19,25 +19,24 @@ This application helps manage:
 ![App Overview](screenshots/app-overview.gif)
 *Quick tour of all features - dashboard, mail log, customers, follow-ups, fee collection, and more*
 
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
-*Comprehensive dashboard with analytics, mail volume charts, and quick-access follow-ups*
-
 ### AI-Powered Mail Scanning
 ![AI Scanning Feature](screenshots/Ai%20scanning%20feature.gif)
 *Intelligent AI scanning feature for automated mail processing and categorization*
 
-### Mail Log
-![Mail Log](screenshots/mail-log.png)
-*Advanced filtering and tracking of all mail items with status updates*
-
-### Follow-ups Management
-![Follow-ups Detail](screenshots/follow-ups-detail.png)
-*Detailed view of customer follow-ups with action buttons*
-
-### Fee Collection
-![Fee Collection](screenshots/fee-collection.png)
-*Package storage fee tracking with automated calculations and collection tools*
+<table>
+  <tr>
+    <td align="center"><b>Dashboard</b><br><img src="screenshots/dashboard.png" width="400"><br><em>Analytics, charts, and quick-access follow-ups</em></td>
+    <td align="center"><b>Mail Log</b><br><img src="screenshots/mail-log.png" width="400"><br><em>Filtering and tracking all mail items</em></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Customers</b><br><img src="screenshots/customers.png" width="400"><br><em>Customer management with search and filtering</em></td>
+    <td align="center"><b>Fee Collection</b><br><img src="screenshots/fee-collection.png" width="400"><br><em>Storage fee tracking and collection tools</em></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Follow-ups</b><br><img src="screenshots/follow-ups-detail.png" width="400"><br><em>Customer follow-ups with action buttons</em></td>
+    <td align="center"><b>Dashboard (Chinese)</b><br><img src="screenshots/dashboard-chinese.png" width="400"><br><em>Multi-language support</em></td>
+  </tr>
+</table>
 
 ## 🚀 Features
 
