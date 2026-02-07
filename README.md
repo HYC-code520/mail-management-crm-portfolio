@@ -15,6 +15,10 @@ This application helps manage:
 
 ## 📸 Screenshots
 
+### App Overview
+![App Overview](screenshots/app-overview.gif)
+*Quick tour of all features - dashboard, mail log, customers, follow-ups, fee collection, and more*
+
 ### Dashboard
 ![Dashboard](screenshots/dashboard.png)
 *Comprehensive dashboard with analytics, mail volume charts, and quick-access follow-ups*
