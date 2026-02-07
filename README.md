@@ -13,6 +13,27 @@ This application helps manage:
 - **Templates** - Manage reusable message templates
 - **Dashboard Analytics** - View real-time statistics, grouped follow-ups by person, and revenue metrics
 
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+*Comprehensive dashboard with analytics, mail volume charts, and quick-access follow-ups*
+
+### Mail Log
+![Mail Log](screenshots/mail-log.png)
+*Advanced filtering and tracking of all mail items with status updates*
+
+### Follow-ups Management
+![Follow-ups](screenshots/follow-ups.png)
+*Organized follow-up cards grouped by customer with urgency indicators*
+
+![Follow-ups Detail](screenshots/follow-ups-detail.png)
+*Detailed view of customer follow-ups with action buttons*
+
+### Fee Collection
+![Fee Collection](screenshots/fee-collection.png)
+*Package storage fee tracking with automated calculations and collection tools*
+
 ## 🚀 Features
 
 - ✅ Customer contact management with search and filtering
