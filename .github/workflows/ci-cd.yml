@@ -48,6 +48,11 @@ jobs:
       run: |
         cd backend
         npm run test:coverage
+      env:
+        SUPABASE_URL: https://placeholder.supabase.co
+        SUPABASE_ANON_KEY: placeholder-key
+        SUPABASE_SERVICE_ROLE_KEY: placeholder-key
+        JWT_SECRET: test-secret-key-for-ci
     
     - name: ✅ Check coverage threshold
       if: matrix.node-version == '20.x'
@@ -55,6 +60,11 @@ jobs:
         cd backend
         npm run test:coverage -- --coverageThreshold='{"global":{"branches":50,"functions":50,"lines":50,"statements":50}}'
       continue-on-error: true
+      env:
+        SUPABASE_URL: https://placeholder.supabase.co
+        SUPABASE_ANON_KEY: placeholder-key
+        SUPABASE_SERVICE_ROLE_KEY: placeholder-key
+        JWT_SECRET: test-secret-key-for-ci
 
   # Frontend Lint
   frontend-lint:

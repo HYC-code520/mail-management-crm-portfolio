@@ -50,6 +50,11 @@ jobs:
       run: |
         cd backend
         npm run test:coverage
+      env:
+        SUPABASE_URL: https://placeholder.supabase.co
+        SUPABASE_ANON_KEY: placeholder-key
+        SUPABASE_SERVICE_ROLE_KEY: placeholder-key
+        JWT_SECRET: test-secret-key-for-ci
     
     - name: 📈 Upload coverage to Codecov (optional)
       if: matrix.node-version == '20.x'
